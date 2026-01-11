@@ -1,4 +1,5 @@
 # Cortex Development Plan
+
 ## A Local-First AI-Powered Second Brain
 
 ---
@@ -8,6 +9,7 @@
 Cortex is a desktop application that acts as your personal knowledge management system. It captures content from anywhere, understands it deeply using AI, connects related ideas automatically, and surfaces relevant knowledge when you need it.
 
 **What makes Cortex different:**
+
 - **Local-First**: All data stays on your machine, AI runs locally by default
 - **Privacy-First**: No accounts, no cloud sync, no data collection
 - **Flexible AI**: Local models (Ollama) or cloud APIs (OpenAI, Anthropic, Google) — user's choice
@@ -23,6 +25,7 @@ Cortex is a desktop application that acts as your personal knowledge management 
 Knowledge workers are drowning in information scattered across dozens of tools. You save an insightful article, highlight a key passage in a book, bookmark a useful tweet—and then never find it again when you actually need it.
 
 Current solutions fall short:
+
 - **Note apps** (Notion, Obsidian) require manual organization and don't understand your content
 - **Read-later apps** (Pocket, Instapaper) are graveyards of unread articles
 - **AI assistants** (ChatGPT, Claude) have no memory of what you've learned
@@ -41,13 +44,13 @@ Cortex acts as an external brain that:
 
 The decision to build Cortex as a local-first application is foundational to the product:
 
-| Concern | Cloud-Only Approach | Our Local-First Approach |
-|---------|---------------------|--------------------------|
-| **Privacy** | Your thoughts on someone else's server | Your data never leaves your device |
-| **Ownership** | Company shuts down, data at risk | Single SQLite file you control forever |
-| **Cost** | Ongoing subscription fees | One-time purchase, minimal ongoing costs |
-| **Latency** | Network round-trips for every action | Instant, works offline |
-| **Trust** | "We won't read your data" promises | Mathematically impossible to access |
+| Concern       | Cloud-Only Approach                    | Our Local-First Approach                 |
+| ------------- | -------------------------------------- | ---------------------------------------- |
+| **Privacy**   | Your thoughts on someone else's server | Your data never leaves your device       |
+| **Ownership** | Company shuts down, data at risk       | Single SQLite file you control forever   |
+| **Cost**      | Ongoing subscription fees              | One-time purchase, minimal ongoing costs |
+| **Latency**   | Network round-trips for every action   | Instant, works offline                   |
+| **Trust**     | "We won't read your data" promises     | Mathematically impossible to access      |
 
 For a "second brain" containing your private thoughts, research, and sensitive information, local-first isn't just a feature—it's the only ethical choice.
 
@@ -59,17 +62,17 @@ For a "second brain" containing your private thoughts, research, and sensitive i
 
 ### Technology Stack Summary
 
-| Layer | Technology | Why |
-|-------|------------|-----|
-| **Desktop Shell** | Tauri 2.0 (Rust) | Small binary, native performance, secure |
-| **Frontend** | React + TypeScript + Vite | Fast dev, great ecosystem, type safety |
-| **UI Components** | shadcn/ui + Tailwind | Beautiful defaults, rapid development |
-| **Backend** | Python + FastAPI | AI ecosystem, LangGraph support |
-| **Database** | SQLite + sqlite-vec | Single file, zero config, vector search built-in |
-| **AI Orchestration** | LangGraph | Stateful workflows, retries, cycles |
-| **Local AI** | Ollama | Easy model management, runs anywhere |
-| **Cloud AI** | LiteLLM → OpenAI/Anthropic/Google | Unified interface, direct API pricing |
-| **Browser Extension** | Plasmo | Modern DX, cross-browser |
+| Layer                 | Technology                        | Why                                              |
+| --------------------- | --------------------------------- | ------------------------------------------------ |
+| **Desktop Shell**     | Tauri 2.0 (Rust)                  | Small binary, native performance, secure         |
+| **Frontend**          | React + TypeScript + Vite         | Fast dev, great ecosystem, type safety           |
+| **UI Components**     | shadcn/ui + Tailwind              | Beautiful defaults, rapid development            |
+| **Backend**           | Python + FastAPI                  | AI ecosystem, LangGraph support                  |
+| **Database**          | SQLite + sqlite-vec               | Single file, zero config, vector search built-in |
+| **AI Orchestration**  | LangGraph                         | Stateful workflows, retries, cycles              |
+| **Local AI**          | Ollama                            | Easy model management, runs anywhere             |
+| **Cloud AI**          | LiteLLM → OpenAI/Anthropic/Google | Unified interface, direct API pricing            |
+| **Browser Extension** | Plasmo                            | Modern DX, cross-browser                         |
 
 ### Decision 1: Tauri + Python Sidecar
 
@@ -78,11 +81,13 @@ For a "second brain" containing your private thoughts, research, and sensitive i
 **Why this hybrid approach:**
 
 The obvious choice for a local AI app would be Electron + Node.js, but this has significant drawbacks:
+
 - Electron apps are bloated (150MB+ just for the shell)
 - Node.js lacks mature ML/AI libraries
 - Python has the best ecosystem for LangChain, LangGraph, and AI tooling
 
 Pure Rust would be ideal for performance, but:
+
 - Rust has a steep learning curve
 - The LangGraph ecosystem is Python-first
 - Rapid iteration is harder in Rust
@@ -107,6 +112,7 @@ Pure Rust would be ideal for performance, but:
 ```
 
 **Trade-offs accepted:**
+
 - Two runtimes instead of one (acceptable: Python is usually already installed)
 - Slightly more complex deployment (mitigated: we bundle Python with the app)
 - IPC overhead (negligible: localhost HTTP is fast)
@@ -118,6 +124,7 @@ Pure Rust would be ideal for performance, but:
 **Why SQLite:**
 
 For a local-first app, SQLite is the obvious choice:
+
 - Zero configuration, no separate database server
 - Battle-tested reliability (used in every iPhone, Android, browser)
 - Single file that users can backup, move, or inspect
@@ -125,12 +132,12 @@ For a local-first app, SQLite is the obvious choice:
 
 **Why sqlite-vec over alternatives:**
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Pinecone/Weaviate | Powerful, scalable | Cloud-based, defeats local-first purpose |
-| ChromaDB | Local, popular | Separate process, adds complexity |
-| pgvector | Great for Postgres | Requires PostgreSQL server |
-| **sqlite-vec** | Native SQLite extension, single file | Newer, smaller community |
+| Option            | Pros                                 | Cons                                     |
+| ----------------- | ------------------------------------ | ---------------------------------------- |
+| Pinecone/Weaviate | Powerful, scalable                   | Cloud-based, defeats local-first purpose |
+| ChromaDB          | Local, popular                       | Separate process, adds complexity        |
+| pgvector          | Great for Postgres                   | Requires PostgreSQL server               |
+| **sqlite-vec**    | Native SQLite extension, single file | Newer, smaller community                 |
 
 sqlite-vec keeps everything in one file—your items, chunks, embeddings, and conversations all live together. This dramatically simplifies backup, sync, and portability.
 
@@ -153,12 +160,14 @@ cortex.db
 **Why this hybrid approach:**
 
 Local-first with Ollama:
+
 - **Privacy maximum**: Nothing leaves the device
 - **Works offline**: No internet required
 - **Zero ongoing cost**: Just your electricity
 - **User controls models**: Swap based on hardware and needs
 
 But local models have real limitations:
+
 - Require decent hardware (8GB+ RAM for usable models)
 - Quality gap vs frontier models (GPT-4, Claude 3.5)
 - Slower on CPU-only machines
@@ -192,25 +201,26 @@ But local models have real limitations:
 
 **Why direct APIs over aggregators (OpenRouter, etc.):**
 
-| Factor | Aggregators | Direct APIs |
-|--------|-------------|-------------|
-| **Reliability** | Middleman can fail | Only provider uptime matters |
-| **Longevity** | Startup risk | OpenAI/Anthropic/Google aren't going anywhere |
-| **Pricing** | 5-20% markup | Base price |
-| **Complexity** | One API key | Multiple keys (but LiteLLM abstracts this) |
+| Factor          | Aggregators        | Direct APIs                                   |
+| --------------- | ------------------ | --------------------------------------------- |
+| **Reliability** | Middleman can fail | Only provider uptime matters                  |
+| **Longevity**   | Startup risk       | OpenAI/Anthropic/Google aren't going anywhere |
+| **Pricing**     | 5-20% markup       | Base price                                    |
+| **Complexity**  | One API key        | Multiple keys (but LiteLLM abstracts this)    |
 
 For a desktop app meant to last years, depending on a VC-funded aggregator is unnecessary risk. LiteLLM (open source, bundled locally) gives us unified API access without the middleman.
 
 **Model recommendations:**
 
-| Use Case | Ollama (Local) | Cloud Alternative |
-|----------|---------------|-------------------|
-| **Embeddings** | nomic-embed-text (274MB) | OpenAI text-embedding-3-small |
-| **Chat (Budget)** | llama3.2:3b (2GB) | Google Gemini 1.5 Flash |
-| **Chat (Quality)** | mistral:7b (4GB) | Anthropic Claude 3 Haiku |
-| **Chat (Best)** | llama3.1:70b (40GB) | Claude 3.5 Sonnet / GPT-4o |
+| Use Case           | Ollama (Local)           | Cloud Alternative             |
+| ------------------ | ------------------------ | ----------------------------- |
+| **Embeddings**     | nomic-embed-text (274MB) | OpenAI text-embedding-3-small |
+| **Chat (Budget)**  | llama3.2:3b (2GB)        | Google Gemini 1.5 Flash       |
+| **Chat (Quality)** | mistral:7b (4GB)         | Anthropic Claude 3 Haiku      |
+| **Chat (Best)**    | llama3.1:70b (40GB)      | Claude 3.5 Sonnet / GPT-4o    |
 
 **Typical cloud costs** (for users who choose that path):
+
 - Light usage (50 items/month): ~$0.10-0.25/month
 - Heavy usage (200 items/month): ~$0.50-1.00/month
 - Using premium models (Sonnet/GPT-4o): ~$2-5/month
@@ -236,14 +246,15 @@ These aren't single LLM calls—they're stateful workflows with branching logic,
 
 **Why LangGraph specifically:**
 
-| Alternative | Issue |
-|-------------|-------|
-| Plain functions | State management becomes spaghetti, no visibility |
-| Celery/queue systems | Overkill for local, adds infrastructure |
-| LangChain alone | Chains are linear, can't handle cycles |
-| Custom state machine | Reinventing the wheel |
+| Alternative          | Issue                                             |
+| -------------------- | ------------------------------------------------- |
+| Plain functions      | State management becomes spaghetti, no visibility |
+| Celery/queue systems | Overkill for local, adds infrastructure           |
+| LangChain alone      | Chains are linear, can't handle cycles            |
+| Custom state machine | Reinventing the wheel                             |
 
 LangGraph provides:
+
 - **Typed state**: Each workflow has a clear schema
 - **Conditional edges**: Route to different nodes based on state
 - **Cycles**: Naturally handle retry loops
@@ -277,6 +288,7 @@ LangGraph provides:
 **Why this matters:**
 
 Users have different needs:
+
 - Privacy maximalists want everything local
 - Users with weak hardware need cloud inference
 - Power users want the best models regardless of where they run
@@ -299,6 +311,7 @@ class AIProvider:
 Rather than implementing separate clients for OpenAI, Anthropic, and Google, we use LiteLLM — an open-source library that provides a unified interface to 100+ LLM providers. It runs locally (bundled with the app), so there's no middleman service.
 
 Benefits of LiteLLM:
+
 - Single interface for all providers
 - Automatic retries and fallbacks
 - Cost tracking built-in
@@ -397,6 +410,7 @@ First Launch
 **Hybrid mode behavior:**
 
 When hybrid mode is enabled:
+
 1. **Embeddings**: Always use the configured embedding provider (usually local for speed)
 2. **Simple extraction**: Use local model
 3. **Complex chat queries**: User can choose per-query or set a default
@@ -547,7 +561,7 @@ This gives users fine-grained control while keeping the default experience simpl
    ▼                       │
 ┌──────────┐               │
 │ Rewrite  │               │ Transform query for better retrieval:
-│  Query   │───────────────│ "pricing article insights" → 
+│  Query   │───────────────│ "pricing article insights" →
 └────┬─────┘  Retry search │ "pricing strategy key points summary"
      │                     │
      └─────────────────────┘
@@ -596,7 +610,7 @@ This gives users fine-grained control while keeping the default experience simpl
        │
 ┌──────▼──────┐
 │Find Similar │ Vector search for items with similar embeddings
-└──────┬──────┘ 
+└──────┬──────┘
        │
 ┌──────▼──────┐
 │  Extract    │ Get entities (people, companies, concepts) from this item
@@ -686,6 +700,7 @@ This gives users fine-grained control while keeping the default experience simpl
 **Goal**: A working app that can save and retrieve content with flexible AI backend.
 
 **Deliverables:**
+
 1. Tauri app shell with React frontend
 2. Python sidecar with FastAPI
 3. SQLite database with schema
@@ -698,6 +713,7 @@ This gives users fine-grained control while keeping the default experience simpl
 7. Simple item list UI
 
 **Technical milestones:**
+
 - [ ] Tauri spawns Python process on startup, manages lifecycle
 - [ ] Frontend can call Python endpoints via localhost
 - [ ] Items persist in SQLite and survive app restart
@@ -713,6 +729,7 @@ The AI provider layer is foundational — every subsequent feature depends on it
 **Goal**: Saved content is processed and searchable.
 
 **Deliverables:**
+
 1. Processing Graph (LangGraph) with:
    - HTML parsing and cleanup
    - Semantic chunking
@@ -723,6 +740,7 @@ The AI provider layer is foundational — every subsequent feature depends on it
 4. Processing status UI (pending → processing → ready)
 
 **Technical milestones:**
+
 - [ ] Saving a webpage triggers processing automatically
 - [ ] Embeddings stored in sqlite-vec and searchable
 - [ ] Search returns relevant chunks with snippets
@@ -736,6 +754,7 @@ Search is the core value proposition. Without good retrieval, chat and connectio
 **Goal**: Users can capture content from their browser with one click.
 
 **Deliverables:**
+
 1. Chrome extension (Firefox later)
    - Popup with "Save to Cortex" button
    - Content extraction from current page
@@ -744,6 +763,7 @@ Search is the core value proposition. Without good retrieval, chat and connectio
 3. Keyboard shortcut support
 
 **Technical milestones:**
+
 - [ ] Extension detects running Cortex app
 - [ ] One-click save extracts title, URL, content
 - [ ] Highlighted text saved with context
@@ -757,6 +777,7 @@ Capture friction kills adoption. If saving is hard, users won't build a knowledg
 **Goal**: Users can have conversations with their knowledge base.
 
 **Deliverables:**
+
 1. Chat Graph (LangGraph) with:
    - Context retrieval
    - Document grading
@@ -769,6 +790,7 @@ Capture friction kills adoption. If saving is hard, users won't build a knowledg
 3. Conversation persistence
 
 **Technical milestones:**
+
 - [ ] Chat answers questions using saved content
 - [ ] Citations are clickable and accurate
 - [ ] Conversation history persists across sessions
@@ -782,6 +804,7 @@ Chat is the primary interface for knowledge retrieval. It's more natural than se
 **Goal**: The app proactively surfaces insights and connections.
 
 **Deliverables:**
+
 1. Connection Discovery Graph
 2. Adaptive Search Graph with:
    - Query decomposition
@@ -793,6 +816,7 @@ Chat is the primary interface for knowledge retrieval. It's more natural than se
 5. Daily Digest (optional, user-enabled)
 
 **Technical milestones:**
+
 - [ ] Items show related content automatically
 - [ ] Search handles complex queries gracefully
 - [ ] Daily digest surfaces forgotten content
@@ -806,6 +830,7 @@ Connections transform a "save and search" tool into a true Second Brain. This is
 **Goal**: Production-ready application.
 
 **Deliverables:**
+
 1. Onboarding flow with:
    - AI provider selection (Ollama vs Cloud vs Hybrid)
    - Ollama setup wizard with model downloads
@@ -822,6 +847,7 @@ Connections transform a "save and search" tool into a true Second Brain. This is
 8. Platform-specific builds (macOS, Windows, Linux)
 
 **Technical milestones:**
+
 - [ ] New user can go from download to first save in < 5 minutes
 - [ ] Provider switching works without data loss
 - [ ] App handles 10,000+ items without performance degradation
@@ -840,6 +866,7 @@ Polish separates a prototype from a product. Onboarding, updates, and error hand
 **Concern**: Local models may produce poor extractions or answers compared to GPT-4/Claude.
 
 **Mitigations:**
+
 - Validation loops in workflows catch obvious failures
 - Extraction prompts optimized for smaller models (simpler, more explicit)
 - Users with powerful hardware can use larger local models (7B+)
@@ -851,6 +878,7 @@ Polish separates a prototype from a product. Onboarding, updates, and error hand
 **Concern**: Requiring users to install Ollama adds friction.
 
 **Mitigations:**
+
 - Clear onboarding wizard with one-click Ollama install
 - App detects missing Ollama and guides user through setup
 - Future option: bundle llama.cpp directly (no external dependency)
@@ -860,6 +888,7 @@ Polish separates a prototype from a product. Onboarding, updates, and error hand
 **Concern**: sqlite-vec is newer than alternatives like ChromaDB.
 
 **Mitigations:**
+
 - Extensive testing with realistic data volumes
 - Fallback plan: migrate to ChromaDB if issues arise (similar API)
 - sqlite-vec is actively maintained and used in production by others
@@ -869,6 +898,7 @@ Polish separates a prototype from a product. Onboarding, updates, and error hand
 **Concern**: Shipping Python with a desktop app is complex.
 
 **Mitigations:**
+
 - PyInstaller or PyOxidizer creates standalone executable
 - Tauri's sidecar feature handles process management
 - Test extensively on all platforms before each release
@@ -878,6 +908,7 @@ Polish separates a prototype from a product. Onboarding, updates, and error hand
 **Concern**: Embedding many chunks is slow with local models.
 
 **Mitigations:**
+
 - Batch embedding reduces Ollama overhead
 - Background processing doesn't block UI
 - Progress indicators keep users informed
@@ -913,29 +944,29 @@ Polish separates a prototype from a product. Onboarding, updates, and error hand
 
 ### User Success
 
-| Metric | Target | Why It Matters |
-|--------|--------|----------------|
-| Items captured per week | 10+ | Measures habit formation |
-| Search queries per week | 5+ | Proves retrieval value |
-| Chat sessions per week | 3+ | Shows AI is useful |
-| 30-day retention | 40%+ | Real stickiness |
+| Metric                  | Target | Why It Matters           |
+| ----------------------- | ------ | ------------------------ |
+| Items captured per week | 10+    | Measures habit formation |
+| Search queries per week | 5+     | Proves retrieval value   |
+| Chat sessions per week  | 3+     | Shows AI is useful       |
+| 30-day retention        | 40%+   | Real stickiness          |
 
 ### Technical Health
 
-| Metric | Target | Why It Matters |
-|--------|--------|----------------|
-| Processing success rate | 95%+ | Pipeline reliability |
-| Search latency (p95) | < 500ms | Feels instant |
-| Chat response time | < 5s | Acceptable for local LLM |
-| App crash rate | < 1% | Stability |
+| Metric                  | Target  | Why It Matters           |
+| ----------------------- | ------- | ------------------------ |
+| Processing success rate | 95%+    | Pipeline reliability     |
+| Search latency (p95)    | < 500ms | Feels instant            |
+| Chat response time      | < 5s    | Acceptable for local LLM |
+| App crash rate          | < 1%    | Stability                |
 
 ### Business (If Monetized)
 
-| Metric | Target | Why It Matters |
-|--------|--------|----------------|
-| Downloads | 10K in 6 months | Market validation |
-| Paid conversions | 5%+ | Sustainable business |
-| Refund rate | < 5% | Product satisfaction |
+| Metric           | Target          | Why It Matters       |
+| ---------------- | --------------- | -------------------- |
+| Downloads        | 10K in 6 months | Market validation    |
+| Paid conversions | 5%+             | Sustainable business |
+| Refund rate      | < 5%            | Product satisfaction |
 
 ---
 
@@ -952,6 +983,7 @@ By combining a local-first architecture with LangGraph-orchestrated AI workflows
 **The key insight**: Data locality and AI capability don't have to be at odds. Your knowledge base stays on your machine always. Only the AI inference is flexible — run it locally for maximum privacy, or use cloud APIs when you need more power. Users choose their own trade-off.
 
 The path from here to launch is clear:
+
 1. Build the foundation (Tauri + Python + SQLite + Provider Layer)
 2. Prove the AI works (Processing + Search)
 3. Make capture effortless (Browser Extension)
@@ -962,5 +994,5 @@ Let's build the knowledge tool we wish existed.
 
 ---
 
-*Development Plan Version: 2.0 (Ollama + Direct APIs)*
-*Last Updated: December 2024*
+_Development Plan Version: 2.0 (Ollama + Direct APIs)_
+_Last Updated: December 2024_
