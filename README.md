@@ -1,10 +1,8 @@
-# Tauri React Template
+# Cortex
 
-A "batteries-included" template for building production-ready desktop applications with **Tauri v2**, **React**, and **TypeScript**. Designed with opinionated patterns that help both human developers and AI coding agents build well-architected apps from the start.
+A personal knowledge management system that captures content from anywhere, uses AI to understand it deeply, connects related ideas automatically, and surfaces relevant knowledge when you need it. Built with **Tauri v2**, **React**, and **TypeScript**.
 
-## Why This Template?
-
-Most Tauri starters give you a blank canvas. This template gives you a **working application** with patterns already established:
+## Features
 
 - **Type-safe Rust-TypeScript bridge** via tauri-specta.
 - **Performance patterns enforced by tooling** - all the usual linting plus ast-grep for common anti-patterns

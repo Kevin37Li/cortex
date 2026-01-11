@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a template with sensible defaults for building Tauri React apps.
+Cortex is a personal knowledge management system that captures content from anywhere, uses AI to understand it deeply, connects related ideas automatically, and surfaces relevant knowledge when you need it.
 
 ## Core Rules
 

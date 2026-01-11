@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "Cortex",
   "version": "0.1.0",
-  "identifier": "com.tauri-app.app",
+  "identifier": "com.Kevin37Li.cortex",
   "build": {
     "removeUnusedCommands": true,
     "beforeDevCommand": "npm run dev",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "tauri-app",
+        "title": "Cortex",
         "width": 1000,
         "height": 700,
         "minWidth": 1000,
@@ -45,11 +45,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "Your Name",
-    "category": "DeveloperTool",
-    "shortDescription": "A Tauri React template application",
-    "longDescription": "A modern Tauri React template with comprehensive boilerplate code, TypeScript, Tailwind CSS, and shadcn/ui components.",
-    "copyright": "Copyright © 2025 Your Name. All rights reserved.",
+    "publisher": "Kevin37Li",
+    "category": "Productivity",
+    "shortDescription": "Personal knowledge management system with AI-powered understanding",
+    "longDescription": "A personal knowledge management system that captures content from anywhere, uses AI to understand it deeply, connects related ideas automatically, and surfaces relevant knowledge when you need it.",
+    "copyright": "Copyright © 2025 Kevin37Li. All rights reserved.",
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.15",
@@ -63,7 +63,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest/download/latest.json"
+        "https://github.com/Kevin37Li/cortex/releases/latest/download/latest.json"
       ],
       "dialog": true,
       "pubkey": "YOUR_UPDATER_PUBLIC_KEY_HERE"

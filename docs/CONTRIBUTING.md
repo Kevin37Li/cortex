@@ -13,8 +13,8 @@ Thank you for your interest in contributing!
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+git clone https://github.com/Kevin37Li/cortex.git
+cd cortex
 npm install
 npm run dev
 npm run check:all
