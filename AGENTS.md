@@ -9,7 +9,7 @@ Cortex is a personal knowledge management system that captures content from anyw
 ### New Sessions
 
 - Read @docs/tasks.md for task management
-- Review `docs/developer/architecture-guide.md` for high-level patterns
+- Review `docs/developer/architecture/architecture-guide.md` for high-level patterns
 - Check `docs/developer/README.md` for the full documentation index
 - Check git status and project structure
 
@@ -61,7 +61,7 @@ const handleAction = () => {
 ### Static Analysis
 
 - **React Compiler**: Handles memoization automatically - no manual `useMemo`/`useCallback` needed
-- **ast-grep**: Enforces architecture patterns (e.g., no Zustand destructuring). See `docs/developer/static-analysis.md`
+- **ast-grep**: Enforces architecture patterns (e.g., no Zustand destructuring). See `docs/developer/quality-tooling/static-analysis.md`
 - **Knip/jscpd**: Periodic cleanup tools. Use `/cleanup` command (Claude Code)
 
 ### Event-Driven Bridge
@@ -85,7 +85,7 @@ if (result.status === 'ok') {
 const prefs = await invoke('load_preferences')
 ```
 
-**Adding commands**: See `docs/developer/tauri-commands.md`
+**Adding commands**: See `docs/developer/core-systems/tauri-commands.md`
 
 ### Internationalization (i18n)
 
@@ -106,7 +106,7 @@ i18n.t('key')                 // Or call directly for occasional use
 
 - **Translations**: All strings in `/locales/*.json`
 - **RTL Support**: Use CSS logical properties (`text-start` not `text-left`)
-- **Adding strings**: See `docs/developer/i18n-patterns.md`
+- **Adding strings**: See `docs/developer/ui-ux/i18n-patterns.md`
 
 ### Documentation & Versions
 
@@ -119,10 +119,10 @@ For complete patterns and detailed guidance, see `docs/developer/README.md`.
 
 Key documents:
 
-- `architecture-guide.md` - Mental models, security, anti-patterns
-- `state-management.md` - State onion, getState() pattern details
-- `tauri-commands.md` - Adding new Rust commands
-- `static-analysis.md` - All linting tools and quality gates
+- `architecture/architecture-guide.md` - Mental models, security, anti-patterns
+- `architecture/state-management.md` - State onion, getState() pattern details
+- `core-systems/tauri-commands.md` - Adding new Rust commands
+- `quality-tooling/static-analysis.md` - All linting tools and quality gates
 
 ## Claude Code Commands & Agents
 

@@ -54,7 +54,7 @@ This ensures the same actions work consistently across all interaction methods.
 
 ### Command-Centric Design
 
-All user actions flow through a centralized [command system](./command-system.md):
+All user actions flow through a centralized [command system](../core-systems/command-system.md):
 
 - **Commands** are pure objects with `execute()` functions
 - **Context** provides all state and actions commands need
@@ -85,15 +85,15 @@ Event-Driven Bridge
 
 ## Core Systems
 
-| System               | Documentation                                    |
-| -------------------- | ------------------------------------------------ |
-| Command System       | [command-system.md](./command-system.md)         |
-| Keyboard Shortcuts   | [keyboard-shortcuts.md](./keyboard-shortcuts.md) |
-| Native Menus         | [menus.md](./menus.md)                           |
-| Quick Panes          | [quick-panes.md](./quick-panes.md)               |
-| Data Persistence     | [data-persistence.md](./data-persistence.md)     |
-| Internationalization | [i18n-patterns.md](./i18n-patterns.md)           |
-| Cross-Platform       | [cross-platform.md](./cross-platform.md)         |
+| System               | Documentation                                                    |
+| -------------------- | ---------------------------------------------------------------- |
+| Command System       | [command-system.md](../core-systems/command-system.md)           |
+| Keyboard Shortcuts   | [keyboard-shortcuts.md](../core-systems/keyboard-shortcuts.md)   |
+| Native Menus         | [menus.md](../core-systems/menus.md)                             |
+| Quick Panes          | [quick-panes.md](../core-systems/quick-panes.md)                 |
+| Data Persistence     | [data-persistence.md](../data-storage/data-persistence.md)       |
+| Internationalization | [i18n-patterns.md](../ui-ux/i18n-patterns.md)                    |
+| Cross-Platform       | [cross-platform.md](../ui-ux/cross-platform.md)                  |
 
 ## Component Hierarchy
 
@@ -150,7 +150,7 @@ listen('data-updated', ({ payload }) => {
 })
 ```
 
-See [quick-panes.md](./quick-panes.md) for a complete implementation example.
+See [quick-panes.md](../core-systems/quick-panes.md) for a complete implementation example.
 
 ## Security Architecture
 
@@ -192,7 +192,7 @@ CSP prevents XSS attacks. Configuration is in `src-tauri/tauri.conf.json`.
 | App preferences | App data directory (JSON)     | Medium         |
 | User content    | App data directory/SQLite     | Medium         |
 
-Never store sensitive tokens in `tauri-plugin-store` (plain JSON on disk). See [external-apis.md](./external-apis.md) for keychain patterns.
+Never store sensitive tokens in `tauri-plugin-store` (plain JSON on disk). See [external-apis.md](../data-storage/external-apis.md) for keychain patterns.
 
 ### Rust-First Security
 
@@ -244,7 +244,7 @@ if (result.status === 'ok') {
 const prefs = await invoke<AppPreferences>('load_preferences')
 ```
 
-See [tauri-commands.md](./tauri-commands.md) for adding new commands.
+See [tauri-commands.md](../core-systems/tauri-commands.md) for adding new commands.
 
 ## Quality Gates
 
@@ -254,7 +254,7 @@ Before any changes are committed:
 npm run check:all
 ```
 
-See [static-analysis.md](./static-analysis.md) for all tools included.
+See [static-analysis.md](../quality-tooling/static-analysis.md) for all tools included.
 
 ## Anti-Patterns to Avoid
 
@@ -271,6 +271,6 @@ See [static-analysis.md](./static-analysis.md) for all tools included.
 1. **Commands** - Add to appropriate command group file
 2. **State** - Choose appropriate layer (useState/Zustand/TanStack Query)
 3. **UI** - Follow component architecture
-4. **Persistence** - Use established [data-persistence.md](./data-persistence.md) patterns
-5. **Testing** - Add tests following [testing.md](./testing.md) patterns
+4. **Persistence** - Use established [data-persistence.md](../data-storage/data-persistence.md) patterns
+5. **Testing** - Add tests following [testing.md](../quality-tooling/testing.md) patterns
 6. **Documentation** - Update relevant docs

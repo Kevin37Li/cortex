@@ -185,7 +185,7 @@ pub async fn fetch_protected_data() -> Result<Data, String> {
 
 ## Error Handling
 
-See [error-handling.md](./error-handling.md) for complete patterns. Key points for API calls:
+See [error-handling.md](../architecture/error-handling.md) for complete patterns. Key points for API calls:
 
 ```typescript
 // Configure retry for network errors, not validation errors

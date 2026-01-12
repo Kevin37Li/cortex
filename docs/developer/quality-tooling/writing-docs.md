@@ -29,7 +29,7 @@ New docs should be added to `README.md` in this directory.
 - The "why" behind non-obvious decisions
 - "How to add X" sections for patterns not obvious from code
 - Common mistakes (especially from outdated AI training data)
-- Cross-links to related docs: `See [state-management.md](./state-management.md)`
+- Cross-links to related docs: `See [state-management.md](../architecture/state-management.md)`
 
 ### Exclude
 

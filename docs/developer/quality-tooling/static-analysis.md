@@ -76,7 +76,7 @@ Handles memoization automatically at build time. You do **not** need to manually
 
 The compiler analyzes code and adds memoization where beneficial.
 
-**Note:** The `getState()` pattern is still critical - it avoids store subscriptions, not memoization. See [state-management.md](./state-management.md).
+**Note:** The `getState()` pattern is still critical - it avoids store subscriptions, not memoization. See [state-management.md](../architecture/state-management.md).
 
 ### Rust Tooling
 

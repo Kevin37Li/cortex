@@ -235,4 +235,4 @@ const handleChange = async (newValue: string) => {
 | Optional feature       | Either          | Graceful degradation | Silent fallback  |
 | Critical operation     | Structured enum | Explicit + rollback  | Toast + recovery |
 
-See also: [tauri-commands.md](./tauri-commands.md) for Result type patterns, [logging.md](./logging.md) for logging best practices.
+See also: [tauri-commands.md](../core-systems/tauri-commands.md) for Result type patterns, [logging.md](../quality-tooling/logging.md) for logging best practices.

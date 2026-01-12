@@ -45,7 +45,7 @@ export function useMainWindowEventListeners() {
 }
 ```
 
-**Critical**: Use `getState()` to access store data in event handlers to avoid render cascades. See [State Management](./state-management.md#the-getstate-pattern).
+**Critical**: Use `getState()` to access store data in event handlers to avoid render cascades. See [State Management](../architecture/state-management.md#the-getstate-pattern).
 
 ## Adding New Shortcuts
 
