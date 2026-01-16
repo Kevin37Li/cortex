@@ -117,12 +117,15 @@ i18n.t('key')                 // Or call directly for occasional use
 
 For complete patterns and detailed guidance, see `docs/developer/README.md`.
 
-Key documents:
+Key documents by category:
 
-- `architecture/architecture-guide.md` - Mental models, security, anti-patterns
-- `architecture/state-management.md` - State onion, getState() pattern details
-- `core-systems/tauri-commands.md` - Adding new Rust commands
-- `quality-tooling/static-analysis.md` - All linting tools and quality gates
+- **Architecture**: `architecture-guide.md`, `state-management.md`, `python-sidecar.md`, `error-handling.md`
+- **AI & ML**: `ai/overview.md` (provider architecture), `ai/workflows.md` (LangGraph pipelines)
+- **Python Backend**: `python-backend/architecture.md` (FastAPI, database layer)
+- **Core Systems**: `core-systems/tauri-commands.md`, `core-systems/command-system.md`
+- **Quality**: `quality-tooling/static-analysis.md`, `quality-tooling/testing.md`
+
+All paths relative to `docs/developer/`.
 
 ## Claude Code Commands & Agents
 
