@@ -225,14 +225,93 @@ const handleChange = async (newValue: string) => {
 }
 ```
 
+## Python Error Handling
+
+### Custom Exceptions
+
+Define a hierarchy of exceptions for the Python backend:
+
+```python
+# src/exceptions.py
+class CortexError(Exception):
+    """Base exception for Cortex backend."""
+    pass
+
+class ItemNotFoundError(CortexError):
+    """Item does not exist."""
+    pass
+
+class ProcessingError(CortexError):
+    """Error during content processing."""
+    pass
+
+class AIProviderError(CortexError):
+    """Error from AI provider."""
+    pass
+```
+
+### FastAPI Exception Handlers
+
+Register exception handlers for consistent API responses:
+
+```python
+# src/main.py
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(ItemNotFoundError)
+async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content={"error": "item_not_found", "message": str(exc)}
+    )
+
+@app.exception_handler(ProcessingError)
+async def processing_error_handler(request: Request, exc: ProcessingError):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "processing_error", "message": str(exc)}
+    )
+
+@app.exception_handler(AIProviderError)
+async def ai_provider_error_handler(request: Request, exc: AIProviderError):
+    return JSONResponse(
+        status_code=503,
+        content={"error": "ai_provider_error", "message": str(exc)}
+    )
+```
+
+### Error Response Format
+
+Python API errors follow a consistent JSON structure:
+
+```json
+{
+  "error": "error_type_snake_case",
+  "message": "Human-readable error description"
+}
+```
+
+### Logging vs User Messages
+
+```python
+# ✅ GOOD: Log technical details, return user-friendly message
+async def process_item(item_id: str) -> Item:
+    try:
+        result = await ai_provider.extract(content)
+    except Exception as e:
+        logger.error(f"AI extraction failed for {item_id}: {e}", exc_info=True)
+        raise ProcessingError("Failed to process content")
+```
+
 ## Quick Reference
 
-| Scenario               | Rust Error Type | TypeScript Pattern   | User Feedback    |
-| ---------------------- | --------------- | -------------------- | ---------------- |
-| Simple command         | `String`        | if/else + toast      | Toast on error   |
-| Multiple failure modes | Structured enum | Match on `.type`     | Context-specific |
-| Data fetching          | Either          | `unwrapResult`       | Query error UI   |
-| Optional feature       | Either          | Graceful degradation | Silent fallback  |
-| Critical operation     | Structured enum | Explicit + rollback  | Toast + recovery |
+| Scenario               | Rust Error Type | TypeScript Pattern   | Python Pattern          | User Feedback    |
+| ---------------------- | --------------- | -------------------- | ----------------------- | ---------------- |
+| Simple command         | `String`        | if/else + toast      | Raise exception         | Toast on error   |
+| Multiple failure modes | Structured enum | Match on `.type`     | Custom exception types  | Context-specific |
+| Data fetching          | Either          | `unwrapResult`       | Exception handler       | Query error UI   |
+| Optional feature       | Either          | Graceful degradation | try/except with default | Silent fallback  |
+| Critical operation     | Structured enum | Explicit + rollback  | Transaction rollback    | Toast + recovery |
 
 See also: [tauri-commands.md](../core-systems/tauri-commands.md) for Result type patterns, [logging.md](../quality-tooling/logging.md) for logging best practices.

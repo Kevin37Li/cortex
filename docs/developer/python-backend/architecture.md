@@ -477,95 +477,11 @@ settings = Settings()
 
 ## Error Handling
 
-### Custom Exceptions
-
-```python
-# src/exceptions.py
-class CortexError(Exception):
-    """Base exception for Cortex backend."""
-    pass
-
-class ItemNotFoundError(CortexError):
-    """Item does not exist."""
-    pass
-
-class ProcessingError(CortexError):
-    """Error during content processing."""
-    pass
-
-class AIProviderError(CortexError):
-    """Error from AI provider."""
-    pass
-```
-
-### Exception Handlers
-
-```python
-# src/main.py
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
-@app.exception_handler(ItemNotFoundError)
-async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
-    return JSONResponse(
-        status_code=404,
-        content={"error": "item_not_found", "message": str(exc)}
-    )
-
-@app.exception_handler(ProcessingError)
-async def processing_error_handler(request: Request, exc: ProcessingError):
-    return JSONResponse(
-        status_code=500,
-        content={"error": "processing_error", "message": str(exc)}
-    )
-```
+See [Error Handling](../architecture/error-handling.md#python-error-handling) for Python exception patterns, FastAPI exception handlers, and error response formats.
 
 ## Testing
 
-### Test Setup
-
-```python
-# tests/conftest.py
-import pytest
-from httpx import AsyncClient
-from src.main import app
-from src.db.database import Database
-
-@pytest.fixture
-async def db():
-    """In-memory database for tests."""
-    db = Database(":memory:")
-    await db.connect()
-    await db.run_migrations()
-    yield db
-    await db.close()
-
-@pytest.fixture
-async def client(db):
-    """Test client with mocked database."""
-    app.dependency_overrides[get_db] = lambda: db
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
-```
-
-### Example Tests
-
-```python
-# tests/api/test_items.py
-import pytest
-
-@pytest.mark.asyncio
-async def test_create_item(client):
-    response = await client.post("/api/items", json={
-        "title": "Test Item",
-        "content": "Test content",
-        "source": "test"
-    })
-    assert response.status_code == 200
-    data = response.json()
-    assert data["title"] == "Test Item"
-    assert data["status"] == "pending"
-```
+See [Testing](../quality-tooling/testing.md#python-testing) for pytest setup, fixtures, and example tests.
 
 ## Related Documentation
 

@@ -26,7 +26,7 @@ Either:
 
 ### 1. Read Guidelines
 
-First, read `docs/developer/writing-docs.md` to understand the documentation standards.
+First, read `docs/developer/quality-tooling/writing-docs.md` to understand the documentation standards.
 
 ### 2. Read All Developer Documentation
 

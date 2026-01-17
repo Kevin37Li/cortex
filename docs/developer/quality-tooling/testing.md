@@ -202,6 +202,95 @@ vi.mock('@/lib/tauri-bindings', () => ({
 }))
 ```
 
+## Python Testing
+
+Uses **pytest** with **pytest-asyncio** for async tests. Configuration in `pyproject.toml`.
+
+### Test File Location
+
+Place tests in a parallel `tests/` directory:
+
+```
+python-backend/
+├── src/
+│   ├── api/
+│   │   └── items.py
+│   └── workflows/
+│       └── processing.py
+└── tests/
+    ├── api/
+    │   └── test_items.py
+    ├── workflows/
+    │   └── test_processing.py
+    └── conftest.py
+```
+
+### Test Setup
+
+```python
+# tests/conftest.py
+import pytest
+from httpx import AsyncClient
+from src.main import app
+from src.db.database import Database
+
+@pytest.fixture
+async def db():
+    """In-memory database for tests."""
+    db = Database(":memory:")
+    await db.connect()
+    await db.run_migrations()
+    yield db
+    await db.close()
+
+@pytest.fixture
+async def client(db):
+    """Test client with mocked database."""
+    app.dependency_overrides[get_db] = lambda: db
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+```
+
+### Example Tests
+
+```python
+# tests/api/test_items.py
+import pytest
+
+@pytest.mark.asyncio
+async def test_create_item(client):
+    response = await client.post("/api/items", json={
+        "title": "Test Item",
+        "content": "Test content",
+        "source": "test"
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title"] == "Test Item"
+    assert data["status"] == "pending"
+
+@pytest.mark.asyncio
+async def test_get_item_not_found(client):
+    response = await client.get("/api/items/nonexistent")
+    assert response.status_code == 404
+```
+
+### Running Python Tests
+
+```bash
+# Run all Python tests
+cd python-backend && pytest
+
+# Run with coverage
+pytest --cov=src --cov-report=html
+
+# Run specific test file
+pytest tests/api/test_items.py
+
+# Run with verbose output
+pytest -v
+```
+
 ## Best Practices
 
 | Do                                    | Don't                         |
@@ -210,3 +299,5 @@ vi.mock('@/lib/tauri-bindings', () => ({
 | Use `vi.mocked()` for type-safe mocks | Use untyped mock assertions   |
 | Test user-visible behavior            | Test implementation details   |
 | Use `tempfile` for Rust file tests    | Write to real file system     |
+| Use in-memory SQLite for Python tests | Connect to real database      |
+| Use `pytest.fixture` for test setup   | Duplicate setup in each test  |

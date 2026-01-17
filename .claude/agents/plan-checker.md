@@ -28,16 +28,69 @@ Read and understand the task document or implementation plan being validated.
 
 Read ALL of these files to build complete understanding:
 
+**Core:**
+
 - `AGENTS.md` - core patterns and rules
-- `docs/developer/architecture-guide.md` - high-level architecture
-- `docs/developer/state-management.md` - state onion pattern
-- `docs/developer/command-system.md` - command patterns
-- `docs/developer/tauri-commands.md` - Rust-React bridge
-- `docs/developer/ui-patterns.md` - CSS and component patterns
-- `docs/developer/keyboard-shortcuts.md` - shortcut handling
-- `docs/developer/i18n-patterns.md` - internationalization
-- `docs/developer/testing.md` - testing patterns
-- Any other relevant docs based on the plan's scope
+- `docs/developer/README.md` - documentation index
+
+**Architecture:**
+
+- `docs/developer/architecture/architecture-guide.md` - high-level architecture
+- `docs/developer/architecture/state-management.md` - state onion pattern
+- `docs/developer/architecture/error-handling.md` - error handling patterns
+- `docs/developer/architecture/rust-architecture.md` - Rust-side patterns
+- `docs/developer/architecture/python-sidecar.md` - Python integration
+
+**AI & ML:**
+
+- `docs/developer/ai/overview.md` - AI provider architecture
+- `docs/developer/ai/workflows.md` - LangGraph pipelines
+- `docs/developer/ai/embeddings.md` - embedding patterns
+- `docs/developer/ai/ollama.md` - local LLM setup
+- `docs/developer/ai/cloud-providers.md` - cloud AI providers
+
+**Python Backend:**
+
+- `docs/developer/python-backend/architecture.md` - FastAPI, database layer
+- `docs/developer/python-backend/bundling.md` - bundling patterns
+
+**Core Systems:**
+
+- `docs/developer/core-systems/command-system.md` - command patterns
+- `docs/developer/core-systems/tauri-commands.md` - Rust-React bridge
+- `docs/developer/core-systems/tauri-plugins.md` - Tauri plugin patterns
+- `docs/developer/core-systems/keyboard-shortcuts.md` - shortcut handling
+- `docs/developer/core-systems/menus.md` - menu patterns
+- `docs/developer/core-systems/quick-panes.md` - quick pane patterns
+- `docs/developer/core-systems/browser-extension.md` - browser extension
+
+**Data Storage:**
+
+- `docs/developer/data-storage/data-persistence.md` - data persistence patterns
+- `docs/developer/data-storage/sqlite-vec.md` - vector storage
+- `docs/developer/data-storage/external-apis.md` - external API patterns
+
+**UI/UX:**
+
+- `docs/developer/ui-ux/ui-patterns.md` - CSS and component patterns
+- `docs/developer/ui-ux/i18n-patterns.md` - internationalization
+- `docs/developer/ui-ux/notifications.md` - notification patterns
+- `docs/developer/ui-ux/cross-platform.md` - cross-platform considerations
+
+**Quality & Tooling:**
+
+- `docs/developer/quality-tooling/testing.md` - testing patterns
+- `docs/developer/quality-tooling/static-analysis.md` - ast-grep rules
+- `docs/developer/quality-tooling/logging.md` - logging patterns
+- `docs/developer/quality-tooling/writing-ast-grep-rules.md` - custom rule creation
+- `docs/developer/quality-tooling/writing-docs.md` - documentation standards
+- `docs/developer/quality-tooling/bundle-optimization.md` - bundle optimization
+
+**Release:**
+
+- `docs/developer/release/releases.md` - release process
+
+**Note:** Not all docs need to be read for every plan. Prioritize based on the plan's scope (e.g., skip AI docs for pure UI changes).
 
 ### 3. Check Each Step Against Patterns
 
