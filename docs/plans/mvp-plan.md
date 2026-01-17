@@ -1,8 +1,9 @@
 # Cortex MVP Implementation Plan
 
 **Status:** Draft - Pending Stakeholder Approval
-**Version:** 1.0
+**Version:** 1.1
 **Date:** January 2026
+**Last Reviewed:** Architecture patterns validated against `docs/developer/`
 
 ---
 
@@ -262,6 +263,57 @@ Setup and management of local vs cloud AI.
 
 ---
 
+## Development Standards
+
+These standards apply to **all phases** and ensure consistency with documented architecture patterns.
+
+### Cross-Cutting Requirements
+
+| Requirement | Reference | Action |
+|-------------|-----------|--------|
+| **i18n** | `docs/developer/ui-ux/i18n-patterns.md` | All user-facing strings must use translation keys in `/locales/*.json` |
+| **RTL Support** | `docs/developer/ui-ux/i18n-patterns.md` | Use CSS logical properties (`text-start` not `text-left`) |
+| **Command Registration** | `docs/developer/core-systems/command-system.md` | Register new keyboard shortcuts in `src/lib/commands/` with `labelKey` |
+| **Tauri Bindings** | `docs/developer/core-systems/tauri-commands.md` | Run `bun run rust:bindings` after any Rust command changes |
+| **Error Handling** | `docs/developer/architecture/error-handling.md` | Follow patterns for Rust Result types, Python exceptions, TypeScript errors |
+| **Testing** | `docs/developer/quality-tooling/testing.md` | Write tests for business logic; mock Tauri commands per testing patterns |
+
+### State Management Decision Tree
+
+Per `docs/developer/architecture/state-management.md`, choose the appropriate layer:
+
+```
+useState (component-local) → Zustand (global UI) → TanStack Query (persistent data)
+```
+
+| Feature | State Layer | Rationale |
+|---------|-------------|-----------|
+| Item list data | TanStack Query | Persistent data from Python backend |
+| Search UI visibility | Zustand | Global UI state shared across components |
+| Chat messages | TanStack Query | Persistent with WebSocket updates |
+| Sidebar visibility | Zustand | Already documented pattern |
+| Form input values | useState | Component-local, not shared |
+
+### Anti-Patterns to Avoid
+
+| Anti-Pattern | Why Bad | Correct Pattern |
+|--------------|---------|-----------------|
+| `const { value } = useUIStore()` | Subscribes to entire store, causes render cascades | `useUIStore(state => state.value)` |
+| Manual `useMemo`/`useCallback` | React Compiler handles this automatically | Let compiler optimize |
+| `await invoke('command')` | No type safety | `import { commands } from '@/lib/tauri-bindings'` |
+| Synchronous AI calls | Blocks UI | Use async patterns with progress indicators |
+
+### Quality Gate (Per Phase)
+
+Before marking any phase complete:
+
+1. Run `bun run check:all` and resolve all issues
+2. Verify all new UI strings have translation keys
+3. Confirm tests pass for new functionality
+4. Review code for anti-patterns listed above
+
+---
+
 ## Implementation Phases
 
 ### Phase 1: Foundation (Weeks 1-2)
@@ -275,15 +327,24 @@ Setup and management of local vs cloud AI.
 - [ ] CRUD endpoints for items (`/api/items`)
 - [ ] Health check endpoint (`/api/health`)
 - [ ] Ollama provider integration and health check
+- [ ] Set up pytest infrastructure with fixtures for in-memory SQLite database
+- [ ] Write tests for repository patterns and CRUD endpoints
 
 **Frontend Tasks:**
 - [ ] Tauri project with React 19 + Tailwind v4
-- [ ] Main window three-pane layout
+- [ ] Main window three-pane layout (state: Zustand for sidebar visibility)
 - [ ] Theme system (light/dark/system)
-- [ ] Command palette (Cmd+K) shell
+- [ ] Command palette (Cmd+K) shell - register in `src/lib/commands/`
 - [ ] Preferences dialog skeleton
 - [ ] Window state persistence
 - [ ] Basic routing and navigation
+- [ ] Add translation keys for all UI strings in `/locales/en.json`
+- [ ] Run `bun run rust:bindings` after adding Rust commands
+
+**Quality Gate:**
+- [ ] `bun run check:all` passes
+- [ ] All UI strings use translation keys
+- [ ] Python tests pass
 
 **Milestone:** Can launch app, see empty item list, backend responds to health checks
 
@@ -299,12 +360,21 @@ Setup and management of local vs cloud AI.
 - [ ] Metadata extraction (summary, entities, concepts)
 - [ ] Background processing queue with status updates
 - [ ] Processing status events (WebSocket)
+- [ ] Implement error handling per `error-handling.md` (Python exception hierarchy)
+- [ ] Write tests for processing workflow steps
 
 **Frontend Tasks:**
-- [ ] Quick note creation UI
+- [ ] Quick note creation UI (state: useState for form, TanStack Query for submission)
 - [ ] File import dialog
-- [ ] Item list with processing status indicators
+- [ ] Item list with processing status indicators (state: TanStack Query)
 - [ ] Item detail view (content, metadata, status)
+- [ ] Progress indicators for async AI operations
+- [ ] Add translation keys for processing status messages
+
+**Quality Gate:**
+- [ ] `bun run check:all` passes
+- [ ] All UI strings use translation keys
+- [ ] Python tests pass for workflow steps
 
 **Milestone:** Can create a note → see it process → view extracted metadata
 
@@ -317,12 +387,19 @@ Setup and management of local vs cloud AI.
 - [ ] Full-text search (FTS5)
 - [ ] Hybrid search with Reciprocal Rank Fusion
 - [ ] Search endpoint (`POST /api/search`)
+- [ ] Write tests for search ranking and fusion
 
 **Frontend Tasks:**
-- [ ] Search input with keyboard shortcut (Cmd+F)
-- [ ] Search results display with relevance scores
+- [ ] Search input with keyboard shortcut (Cmd+F) - register per `command-system.md`
+- [ ] Search results display with relevance scores (state: TanStack Query)
 - [ ] Click-through to item detail
 - [ ] Empty state and loading states
+- [ ] Add translation keys for search UI strings
+
+**Quality Gate:**
+- [ ] `bun run check:all` passes
+- [ ] Search command registered with `labelKey` translation
+- [ ] Python tests pass for search functionality
 
 **Milestone:** Can search items and find relevant results
 
@@ -334,15 +411,23 @@ Setup and management of local vs cloud AI.
 - [ ] Conversation and message data models
 - [ ] LangGraph RAG workflow (retrieve → grade → generate)
 - [ ] Citation extraction and formatting
-- [ ] WebSocket streaming endpoint
+- [ ] WebSocket streaming endpoint with error handling per `error-handling.md`
 - [ ] Conversation persistence
+- [ ] Implement FastAPI exception handlers for streaming errors
+- [ ] Write tests for RAG workflow and citation extraction
 
 **Frontend Tasks:**
-- [ ] Chat panel UI
+- [ ] Chat panel UI (state: TanStack Query for messages with WebSocket updates)
 - [ ] Message input and streaming display
 - [ ] Citation links to source items
 - [ ] Conversation list and switching
 - [ ] New conversation creation
+- [ ] Add translation keys for chat UI strings
+
+**Quality Gate:**
+- [ ] `bun run check:all` passes
+- [ ] All chat UI strings use translation keys
+- [ ] Python tests pass for RAG workflow
 
 **Milestone:** Can ask questions and get cited answers from knowledge base
 
@@ -358,11 +443,18 @@ Setup and management of local vs cloud AI.
 - [ ] Status indicator (connected/offline)
 - [ ] Keyboard shortcut (Cmd+Shift+S)
 - [ ] Popup UI for save confirmation
+- [ ] Add translation keys for extension UI strings (if i18n supported)
 
 **Integration Tasks:**
 - [ ] Backend endpoint for extension submissions
 - [ ] Queue processing for extension items
 - [ ] Source URL tracking and display
+- [ ] Write integration tests for extension → backend flow
+
+**Quality Gate:**
+- [ ] `bun run check:all` passes
+- [ ] Extension builds without errors
+- [ ] Integration tests pass
 
 **Milestone:** Can save articles from Chrome → see them in desktop app
 
@@ -370,17 +462,39 @@ Setup and management of local vs cloud AI.
 
 **Goal:** Production-ready MVP
 
-**Tasks:**
+**Feature Tasks:**
 - [ ] Connection discovery (similarity-based)
 - [ ] Connections display in item detail
 - [ ] AI provider setup wizard (first-run)
 - [ ] Ollama status and model selection UI
 - [ ] OpenAI API key configuration
-- [ ] Error handling and user feedback throughout
-- [ ] Performance profiling and optimization
-- [ ] Memory usage optimization
+- [ ] Add translation keys for setup wizard and settings UI
+
+**Quality Tasks:**
+- [ ] Error handling review: verify all layers follow `error-handling.md`
+- [ ] User-friendly error messages for all error states
 - [ ] End-to-end testing of core flows
-- [ ] Documentation updates
+
+**Performance Tasks (verify against Performance Targets):**
+- [ ] App startup < 3 seconds
+- [ ] Search keystroke to results < 100ms (debounced)
+- [ ] Full search execution < 500ms for 10K items
+- [ ] Chat first token (local) < 2 seconds
+- [ ] Chat first token (cloud) < 1 second
+- [ ] Item processing < 30 seconds per webpage
+- [ ] Memory usage < 500MB at idle
+- [ ] Profile and optimize any metrics not meeting targets
+
+**Documentation Tasks:**
+- [ ] Update relevant `docs/developer/` files for new patterns discovered
+- [ ] Verify all architecture decisions are documented
+
+**Final Quality Gate:**
+- [ ] `bun run check:all` passes with no warnings
+- [ ] All UI strings use translation keys
+- [ ] All Python tests pass
+- [ ] All frontend tests pass
+- [ ] Performance targets met
 
 **Milestone:** Complete MVP ready for user testing
 
