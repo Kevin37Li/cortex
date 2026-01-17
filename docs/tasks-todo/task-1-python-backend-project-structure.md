@@ -6,18 +6,20 @@ Set up the FastAPI project with proper layering following documented architectur
 
 ## Acceptance Criteria
 
-- [ ] Python project created in `python/` directory
+- [ ] Python project created in `python-backend/` directory
 - [ ] FastAPI application initialized with proper folder structure:
-  - `python/app/` - main application package
-  - `python/app/api/` - API routes
-  - `python/app/core/` - core utilities (config, logging)
-  - `python/app/db/` - database layer
-  - `python/app/models/` - Pydantic models
-  - `python/app/services/` - business logic
-- [ ] `pyproject.toml` with dependencies (FastAPI, uvicorn, pydantic, python-dotenv)
-- [ ] Entry point `python/app/main.py` with basic FastAPI app
+  - `python-backend/src/` - main application package
+  - `python-backend/src/api/` - API routes
+  - `python-backend/src/db/` - database layer
+  - `python-backend/src/db/repositories/` - repository classes
+  - `python-backend/src/providers/` - AI provider abstractions
+  - `python-backend/src/workflows/` - LangGraph workflows (empty for Phase 1)
+  - `python-backend/src/services/` - business logic
+- [ ] `pyproject.toml` with dependencies (FastAPI, uvicorn, pydantic, pydantic-settings, python-dotenv, aiosqlite)
+- [ ] Entry point `python-backend/src/main.py` with basic FastAPI app
 - [ ] Development server runs on `localhost:8742`
 - [ ] `.python-version` file specifying Python 3.11+
+- [ ] CORS middleware configured for Tauri webview
 
 ## Dependencies
 
@@ -33,28 +35,32 @@ Set up the FastAPI project with proper layering following documented architectur
 ## Files to Create
 
 ```
-python/
+python-backend/
 ├── .python-version
 ├── pyproject.toml
-├── app/
+├── src/
 │   ├── __init__.py
 │   ├── main.py
+│   ├── config.py
 │   ├── api/
 │   │   └── __init__.py
-│   ├── core/
-│   │   ├── __init__.py
-│   │   └── config.py
 │   ├── db/
+│   │   ├── __init__.py
+│   │   └── repositories/
+│   │       └── __init__.py
+│   ├── providers/
 │   │   └── __init__.py
-│   ├── models/
+│   ├── workflows/
 │   │   └── __init__.py
 │   └── services/
 │       └── __init__.py
+└── tests/
+    └── __init__.py
 ```
 
 ## Verification
 
 ```bash
-cd python && uv run uvicorn app.main:app --host 127.0.0.1 --port 8742
+cd python-backend && uv run uvicorn src.main:app --host 127.0.0.1 --port 8742
 # Should start server and respond to http://localhost:8742/
 ```

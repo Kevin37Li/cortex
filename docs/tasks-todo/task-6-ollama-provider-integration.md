@@ -56,10 +56,9 @@ class OllamaProvider:
 
 ## Files to Create
 
-- `python/app/services/providers/__init__.py`
-- `python/app/services/providers/ollama.py` - Ollama provider
-- `python/app/services/providers/base.py` - Provider interface
-- `python/app/api/routes/health.py` - Add Ollama health check
+- `python-backend/src/providers/base.py` - Provider interface
+- `python-backend/src/providers/ollama.py` - Ollama provider
+- `python-backend/src/api/routes/health.py` - Add Ollama health check
 
 ## Verification
 

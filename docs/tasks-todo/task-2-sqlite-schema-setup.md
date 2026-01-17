@@ -25,7 +25,7 @@ Create the SQLite database schema for storing items, chunks, and embeddings usin
 - sqlite-vec provides vector similarity search (cosine distance)
 - Use embedding dimension 768 (nomic-embed-text) or 1536 (OpenAI)
 - FTS5 for keyword search with BM25 ranking
-- Consider using `aiosqlite` for async operations
+- Use `aiosqlite` for async operations
 
 ## Schema Design
 
@@ -75,9 +75,9 @@ CREATE INDEX idx_chunks_item ON chunks(item_id);
 
 ## Files to Create/Modify
 
-- `python/app/db/database.py` - Database connection and initialization
-- `python/app/db/schema.sql` - Schema definitions
-- `python/app/db/migrations/` - Future migration support (optional for MVP)
+- `python-backend/src/db/database.py` - Database connection and initialization
+- `python-backend/src/db/schema.sql` - Schema definitions
+- `python-backend/src/db/migrations/` - Future migration support (optional for MVP)
 
 ## Verification
 

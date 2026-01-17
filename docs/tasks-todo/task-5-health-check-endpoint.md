@@ -62,9 +62,9 @@ Response: 503 Service Unavailable
 
 ## Files to Create/Modify
 
-- `python/app/api/routes/health.py` - Health endpoints
-- `python/app/core/config.py` - Add version from pyproject.toml
-- `python/app/main.py` - Register health routes
+- `python-backend/src/api/routes/health.py` - Health endpoints
+- `python-backend/src/config.py` - Add version from pyproject.toml
+- `python-backend/src/main.py` - Register health routes
 
 ## Verification
 

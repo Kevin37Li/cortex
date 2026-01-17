@@ -8,7 +8,7 @@ Validate that all Phase 1 work meets quality standards before proceeding to Phas
 
 - [ ] `bun run check:all` passes with no errors
 - [ ] All UI strings use translation keys
-- [ ] Python tests pass (`cd python && uv run pytest`)
+- [ ] Python tests pass (`cd python-backend && uv run pytest`)
 - [ ] Frontend builds without warnings
 - [ ] Backend starts and responds to health check
 - [ ] Can create and list items via API
@@ -35,23 +35,23 @@ bun run test          # Vitest
 ### Backend Checks
 
 ```bash
-cd python
+cd python-backend
 
 # Run tests with coverage
-uv run pytest --cov=app
+uv run pytest --cov=src
 
 # Type checking (if using mypy)
-uv run mypy app/
+uv run mypy src/
 
 # Linting (if using ruff)
-uv run ruff check app/
+uv run ruff check src/
 ```
 
 ### Integration Verification
 
 ```bash
 # Start backend
-cd python && uv run uvicorn app.main:app --port 8742 &
+cd python-backend && uv run uvicorn src.main:app --port 8742 &
 
 # Verify health
 curl http://localhost:8742/api/health
@@ -85,7 +85,7 @@ Check for these issues from `docs/plans/mvp-plan.md`:
 
 ## Files to Review
 
-- All new Python files in `python/`
+- All new Python files in `python-backend/`
 - Any modified TypeScript files in `src/`
 - Translation files in `locales/`
 

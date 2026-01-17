@@ -104,7 +104,7 @@ def test_list_items_empty(client):
 ## Files to Create
 
 ```
-python/tests/
+python-backend/tests/
 ├── unit/
 │   ├── test_item_repository.py
 │   └── test_chunk_repository.py
@@ -116,14 +116,14 @@ python/tests/
 ## Verification
 
 ```bash
-cd python
+cd python-backend
 
 # Run all tests
 uv run pytest -v
 
 # Run with coverage report
-uv run pytest --cov=app --cov-report=html
+uv run pytest --cov=src --cov-report=html
 
 # Check coverage threshold
-uv run pytest --cov=app --cov-fail-under=80
+uv run pytest --cov=src --cov-fail-under=80
 ```

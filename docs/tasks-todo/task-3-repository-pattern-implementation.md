@@ -47,12 +47,11 @@ class ChunkRepository:
 
 ## Files to Create
 
-- `python/app/db/repositories/__init__.py`
-- `python/app/db/repositories/base.py` - Base repository
-- `python/app/db/repositories/items.py` - ItemRepository
-- `python/app/db/repositories/chunks.py` - ChunkRepository
-- `python/app/models/item.py` - Item Pydantic models
-- `python/app/models/chunk.py` - Chunk Pydantic models
+- `python-backend/src/db/repositories/base.py` - Base repository
+- `python-backend/src/db/repositories/items.py` - ItemRepository
+- `python-backend/src/db/repositories/chunks.py` - ChunkRepository
+- `python-backend/src/db/models.py` - Pydantic models for Item, Chunk, etc.
+- `python-backend/src/exceptions.py` - Custom exception hierarchy
 
 ## Verification
 

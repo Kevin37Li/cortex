@@ -77,10 +77,10 @@ Response: 204 No Content | 404 Not Found
 
 ## Files to Create/Modify
 
-- `python/app/api/routes/__init__.py`
-- `python/app/api/routes/items.py` - Item endpoints
-- `python/app/api/deps.py` - Dependency injection helpers
-- `python/app/main.py` - Register routes
+- `python-backend/src/api/routes/__init__.py`
+- `python-backend/src/api/routes/items.py` - Item endpoints
+- `python-backend/src/api/deps.py` - Dependency injection helpers
+- `python-backend/src/main.py` - Register routes
 
 ## Verification
 

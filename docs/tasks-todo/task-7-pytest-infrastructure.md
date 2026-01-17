@@ -12,7 +12,7 @@ Configure pytest with fixtures for testing the Python backend, including in-memo
 - [ ] Database fixtures that create/teardown schema
 - [ ] Test client fixture for API endpoint testing
 - [ ] Coverage reporting configured
-- [ ] Tests organized in `python/tests/` directory
+- [ ] Tests organized in `python-backend/tests/` directory
 
 ## Dependencies
 
@@ -55,9 +55,8 @@ async def item_repo(db):
 ## Files to Create
 
 ```
-python/
+python-backend/
 ├── pyproject.toml        # Add pytest config
-├── pytest.ini            # Optional: pytest settings
 └── tests/
     ├── __init__.py
     ├── conftest.py       # Shared fixtures
@@ -76,20 +75,20 @@ python_files = ["test_*.py"]
 addopts = "-v --tb=short"
 
 [tool.coverage.run]
-source = ["app"]
+source = ["src"]
 omit = ["tests/*"]
 ```
 
 ## Verification
 
 ```bash
-cd python
+cd python-backend
 
 # Run tests
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=app --cov-report=term-missing
+uv run pytest --cov=src --cov-report=term-missing
 
 # Should see test discovery and execution
 ```
