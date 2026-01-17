@@ -135,7 +135,7 @@ These are specific to Claude Code but documented here for context.
 
 - `/check` - Check work against architecture, run `bun run check:all`, suggest commit message
 - `/cleanup` - Run static analysis (knip, jscpd, check:all), get structured recommendations
-- `/init` - One-time template initialization
+- `/implement-task` - Implement a task with iterative CodeRabbit review (max 2 cycles, critical issues only)
 
 ### Agents
 
