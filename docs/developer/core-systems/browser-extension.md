@@ -5,6 +5,7 @@ Capture content from the browser with one click.
 ## Overview
 
 The browser extension enables frictionless content capture:
+
 - Save entire pages or selected text
 - Extract clean content from articles
 - Capture highlights with context
@@ -37,12 +38,12 @@ The browser extension enables frictionless content capture:
 
 ## Technology Stack
 
-| Component | Technology | Why |
-|-----------|------------|-----|
-| **Framework** | [Plasmo](https://docs.plasmo.com/) | Modern DX, TypeScript, cross-browser |
-| **UI** | React + Tailwind | Consistent with desktop app |
-| **State** | Zustand | Lightweight, same pattern as desktop |
-| **Content Extraction** | @mozilla/readability | Battle-tested article parsing |
+| Component              | Technology                         | Why                                  |
+| ---------------------- | ---------------------------------- | ------------------------------------ |
+| **Framework**          | [Plasmo](https://docs.plasmo.com/) | Modern DX, TypeScript, cross-browser |
+| **UI**                 | React + Tailwind                   | Consistent with desktop app          |
+| **State**              | Zustand                            | Lightweight, same pattern as desktop |
+| **Content Extraction** | @mozilla/readability               | Battle-tested article parsing        |
 
 ## Project Structure
 
@@ -119,9 +120,10 @@ export function captureSelection(): CapturedSelection | null {
 
   // Get surrounding context (paragraph or nearby text)
   const container = range.commonAncestorContainer
-  const contextNode = container.nodeType === Node.TEXT_NODE
-    ? container.parentElement
-    : container as Element
+  const contextNode =
+    container.nodeType === Node.TEXT_NODE
+      ? container.parentElement
+      : (container as Element)
 
   return {
     selectedText: selection.toString(),
@@ -169,7 +171,9 @@ export function QuickNoteForm() {
 // src/lib/api.ts
 const DESKTOP_URL = 'http://localhost:8742'
 
-export async function sendToDesktop(content: CapturedContent): Promise<SaveResult> {
+export async function sendToDesktop(
+  content: CapturedContent
+): Promise<SaveResult> {
   try {
     const response = await fetch(`${DESKTOP_URL}/api/items`, {
       method: 'POST',
@@ -254,7 +258,7 @@ export async function processQueue(): Promise<void> {
 
 // Check periodically
 chrome.alarms.create('processQueue', { periodInMinutes: 1 })
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'processQueue') {
     processQueue()
   }
@@ -268,11 +272,13 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 ```tsx
 // src/popup/index.tsx
 export default function Popup() {
-  const [status, setStatus] = useState<'checking' | 'connected' | 'offline'>('checking')
+  const [status, setStatus] = useState<'checking' | 'connected' | 'offline'>(
+    'checking'
+  )
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    checkDesktopStatus().then((online) => {
+    checkDesktopStatus().then(online => {
       setStatus(online ? 'connected' : 'offline')
     })
   }, [])
@@ -282,7 +288,9 @@ export default function Popup() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
     // Request capture from content script
-    const content = await chrome.tabs.sendMessage(tab.id!, { action: 'capture' })
+    const content = await chrome.tabs.sendMessage(tab.id!, {
+      action: 'capture',
+    })
 
     const result = await sendToDesktop(content)
     setSaving(false)
@@ -344,11 +352,11 @@ function StatusIndicator({ status }: { status: string }) {
 
 ### Default Shortcuts
 
-| Action | Shortcut | Configurable |
-|--------|----------|--------------|
-| Save page | `Ctrl+Shift+S` / `Cmd+Shift+S` | Yes |
-| Save selection | `Ctrl+Shift+H` / `Cmd+Shift+H` | Yes |
-| Open popup | `Ctrl+Shift+C` / `Cmd+Shift+C` | Yes |
+| Action         | Shortcut                       | Configurable |
+| -------------- | ------------------------------ | ------------ |
+| Save page      | `Ctrl+Shift+S` / `Cmd+Shift+S` | Yes          |
+| Save selection | `Ctrl+Shift+H` / `Cmd+Shift+H` | Yes          |
+| Open popup     | `Ctrl+Shift+C` / `Cmd+Shift+C` | Yes          |
 
 ### Implementation
 
@@ -376,7 +384,7 @@ function StatusIndicator({ status }: { status: string }) {
 
 ```typescript
 // src/background/index.ts
-chrome.commands.onCommand.addListener(async (command) => {
+chrome.commands.onCommand.addListener(async command => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
   switch (command) {
@@ -406,8 +414,8 @@ interface SiteExtractor {
 const extractors: SiteExtractor[] = [
   {
     // Twitter/X
-    matches: (url) => url.includes('twitter.com') || url.includes('x.com'),
-    extract: (doc) => {
+    matches: url => url.includes('twitter.com') || url.includes('x.com'),
+    extract: doc => {
       const tweet = doc.querySelector('[data-testid="tweetText"]')
       return {
         content: tweet?.textContent || '',
@@ -417,8 +425,8 @@ const extractors: SiteExtractor[] = [
   },
   {
     // YouTube
-    matches: (url) => url.includes('youtube.com/watch'),
-    extract: (doc) => {
+    matches: url => url.includes('youtube.com/watch'),
+    extract: doc => {
       const title = doc.querySelector('h1.ytd-video-primary-info-renderer')
       const description = doc.querySelector('#description')
       return {
@@ -433,7 +441,7 @@ const extractors: SiteExtractor[] = [
 
 export function extractContent(url: string, doc: Document): ExtractedContent {
   // Try site-specific extractor first
-  const extractor = extractors.find((e) => e.matches(url))
+  const extractor = extractors.find(e => e.matches(url))
   if (extractor) {
     return extractor.extract(doc)
   }
@@ -454,13 +462,9 @@ Plasmo generates Manifest V3 compatible extension:
 // plasmo.config.ts
 export default defineConfig({
   manifest: {
-    permissions: [
-      'activeTab',
-      'storage',
-      'alarms',
-    ],
+    permissions: ['activeTab', 'storage', 'alarms'],
     host_permissions: [
-      'http://localhost:8742/*',  // Desktop app communication
+      'http://localhost:8742/*', // Desktop app communication
     ],
   },
 })
@@ -468,12 +472,12 @@ export default defineConfig({
 
 ### Cross-Browser
 
-| Browser | Status | Notes |
-|---------|--------|-------|
-| Chrome | Primary | Full support |
-| Firefox | Planned | Manifest V3 differences |
-| Safari | Future | Requires separate build |
-| Edge | Supported | Uses Chrome extension |
+| Browser | Status    | Notes                   |
+| ------- | --------- | ----------------------- |
+| Chrome  | Primary   | Full support            |
+| Firefox | Planned   | Manifest V3 differences |
+| Safari  | Future    | Requires separate build |
+| Edge    | Supported | Uses Chrome extension   |
 
 ## Testing
 
@@ -485,7 +489,8 @@ import { extractContent } from '../extractor'
 
 describe('Content Extraction', () => {
   it('extracts article content', () => {
-    const doc = new DOMParser().parseFromString(`
+    const doc = new DOMParser().parseFromString(
+      `
       <html>
         <body>
           <article>
@@ -494,7 +499,9 @@ describe('Content Extraction', () => {
           </article>
         </body>
       </html>
-    `, 'text/html')
+    `,
+      'text/html'
+    )
 
     const result = extractContent('https://example.com/article', doc)
     expect(result.title).toBe('Test Article')
@@ -544,6 +551,7 @@ test('save page to Cortex', async () => {
 ### Self-Distribution
 
 For users who don't want to use stores:
+
 1. Provide `.crx` file for Chrome
 2. Instructions for loading unpacked extension
 

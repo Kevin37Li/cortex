@@ -5,6 +5,7 @@ Local AI inference using Ollama.
 ## Overview
 
 Ollama is the default AI provider for Cortex, enabling fully local inference:
+
 - No data leaves the device
 - Works offline
 - No API costs
@@ -83,11 +84,11 @@ If Ollama is not running or models are missing:
 
 Required models for Cortex:
 
-| Model | Size | Purpose | Required |
-|-------|------|---------|----------|
-| nomic-embed-text | 274MB | Embeddings | Yes |
-| llama3.2:3b | 2GB | Chat, extraction | Yes (or alternative) |
-| mistral:7b | 4GB | Better chat quality | Optional |
+| Model            | Size  | Purpose             | Required             |
+| ---------------- | ----- | ------------------- | -------------------- |
+| nomic-embed-text | 274MB | Embeddings          | Yes                  |
+| llama3.2:3b      | 2GB   | Chat, extraction    | Yes (or alternative) |
+| mistral:7b       | 4GB   | Better chat quality | Optional             |
 
 Download UI:
 
@@ -231,6 +232,7 @@ async def pull_model(
 ### Concurrent Requests
 
 Ollama handles concurrent requests, but performance depends on:
+
 - Available VRAM (GPU) or RAM (CPU)
 - Model size
 - Request complexity
@@ -242,6 +244,7 @@ Recommendation: Limit concurrent embedding requests to 4-8 for stability.
 First request after startup loads the model into memory (~5-15 seconds for 7B models). Subsequent requests are fast.
 
 To keep models loaded:
+
 ```python
 # Periodic keepalive request
 async def keepalive(self):
@@ -308,6 +311,7 @@ if "out of memory" in response.text.lower():
 **Concern**: Requiring users to install Ollama adds friction.
 
 **Mitigations**:
+
 - Clear setup wizard with step-by-step instructions
 - App detects missing Ollama and guides user
 - Cloud fallback available for users who don't want local setup
@@ -318,6 +322,7 @@ if "out of memory" in response.text.lower():
 **Concern**: Local models may produce poor extractions compared to GPT-4/Claude.
 
 **Mitigations**:
+
 - Validation loops in workflows catch obvious failures
 - Prompts optimized for smaller models (simpler, more explicit)
 - Users with powerful hardware can use larger models (70B)

@@ -5,6 +5,7 @@ FastAPI sidecar for AI processing and data management.
 ## Overview
 
 The Python backend handles:
+
 - AI operations (embeddings, chat, extraction)
 - LangGraph workflow execution
 - SQLite database access

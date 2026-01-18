@@ -4,11 +4,11 @@ Technical documentation for building and extending Cortex. These docs describe e
 
 ## Product & Vision
 
-| Document                                             | Description                                    |
-| ---------------------------------------------------- | ---------------------------------------------- |
-| [Product Vision](./product/vision.md)                | What Cortex is, why local-first, core principles |
-| [Roadmap](./product/roadmap.md)                      | Future features and expansion plans            |
-| [Success Metrics](./product/success-metrics.md)      | How to measure user and technical success      |
+| Document                                        | Description                                      |
+| ----------------------------------------------- | ------------------------------------------------ |
+| [Product Vision](./product/vision.md)           | What Cortex is, why local-first, core principles |
+| [Roadmap](./product/roadmap.md)                 | Future features and expansion plans              |
+| [Success Metrics](./product/success-metrics.md) | How to measure user and technical success        |
 
 ## Architecture & Patterns
 
@@ -22,20 +22,20 @@ Technical documentation for building and extending Cortex. These docs describe e
 
 ## AI & Machine Learning
 
-| Document                                             | Description                                    |
-| ---------------------------------------------------- | ---------------------------------------------- |
-| [AI Overview](./ai/overview.md)                      | Provider architecture, model selection         |
-| [Ollama Integration](./ai/ollama.md)                 | Local AI setup, model management               |
-| [Cloud Providers](./ai/cloud-providers.md)           | OpenAI/Anthropic via LiteLLM                   |
-| [Embeddings](./ai/embeddings.md)                     | Vector embedding strategy, chunking            |
-| [LangGraph Workflows](./ai/workflows.md)             | AI processing pipelines                        |
+| Document                                   | Description                            |
+| ------------------------------------------ | -------------------------------------- |
+| [AI Overview](./ai/overview.md)            | Provider architecture, model selection |
+| [Ollama Integration](./ai/ollama.md)       | Local AI setup, model management       |
+| [Cloud Providers](./ai/cloud-providers.md) | OpenAI/Anthropic via LiteLLM           |
+| [Embeddings](./ai/embeddings.md)           | Vector embedding strategy, chunking    |
+| [LangGraph Workflows](./ai/workflows.md)   | AI processing pipelines                |
 
 ## Python Backend
 
-| Document                                                   | Description                                    |
-| ---------------------------------------------------------- | ---------------------------------------------- |
-| [Backend Architecture](./python-backend/architecture.md)   | FastAPI structure, endpoints, database layer   |
-| [Bundling](./python-backend/bundling.md)                   | PyInstaller, cross-platform distribution       |
+| Document                                                 | Description                                  |
+| -------------------------------------------------------- | -------------------------------------------- |
+| [Backend Architecture](./python-backend/architecture.md) | FastAPI structure, endpoints, database layer |
+| [Bundling](./python-backend/bundling.md)                 | PyInstaller, cross-platform distribution     |
 
 ## Core Systems
 
@@ -51,12 +51,12 @@ Technical documentation for building and extending Cortex. These docs describe e
 
 ## UI & UX
 
-| Document                                             | Description                                 |
-| ---------------------------------------------------- | ------------------------------------------- |
-| [UI Patterns](./ui-ux/ui-patterns.md)                | CSS architecture, shadcn/ui components      |
-| [Internationalization](./ui-ux/i18n-patterns.md)     | Translation system, RTL support             |
-| [Notifications](./ui-ux/notifications.md)            | Toast and native notifications              |
-| [Cross-Platform](./ui-ux/cross-platform.md)          | Platform detection, OS-specific adaptations |
+| Document                                         | Description                                 |
+| ------------------------------------------------ | ------------------------------------------- |
+| [UI Patterns](./ui-ux/ui-patterns.md)            | CSS architecture, shadcn/ui components      |
+| [Internationalization](./ui-ux/i18n-patterns.md) | Translation system, RTL support             |
+| [Notifications](./ui-ux/notifications.md)        | Toast and native notifications              |
+| [Cross-Platform](./ui-ux/cross-platform.md)      | Platform detection, OS-specific adaptations |
 
 ## Data & Storage
 

@@ -5,6 +5,7 @@ Vector embeddings for semantic search and similarity.
 ## Overview
 
 Embeddings convert text into numerical vectors that capture semantic meaning. Similar concepts have similar vectors, enabling:
+
 - Semantic search (find conceptually related content)
 - Connection discovery (items about the same topic)
 - Query understanding (match intent, not just keywords)
@@ -37,11 +38,13 @@ When content is saved:
 ### Chunking Strategy
 
 **Why chunk?**
+
 - Long documents exceed model context limits
 - Smaller chunks enable more precise retrieval
 - Each chunk can have its own relevance score
 
 **Semantic chunking principles:**
+
 - Respect paragraph boundaries
 - Keep related sentences together
 - Target 200-500 tokens per chunk
@@ -62,11 +65,11 @@ chunks = splitter.split_text(document_text)
 
 ### Embedding Models
 
-| Provider | Model | Dimensions | Speed | Quality |
-|----------|-------|------------|-------|---------|
-| Ollama | nomic-embed-text | 768 | Fast | Good |
-| OpenAI | text-embedding-3-small | 1536 | Fast | Better |
-| OpenAI | text-embedding-3-large | 3072 | Slower | Best |
+| Provider | Model                  | Dimensions | Speed  | Quality |
+| -------- | ---------------------- | ---------- | ------ | ------- |
+| Ollama   | nomic-embed-text       | 768        | Fast   | Good    |
+| OpenAI   | text-embedding-3-small | 1536       | Fast   | Better  |
+| OpenAI   | text-embedding-3-large | 3072       | Slower | Best    |
 
 **Recommendation**: Use `nomic-embed-text` for local, `text-embedding-3-small` for cloud.
 
@@ -75,10 +78,10 @@ chunks = splitter.split_text(document_text)
 Higher dimensions = more precision but more storage:
 
 | Dimensions | Storage per chunk | 10K items (~50K chunks) |
-|------------|-------------------|-------------------------|
-| 768 | 3 KB | 150 MB |
-| 1536 | 6 KB | 300 MB |
-| 3072 | 12 KB | 600 MB |
+| ---------- | ----------------- | ----------------------- |
+| 768        | 3 KB              | 150 MB                  |
+| 1536       | 6 KB              | 300 MB                  |
+| 3072       | 12 KB             | 600 MB                  |
 
 For most use cases, 768-1536 dimensions are sufficient.
 
@@ -121,6 +124,7 @@ CREATE VIRTUAL TABLE vec_chunks USING vec0(
 ```
 
 **Trade-offs:**
+
 - Higher `nlist` = better accuracy, slower build
 - For < 100K chunks, default settings work well
 
@@ -203,6 +207,7 @@ def reciprocal_rank_fusion(
 **Critical**: Never mix embeddings from different models in the same database.
 
 If you change embedding models:
+
 1. Re-embed all existing content
 2. Or maintain separate vector tables per model
 

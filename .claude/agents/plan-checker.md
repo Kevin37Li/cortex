@@ -35,16 +35,16 @@ Read and understand the task document or implementation plan being validated.
 
 Use `docs/developer/README.md` as your index. It lists all documentation organized by category with descriptions. Based on what the plan involves, read the relevant sections:
 
-| Plan involves...        | Read docs in...                    |
-| ----------------------- | ---------------------------------- |
-| State, data flow        | `architecture/`                    |
-| AI, embeddings, LLMs    | `ai/`                              |
-| Python/FastAPI backend  | `python-backend/`                  |
-| Commands, shortcuts     | `core-systems/`                    |
-| Database, storage       | `data-storage/`                    |
-| UI components, i18n     | `ui-ux/`                           |
-| Tests, linting, logging | `quality-tooling/`                 |
-| Release, distribution   | `release/`                         |
+| Plan involves...        | Read docs in...    |
+| ----------------------- | ------------------ |
+| State, data flow        | `architecture/`    |
+| AI, embeddings, LLMs    | `ai/`              |
+| Python/FastAPI backend  | `python-backend/`  |
+| Commands, shortcuts     | `core-systems/`    |
+| Database, storage       | `data-storage/`    |
+| UI components, i18n     | `ui-ux/`           |
+| Tests, linting, logging | `quality-tooling/` |
+| Release, distribution   | `release/`         |
 
 **Selection guidance:**
 

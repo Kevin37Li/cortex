@@ -5,6 +5,7 @@ Why Cortex uses a Tauri + Python hybrid architecture.
 ## The Decision
 
 Cortex uses a hybrid architecture:
+
 - **Tauri (Rust)** for the desktop shell, window management, and system integration
 - **Python (FastAPI)** for AI processing, database access, and business logic
 
@@ -14,12 +15,12 @@ These communicate via localhost HTTP.
 
 Pure Rust would be ideal for performance and simplicity, but:
 
-| Factor | Pure Rust | Python Sidecar |
-|--------|-----------|----------------|
-| **AI ecosystem** | Immature (limited LangChain/LangGraph) | Mature (full LangChain/LangGraph support) |
-| **Development speed** | Slower iteration | Faster prototyping |
-| **ML libraries** | Limited | Comprehensive |
-| **Learning curve** | Steep | Moderate |
+| Factor                | Pure Rust                              | Python Sidecar                            |
+| --------------------- | -------------------------------------- | ----------------------------------------- |
+| **AI ecosystem**      | Immature (limited LangChain/LangGraph) | Mature (full LangChain/LangGraph support) |
+| **Development speed** | Slower iteration                       | Faster prototyping                        |
+| **ML libraries**      | Limited                                | Comprehensive                             |
+| **Learning curve**    | Steep                                  | Moderate                                  |
 
 The Python AI ecosystem is years ahead. LangGraph, the core of our workflow system, is Python-first with limited Rust support.
 
@@ -27,12 +28,12 @@ The Python AI ecosystem is years ahead. LangGraph, the core of our workflow syst
 
 Electron is the "default" for desktop apps, but:
 
-| Factor | Electron | Tauri |
-|--------|----------|-------|
-| **Binary size** | 150MB+ baseline | 10MB baseline |
-| **Memory usage** | Higher (bundled Chromium) | Lower (system webview) |
-| **Startup time** | Slower | Faster |
-| **Node.js AI libs** | Okay but not Python-level | N/A |
+| Factor              | Electron                  | Tauri                  |
+| ------------------- | ------------------------- | ---------------------- |
+| **Binary size**     | 150MB+ baseline           | 10MB baseline          |
+| **Memory usage**    | Higher (bundled Chromium) | Lower (system webview) |
+| **Startup time**    | Slower                    | Faster                 |
+| **Node.js AI libs** | Okay but not Python-level | N/A                    |
 
 Tauri gives us native performance with a smaller footprint. The Python sidecar adds what we need for AI.
 
@@ -106,7 +107,7 @@ WebSocket for real-time updates:
 // Chat streaming
 const ws = new WebSocket(`ws://localhost:8742/api/ws/chat/${conversationId}`)
 
-ws.onmessage = (event) => {
+ws.onmessage = event => {
   const data = JSON.parse(event.data)
   if (data.type === 'chunk') {
     appendToResponse(data.content)
@@ -159,6 +160,7 @@ client.post("http://localhost:8742/api/items")
 ### Crash Recovery
 
 If Python crashes:
+
 1. Rust detects process termination
 2. Rust attempts restart (max 3 times)
 3. If restart fails, show error dialog to user
@@ -252,12 +254,14 @@ uvicorn.run(app, host="127.0.0.1", port=8742)
 ```
 
 This ensures:
+
 - No external network access to the backend
 - Other apps on same machine could connect (acceptable risk for desktop app)
 
 ### No Secrets in IPC
 
 API keys are stored in OS keychain, accessed directly by Python:
+
 - Never sent over IPC
 - Never logged
 - Never included in crash reports
@@ -265,6 +269,7 @@ API keys are stored in OS keychain, accessed directly by Python:
 ### Process Isolation
 
 Python runs as a separate process:
+
 - Crash doesn't take down the UI
 - Memory isolation from frontend
 - Can be restarted independently

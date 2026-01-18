@@ -5,6 +5,7 @@ Packaging the Python backend for distribution with the Tauri app.
 ## Overview
 
 The Python backend must be bundled as a standalone executable that:
+
 - Runs without requiring Python to be installed
 - Includes all dependencies (FastAPI, LangGraph, etc.)
 - Works on macOS, Windows, and Linux
@@ -12,12 +13,12 @@ The Python backend must be bundled as a standalone executable that:
 
 ## Bundling Options
 
-| Tool | Pros | Cons | Recommendation |
-|------|------|------|----------------|
-| **PyInstaller** | Mature, well-documented | Large binaries | Primary choice |
-| **PyOxidizer** | Rust-native, smaller binaries | Complex configuration | Alternative |
-| **Nuitka** | Compiles to C, fast | Long build times | Not recommended |
-| **cx_Freeze** | Simple | Less maintained | Not recommended |
+| Tool            | Pros                          | Cons                  | Recommendation  |
+| --------------- | ----------------------------- | --------------------- | --------------- |
+| **PyInstaller** | Mature, well-documented       | Large binaries        | Primary choice  |
+| **PyOxidizer**  | Rust-native, smaller binaries | Complex configuration | Alternative     |
+| **Nuitka**      | Compiles to C, fast           | Long build times      | Not recommended |
+| **cx_Freeze**   | Simple                        | Less maintained       | Not recommended |
 
 **Recommendation**: Use PyInstaller for initial development, consider PyOxidizer for production builds.
 
@@ -136,6 +137,7 @@ exe = EXE(
 ```
 
 **Entitlements** (entitlements.plist):
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "...">
@@ -161,6 +163,7 @@ exe = EXE(
 ```
 
 **Version info** (version_info.txt):
+
 ```
 VSVersionInfo(
   ffi=FixedFileInfo(
@@ -190,9 +193,7 @@ exe = EXE(
 // tauri.conf.json
 {
   "bundle": {
-    "externalBin": [
-      "binaries/cortex-backend"
-    ]
+    "externalBin": ["binaries/cortex-backend"]
   }
 }
 ```
@@ -200,6 +201,7 @@ exe = EXE(
 ### Binary Naming Convention
 
 Tauri expects platform-specific naming:
+
 ```
 binaries/
 ├── cortex-backend-aarch64-apple-darwin      # macOS ARM
@@ -348,6 +350,7 @@ jobs:
 ### Strategies
 
 1. **Exclude unused modules**:
+
 ```python
 # In spec file
 excludes=[
@@ -360,11 +363,13 @@ excludes=[
 ```
 
 2. **Use UPX compression**:
+
 ```bash
 pyinstaller cortex-backend.spec --upx-dir=/path/to/upx
 ```
 
 3. **Strip debug symbols** (Linux/macOS):
+
 ```bash
 strip dist/cortex-backend
 ```
@@ -372,10 +377,10 @@ strip dist/cortex-backend
 ### Expected Sizes
 
 | Platform | Unoptimized | Optimized |
-|----------|-------------|-----------|
-| macOS | ~150 MB | ~80 MB |
-| Windows | ~120 MB | ~60 MB |
-| Linux | ~100 MB | ~50 MB |
+| -------- | ----------- | --------- |
+| macOS    | ~150 MB     | ~80 MB    |
+| Windows  | ~120 MB     | ~60 MB    |
+| Linux    | ~100 MB     | ~50 MB    |
 
 ## Risks & Mitigations
 
@@ -384,6 +389,7 @@ strip dist/cortex-backend
 **Concern**: Shipping Python with a desktop app is complex.
 
 **Mitigations**:
+
 - Extensive testing on all platforms before each release
 - CI/CD builds on actual platform runners (not cross-compilation)
 - Fallback: guide users to install Python manually if bundling fails
@@ -393,6 +399,7 @@ strip dist/cortex-backend
 **Concern**: Python bundles are large (50-150 MB).
 
 **Mitigations**:
+
 - UPX compression reduces size by 30-50%
 - Exclude unnecessary dependencies
 - Consider splitting into main binary + lazy-loaded modules
@@ -402,6 +409,7 @@ strip dist/cortex-backend
 **Concern**: PyInstaller binaries have slow startup.
 
 **Mitigations**:
+
 - Start sidecar early in Tauri initialization
 - Show loading indicator while backend initializes
 - Use `--onefile` only for distribution, `--onedir` for development
@@ -430,11 +438,11 @@ pyinstaller cortex-backend.spec --debug=imports
 
 ### Common Issues
 
-| Issue | Symptom | Solution |
-|-------|---------|----------|
-| Missing module | `ModuleNotFoundError` at runtime | Add to `hiddenimports` |
-| Missing data file | `FileNotFoundError` | Add to `datas` in spec |
-| Native extension | `ImportError: DLL load failed` | Add to `binaries` |
+| Issue             | Symptom                          | Solution               |
+| ----------------- | -------------------------------- | ---------------------- |
+| Missing module    | `ModuleNotFoundError` at runtime | Add to `hiddenimports` |
+| Missing data file | `FileNotFoundError`              | Add to `datas` in spec |
+| Native extension  | `ImportError: DLL load failed`   | Add to `binaries`      |
 
 ## Related Documentation
 

@@ -8,12 +8,12 @@ Vector embeddings storage using the sqlite-vec extension.
 
 ## Why sqlite-vec
 
-| Alternative | Pros | Cons |
-|-------------|------|------|
-| **Pinecone/Weaviate** | Powerful, scalable | Cloud-based, defeats local-first |
-| **ChromaDB** | Local, popular | Separate process, adds complexity |
-| **pgvector** | Great with Postgres | Requires PostgreSQL server |
-| **sqlite-vec** | Native SQLite, single file | Newer, smaller community |
+| Alternative           | Pros                       | Cons                              |
+| --------------------- | -------------------------- | --------------------------------- |
+| **Pinecone/Weaviate** | Powerful, scalable         | Cloud-based, defeats local-first  |
+| **ChromaDB**          | Local, popular             | Separate process, adds complexity |
+| **pgvector**          | Great with Postgres        | Requires PostgreSQL server        |
+| **sqlite-vec**        | Native SQLite, single file | Newer, smaller community          |
 
 **Our choice**: sqlite-vec keeps everything in one file. Items, chunks, embeddings, and conversations all live together. This simplifies backup, portability, and the mental model.
 
@@ -313,18 +313,20 @@ CREATE VIRTUAL TABLE vec_chunks USING vec0(
 Approximate performance on typical hardware:
 
 | Dataset Size | Insert (per item) | Search (top 10) |
-|--------------|-------------------|-----------------|
-| 10K chunks | ~1ms | ~5ms |
-| 100K chunks | ~1ms | ~20ms |
-| 1M chunks | ~2ms | ~100ms |
+| ------------ | ----------------- | --------------- |
+| 10K chunks   | ~1ms              | ~5ms            |
+| 100K chunks  | ~1ms              | ~20ms           |
+| 1M chunks    | ~2ms              | ~100ms          |
 
 ### Memory Usage
 
 sqlite-vec loads index into memory:
+
 - ~4 bytes × dimensions × chunks for vectors
 - 768 dims × 100K chunks ≈ 300MB
 
 For very large datasets, consider:
+
 - Disk-based index options
 - Sharding by time period
 - Archiving old content
@@ -377,6 +379,7 @@ async def migrate_embeddings(db, new_model_dims: int):
 **Concern**: sqlite-vec is newer than alternatives like ChromaDB.
 
 **Mitigations**:
+
 - Extensive testing with realistic data volumes
 - Regular backups of the database file
 - Fallback plan: migrate to ChromaDB if critical issues arise (similar API)
@@ -387,6 +390,7 @@ async def migrate_embeddings(db, new_model_dims: int):
 **Concern**: Loading native extensions can be platform-specific.
 
 **Mitigations**:
+
 - Bundle pre-compiled extensions for all platforms
 - Test on all platforms in CI
 - Graceful degradation: disable vector search if extension fails

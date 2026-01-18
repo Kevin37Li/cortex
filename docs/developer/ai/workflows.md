@@ -5,12 +5,14 @@ AI-powered processing pipelines orchestrated with LangGraph.
 ## Why LangGraph
 
 Cortex has complex AI operations that aren't simple request-response:
+
 - Multi-step processing with branching logic
 - Retry loops for quality assurance
 - State management across steps
 - Conditional routing based on content type
 
 LangGraph provides:
+
 - **Typed state**: Each workflow has a clear schema
 - **Conditional edges**: Route to different nodes based on state
 - **Cycles**: Handle retry loops naturally
@@ -19,13 +21,13 @@ LangGraph provides:
 
 ## Workflow Overview
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| **Content Processing** | Item saved | Transform raw content into searchable knowledge |
-| **Adaptive Search** | Search query | Find relevant content with smart retrieval |
-| **RAG Chat** | Chat message | Answer questions using knowledge base |
-| **Connection Discovery** | Processing complete | Find relationships between items |
-| **Daily Digest** | Scheduled | Surface insights and forgotten content |
+| Workflow                 | Trigger             | Purpose                                         |
+| ------------------------ | ------------------- | ----------------------------------------------- |
+| **Content Processing**   | Item saved          | Transform raw content into searchable knowledge |
+| **Adaptive Search**      | Search query        | Find relevant content with smart retrieval      |
+| **RAG Chat**             | Chat message        | Answer questions using knowledge base           |
+| **Connection Discovery** | Processing complete | Find relationships between items                |
+| **Daily Digest**         | Scheduled           | Surface insights and forgotten content          |
 
 ## Workflow 1: Content Processing
 

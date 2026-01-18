@@ -36,7 +36,11 @@ Add client-side routing to the frontend to support navigation between main views
 // Navigation items for sidebar
 const navItems = [
   { path: '/items', labelKey: 'nav.allItems', icon: FileTextIcon },
-  { path: '/conversations', labelKey: 'nav.conversations', icon: MessageSquareIcon },
+  {
+    path: '/conversations',
+    labelKey: 'nav.conversations',
+    icon: MessageSquareIcon,
+  },
 ]
 ```
 

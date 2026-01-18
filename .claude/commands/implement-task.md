@@ -16,6 +16,7 @@ Implement a task from `docs/tasks-todo/` with iterative AI code review using Cod
 ```
 
 Examples:
+
 ```
 /implement-task 1
 /implement-task python-backend-project-structure
@@ -42,6 +43,7 @@ Examples:
 For each iteration (maximum 2):
 
 1. **Run CodeRabbit review:**
+
    ```bash
    coderabbit review --prompt-only --type uncommitted
    ```
@@ -78,6 +80,7 @@ Provide a summary with:
 ## Critical Issue Examples
 
 Fix these:
+
 - SQL injection vulnerabilities
 - Missing null/undefined checks that could crash
 - Incorrect business logic
@@ -88,6 +91,7 @@ Fix these:
 ## Nit Examples
 
 Ignore these:
+
 - "Consider renaming X to Y for clarity"
 - "Could add a docstring here"
 - "This could be slightly more performant"

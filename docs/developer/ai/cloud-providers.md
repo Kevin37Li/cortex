@@ -5,6 +5,7 @@ Using OpenAI and other cloud APIs for AI inference.
 ## Overview
 
 Cloud providers are an alternative to local Ollama for users who:
+
 - Have limited hardware (< 8GB RAM)
 - Want higher quality models (GPT-4, Claude)
 - Need faster inference than CPU-only local models
@@ -13,15 +14,16 @@ Cloud providers are an alternative to local Ollama for users who:
 
 ## Supported Providers
 
-| Provider | Models | Best For |
-|----------|--------|----------|
-| **OpenAI** | GPT-4o, GPT-4o-mini, text-embedding-3-small | Primary recommendation |
-| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Haiku | Quality-focused users |
-| **Google** | Gemini 1.5 Flash, Gemini 1.5 Pro | Budget-conscious users |
+| Provider      | Models                                      | Best For               |
+| ------------- | ------------------------------------------- | ---------------------- |
+| **OpenAI**    | GPT-4o, GPT-4o-mini, text-embedding-3-small | Primary recommendation |
+| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Haiku           | Quality-focused users  |
+| **Google**    | Gemini 1.5 Flash, Gemini 1.5 Pro            | Budget-conscious users |
 
 ### Why OpenAI First
 
 OpenAI is the primary cloud provider because:
+
 - Most mature API with best documentation
 - Widest model selection
 - Most users already have API keys
@@ -53,6 +55,7 @@ We use [LiteLLM](https://github.com/BerriAI/litellm) to provide a unified interf
 ```
 
 **Why LiteLLM over direct API calls?**
+
 - Single interface for all providers
 - Automatic fallback between providers
 - Built-in cost tracking
@@ -90,6 +93,7 @@ We use [LiteLLM](https://github.com/BerriAI/litellm) to provide a unified interf
 ### Key Storage
 
 API keys are stored securely in the OS keychain:
+
 - macOS: Keychain Access
 - Windows: Credential Manager
 - Linux: Secret Service (libsecret)
@@ -105,6 +109,7 @@ def get_api_key(provider: str) -> str | None:
 ```
 
 **Never** store API keys in:
+
 - Plain text files
 - SQLite database
 - Environment variables (for desktop app)
@@ -229,14 +234,15 @@ async def chat_with_cost(self, messages: list) -> tuple[str, float]:
 
 ### Cost Estimation
 
-| Operation | Model | Cost per 1M tokens | Typical per item |
-|-----------|-------|-------------------|------------------|
-| Embedding | text-embedding-3-small | $0.02 | $0.0001 |
-| Extraction | gpt-4o-mini | $0.15 input, $0.60 output | $0.001 |
-| Chat query | gpt-4o-mini | $0.15 input, $0.60 output | $0.0005 |
-| Chat query | gpt-4o | $2.50 input, $10.00 output | $0.01 |
+| Operation  | Model                  | Cost per 1M tokens         | Typical per item |
+| ---------- | ---------------------- | -------------------------- | ---------------- |
+| Embedding  | text-embedding-3-small | $0.02                      | $0.0001          |
+| Extraction | gpt-4o-mini            | $0.15 input, $0.60 output  | $0.001           |
+| Chat query | gpt-4o-mini            | $0.15 input, $0.60 output  | $0.0005          |
+| Chat query | gpt-4o                 | $2.50 input, $10.00 output | $0.01            |
 
 **Typical monthly costs:**
+
 - Light usage (50 items/month, 20 queries): ~$0.10
 - Medium usage (100 items/month, 50 queries): ~$0.25
 - Heavy usage (200 items/month, 100 queries): ~$0.50
@@ -326,10 +332,12 @@ class HybridProvider(AIProvider):
 ### What Gets Sent
 
 When using cloud providers, only the following is transmitted:
+
 - Text content being embedded or analyzed
 - Chat messages and system prompts
 
 **Never sent:**
+
 - Your full knowledge base
 - Connection graphs
 - Conversation history (only current query)

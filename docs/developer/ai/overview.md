@@ -17,6 +17,7 @@ class AIProvider:
 ```
 
 This abstraction allows:
+
 - Swapping providers without changing application code
 - Testing with mock providers
 - Fallback chains (try local, fall back to cloud)
@@ -24,6 +25,7 @@ This abstraction allows:
 ### 2. Local by Default
 
 Ollama is the default and recommended provider:
+
 - Maximum privacy (nothing leaves the device)
 - Works offline
 - No ongoing costs
@@ -34,6 +36,7 @@ Cloud APIs are available for users who need them, but never required.
 ### 3. Graceful Degradation
 
 When AI operations fail:
+
 - Retry with exponential backoff
 - Fall back to simpler operations (e.g., keyword search if embedding fails)
 - Never block the user from accessing their data
@@ -74,19 +77,19 @@ When AI operations fail:
 
 Different tasks have different model requirements:
 
-| Task | Local (Ollama) | Cloud (OpenAI) | Notes |
-|------|----------------|----------------|-------|
+| Task           | Local (Ollama)   | Cloud (OpenAI)         | Notes                         |
+| -------------- | ---------------- | ---------------------- | ----------------------------- |
 | **Embeddings** | nomic-embed-text | text-embedding-3-small | Consistency matters—don't mix |
-| **Extraction** | llama3.2:3b | gpt-4o-mini | Structured output, fast |
-| **Chat** | mistral:7b | gpt-4o-mini | Quality/speed tradeoff |
-| **Grading** | llama3.2:3b | gpt-4o-mini | Simple yes/no decisions |
+| **Extraction** | llama3.2:3b      | gpt-4o-mini            | Structured output, fast       |
+| **Chat**       | mistral:7b       | gpt-4o-mini            | Quality/speed tradeoff        |
+| **Grading**    | llama3.2:3b      | gpt-4o-mini            | Simple yes/no decisions       |
 
 ### Model Recommendations by Hardware
 
-| RAM | Embedding Model | Chat Model | Notes |
-|-----|-----------------|------------|-------|
-| 8GB | nomic-embed-text | llama3.2:3b | Minimum viable |
-| 16GB | nomic-embed-text | mistral:7b | Good balance |
+| RAM   | Embedding Model  | Chat Model   | Notes              |
+| ----- | ---------------- | ------------ | ------------------ |
+| 8GB   | nomic-embed-text | llama3.2:3b  | Minimum viable     |
+| 16GB  | nomic-embed-text | mistral:7b   | Good balance       |
 | 32GB+ | nomic-embed-text | llama3.1:70b | Best local quality |
 
 ## User Configuration Flow
@@ -121,6 +124,7 @@ Different tasks have different model requirements:
 ### Settings UI
 
 Users can change providers anytime in Settings > AI:
+
 - Switch between local/cloud/hybrid
 - Select specific models for each task
 - View usage statistics
@@ -165,11 +169,11 @@ except RateLimitError:
 
 When using cloud providers, track and display costs:
 
-| Operation | Typical Cost | Per 100 Items |
-|-----------|--------------|---------------|
-| Embed (text-embedding-3-small) | $0.00002/1K tokens | ~$0.02 |
-| Extract (gpt-4o-mini) | $0.00015/1K tokens | ~$0.15 |
-| Chat (gpt-4o-mini) | $0.00015/1K tokens | ~$0.05/query |
+| Operation                      | Typical Cost       | Per 100 Items |
+| ------------------------------ | ------------------ | ------------- |
+| Embed (text-embedding-3-small) | $0.00002/1K tokens | ~$0.02        |
+| Extract (gpt-4o-mini)          | $0.00015/1K tokens | ~$0.15        |
+| Chat (gpt-4o-mini)             | $0.00015/1K tokens | ~$0.05/query  |
 
 Display in UI: "Estimated cost this month: $0.12"
 
@@ -192,6 +196,7 @@ class MockAIProvider(AIProvider):
 ### Integration Tests
 
 Test against real Ollama with small models:
+
 - Use `llama3.2:1b` for fast CI runs
 - Test embedding dimension consistency
 - Verify streaming works correctly

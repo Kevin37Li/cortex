@@ -129,13 +129,13 @@ Features for growth and advanced use cases.
 
 When deciding what to build next, consider:
 
-| Factor | Weight | Questions |
-|--------|--------|-----------|
-| **Core loop impact** | High | Does it improve capture, process, search, or chat? |
-| **User requests** | High | Are users asking for this? |
+| Factor                   | Weight    | Questions                                           |
+| ------------------------ | --------- | --------------------------------------------------- |
+| **Core loop impact**     | High      | Does it improve capture, process, search, or chat?  |
+| **User requests**        | High      | Are users asking for this?                          |
 | **Privacy preservation** | Must-have | Can we build this without compromising local-first? |
-| **Technical complexity** | Medium | How long will it take? What are the risks? |
-| **Differentiation** | Medium | Does this set us apart from alternatives? |
+| **Technical complexity** | Medium    | How long will it take? What are the risks?          |
+| **Differentiation**      | Medium    | Does this set us apart from alternatives?           |
 
 ## What We're NOT Building
 

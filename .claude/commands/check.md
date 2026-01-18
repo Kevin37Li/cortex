@@ -18,7 +18,6 @@ Check work for adherence with architecture, run checks, and suggest a commit mes
 ## Execution
 
 1. **Architecture adherence** - Check all work in this session against these docs (focus on patterns NOT caught by automated checks):
-
    - `docs/developer/architecture/architecture-guide.md` - high-level patterns
    - `docs/developer/architecture/state-management.md` - correct state tier choice (useState vs Zustand vs TanStack Query)
    - `docs/developer/core-systems/tauri-commands.md` - using tauri-specta bindings, not raw invoke()

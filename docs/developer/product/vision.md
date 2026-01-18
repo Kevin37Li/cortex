@@ -17,24 +17,24 @@ Knowledge workers are drowning in information scattered across dozens of tools. 
 
 Current solutions fall short:
 
-| Solution Type | Examples | Limitation |
-|---------------|----------|------------|
-| Note apps | Notion, Obsidian | Require manual organization, don't understand content |
-| Read-later apps | Pocket, Instapaper | Become graveyards of unread articles |
-| AI assistants | ChatGPT, Claude | No memory of what you've learned |
-| Cloud PKM | Mem, Reflect | Require trusting a third party with personal thoughts |
+| Solution Type   | Examples           | Limitation                                            |
+| --------------- | ------------------ | ----------------------------------------------------- |
+| Note apps       | Notion, Obsidian   | Require manual organization, don't understand content |
+| Read-later apps | Pocket, Instapaper | Become graveyards of unread articles                  |
+| AI assistants   | ChatGPT, Claude    | No memory of what you've learned                      |
+| Cloud PKM       | Mem, Reflect       | Require trusting a third party with personal thoughts |
 
 ## Why Local-First
 
 The decision to build Cortex as a local-first application is foundational:
 
-| Concern | Cloud-Only Approach | Our Local-First Approach |
-|---------|---------------------|--------------------------|
-| **Privacy** | Your thoughts on someone else's server | Your data never leaves your device |
-| **Ownership** | Company shuts down, data at risk | Single SQLite file you control forever |
-| **Cost** | Ongoing subscription fees | One-time purchase, minimal ongoing costs |
-| **Latency** | Network round-trips for every action | Instant, works offline |
-| **Trust** | "We won't read your data" promises | Mathematically impossible to access |
+| Concern       | Cloud-Only Approach                    | Our Local-First Approach                 |
+| ------------- | -------------------------------------- | ---------------------------------------- |
+| **Privacy**   | Your thoughts on someone else's server | Your data never leaves your device       |
+| **Ownership** | Company shuts down, data at risk       | Single SQLite file you control forever   |
+| **Cost**      | Ongoing subscription fees              | One-time purchase, minimal ongoing costs |
+| **Latency**   | Network round-trips for every action   | Instant, works offline                   |
+| **Trust**     | "We won't read your data" promises     | Mathematically impossible to access      |
 
 For a "second brain" containing your private thoughts, research, and sensitive information, local-first isn't just a feature—it's the only ethical choice.
 
@@ -103,12 +103,14 @@ This is for users with limited hardware or those who want more capable models. E
 ## Target Users
 
 **Primary**: Knowledge workers who:
+
 - Save content frequently (articles, papers, notes)
 - Value privacy and data ownership
 - Want AI assistance without cloud dependency
 - Are comfortable with slightly technical setup (Ollama)
 
 **Secondary**: Researchers, writers, and students who:
+
 - Need to organize large amounts of information
 - Want semantic search over keyword search
 - Appreciate citation and source tracking

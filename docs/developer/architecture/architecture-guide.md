@@ -72,12 +72,12 @@ Capture → Process → Search → Chat
 
 ### Why Tauri + Python?
 
-| Layer | Technology | Rationale |
-| ----- | ---------- | --------- |
-| Desktop Shell | Tauri (Rust) | Native performance, ~10MB footprint, security-first |
-| Frontend | React + TypeScript | Rich ecosystem, reactive UI, type safety |
-| AI Backend | Python (FastAPI) | Mature AI ecosystem (LangGraph, LangChain, transformers) |
-| Database | SQLite + sqlite-vec | Single-file, portable, embedded vector search |
+| Layer         | Technology          | Rationale                                                |
+| ------------- | ------------------- | -------------------------------------------------------- |
+| Desktop Shell | Tauri (Rust)        | Native performance, ~10MB footprint, security-first      |
+| Frontend      | React + TypeScript  | Rich ecosystem, reactive UI, type safety                 |
+| AI Backend    | Python (FastAPI)    | Mature AI ecosystem (LangGraph, LangChain, transformers) |
+| Database      | SQLite + sqlite-vec | Single-file, portable, embedded vector search            |
 
 The hybrid architecture adds complexity but is essential: Rust handles security-critical operations and native integration, while Python provides access to the AI ecosystem.
 
@@ -147,6 +147,7 @@ Input → Node₁ → Conditional Edge → Node₂ → ... → Output
 ```
 
 Key patterns:
+
 - **Typed state** flows through the graph
 - **Conditional edges** enable branching and loops
 - **Human-in-the-loop** checkpoints for user confirmation
@@ -202,14 +203,16 @@ Message → Retrieve → Grade Docs → Generate → Ground Check → Response
 ### Frontend → Python Backend
 
 **HTTP** for CRUD operations:
+
 ```typescript
 const response = await fetch('http://localhost:8742/api/items', {
   method: 'POST',
-  body: JSON.stringify({ title, content, url })
+  body: JSON.stringify({ title, content, url }),
 })
 ```
 
 **WebSocket** for streaming (chat, processing progress):
+
 ```typescript
 const ws = new WebSocket(`ws://localhost:8742/api/ws/chat/${id}`)
 ws.onmessage = ({ data }) => appendChunk(JSON.parse(data).content)
@@ -285,13 +288,13 @@ python-backend/src/          # Python sidecar
 
 ### Defense in Depth
 
-| Layer | Protection |
-| ----- | ---------- |
-| Tauri Capabilities | Window-specific permissions |
-| Rust Validation | All file paths validated before access |
-| CSP | No external scripts, strict content policy |
-| Atomic Writes | Write to temp, rename (prevents corruption) |
-| Keychain | API keys in OS keychain, never in IPC |
+| Layer              | Protection                                  |
+| ------------------ | ------------------------------------------- |
+| Tauri Capabilities | Window-specific permissions                 |
+| Rust Validation    | All file paths validated before access      |
+| CSP                | No external scripts, strict content policy  |
+| Atomic Writes      | Write to temp, rename (prevents corruption) |
+| Keychain           | API keys in OS keychain, never in IPC       |
 
 ### Blocked Paths (Rust)
 
@@ -342,27 +345,27 @@ Event-Driven Bridge
 
 ## Core Systems Documentation
 
-| System | Documentation |
-| ------ | ------------- |
-| AI Overview | [ai/overview.md](../ai/overview.md) |
-| AI Workflows | [ai/workflows.md](../ai/workflows.md) |
-| Python Backend | [python-backend/architecture.md](../python-backend/architecture.md) |
-| Command System | [core-systems/command-system.md](../core-systems/command-system.md) |
+| System             | Documentation                                                               |
+| ------------------ | --------------------------------------------------------------------------- |
+| AI Overview        | [ai/overview.md](../ai/overview.md)                                         |
+| AI Workflows       | [ai/workflows.md](../ai/workflows.md)                                       |
+| Python Backend     | [python-backend/architecture.md](../python-backend/architecture.md)         |
+| Command System     | [core-systems/command-system.md](../core-systems/command-system.md)         |
 | Keyboard Shortcuts | [core-systems/keyboard-shortcuts.md](../core-systems/keyboard-shortcuts.md) |
-| Tauri Commands | [core-systems/tauri-commands.md](../core-systems/tauri-commands.md) |
-| Data Persistence | [data-storage/data-persistence.md](../data-storage/data-persistence.md) |
-| State Management | [state-management.md](./state-management.md) |
+| Tauri Commands     | [core-systems/tauri-commands.md](../core-systems/tauri-commands.md)         |
+| Data Persistence   | [data-storage/data-persistence.md](../data-storage/data-persistence.md)     |
+| State Management   | [state-management.md](./state-management.md)                                |
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern | Why It's Bad | Do This Instead |
-| ------------ | ------------ | --------------- |
-| State in wrong layer | Confuses ownership | Follow the onion model |
-| Direct Rust-React coupling | Tight coupling | Use command system + events |
-| Store subscription in callbacks | Render cascades | Use `getState()` pattern |
-| Skipping input validation | Security vulnerabilities | Always validate in Rust |
-| Synchronous AI calls | Blocks UI | Use workflows + streaming |
-| Magic/implicit patterns | Hard to follow | Prefer explicit, clear code |
+| Anti-Pattern                    | Why It's Bad             | Do This Instead             |
+| ------------------------------- | ------------------------ | --------------------------- |
+| State in wrong layer            | Confuses ownership       | Follow the onion model      |
+| Direct Rust-React coupling      | Tight coupling           | Use command system + events |
+| Store subscription in callbacks | Render cascades          | Use `getState()` pattern    |
+| Skipping input validation       | Security vulnerabilities | Always validate in Rust     |
+| Synchronous AI calls            | Blocks UI                | Use workflows + streaming   |
+| Magic/implicit patterns         | Hard to follow           | Prefer explicit, clear code |
 
 ## Adding New Features
 
