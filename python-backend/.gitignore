@@ -8,6 +8,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.ruff_cache/
 
 # Distribution
 dist/
