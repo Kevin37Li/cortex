@@ -133,9 +133,11 @@ These are specific to Claude Code but documented here for context.
 
 ### Commands
 
-- `/check` - Check work against architecture, run `bun run check:all`, suggest commit message
+- `/check` - Check work for adherence with documented architecture patterns
 - `/cleanup` - Run static analysis (knip, jscpd, check:all), get structured recommendations
-- `/implement-task` - Implement a task with iterative CodeRabbit review (max 2 cycles, critical issues only)
+- `/complete-task` - Generate learning report for completed task and trigger docs review
+- `/implement-task` - Implement a task from `docs/tasks-todo/` following documented patterns
+- `/review` - Run automated checks (`bun run check:all`) and CodeRabbit review loop
 
 ### Agents
 
