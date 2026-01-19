@@ -37,14 +37,15 @@ Gather and record what was actually implemented. This creates a factual record b
 
 #### 2.1 Gather Implementation Data
 
-1. **Check git history** for commits related to this task:
+1. **Check uncommitted changes** for this task:
 
    ```bash
-   git log --oneline -20
-   git diff HEAD~10 --name-only  # Adjust range to capture task commits
+   git status
+   git diff --name-only           # Modified tracked files
+   git diff --name-only --cached  # Staged files
    ```
 
-2. **Read the files created/modified** as listed in the task spec (and any additional files found in git)
+2. **Read the files created/modified** as listed in the task spec (and any additional files found in the uncommitted changes)
 
 3. **Identify key implementation details:**
    - Actual files created vs planned
@@ -62,11 +63,6 @@ Append an `## Implementation Details` section to the task file immediately:
 ## Implementation Details
 
 _Tracked: YYYY-MM-DD_
-
-### Commits
-
-- `abc1234` - Commit message 1
-- `def5678` - Commit message 2
 
 ### Files Changed
 
@@ -184,7 +180,7 @@ Use the Task tool with:
 
 Provide a final summary with:
 
-1. **Implementation Tracked** - Confirmation that commits, files, and criteria status were recorded
+1. **Implementation Tracked** - Confirmation that files changed and criteria status were recorded
 2. **Learning Report Added** - Confirmation the analysis was appended
 3. **Documentation Updates** - Summary of what the docs-reviewer agent found/updated
 4. **Next Steps**:

@@ -31,6 +31,8 @@ For each iteration (maximum 2):
    coderabbit review --prompt-only --type uncommitted
    ```
 
+   **Note:** Allow the CodeRabbit review process to take as long as it needs. Do not interrupt or timeout prematurely.
+
 2. **Analyze findings and categorize:**
    - **Critical/Major**: Security issues, bugs, logic errors, breaking changes, missing error handling
    - **Nits (ignore)**: Style preferences, minor naming suggestions, optional improvements, documentation suggestions

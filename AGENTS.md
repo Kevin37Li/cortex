@@ -133,7 +133,7 @@ These are specific to Claude Code but documented here for context.
 
 ### Commands
 
-- `/check` - Check work for adherence with documented architecture patterns
+- `/check [commit|all]` - Check code for architecture pattern compliance (invokes `architecture-checker` agent)
 - `/cleanup` - Run static analysis (knip, jscpd, check:all), get structured recommendations
 - `/complete-task` - Generate learning report for completed task and trigger docs review
 - `/implement-task` - Implement a task from `docs/tasks-todo/` following documented patterns
@@ -143,6 +143,7 @@ These are specific to Claude Code but documented here for context.
 
 Task-focused agents that leverage separate context for focused work:
 
+- `architecture-checker` - Check code for architecture pattern compliance (uncommitted, since commit, or full codebase)
 - `plan-checker` - Validate implementation plans against documented architecture
 - `docs-reviewer` - Review developer docs for accuracy and codebase consistency
 - `userguide-reviewer` - Review user guide against actual system features

@@ -1,41 +1,44 @@
 ---
-allowed-tools: [Read, Glob, Grep]
+allowed-tools: [Task]
 description: 'Check work for adherence with architecture patterns'
 ---
 
 # /check - Architecture Review
 
-## Purpose
-
-Check work for adherence with documented architecture patterns and specs in `docs/developer/`.
-
 ## Usage
 
 ```
-/check
+/check                    # Check uncommitted changes (default)
+/check abc1234            # Check changes since commit abc1234
+/check all                # Check the entire codebase
 ```
 
 ## Execution
 
-Review all work in this session against relevant docs in `docs/developer/` (focus on patterns NOT caught by automated checks).
+Use the Task tool to spawn the `architecture-checker` agent with the appropriate input:
 
-Read `docs/developer/README.md` to find relevant documentation based on the scope of work being checked. Common docs include:
+- **No arguments**: Pass "uncommitted" as the prompt
+- **Commit hash argument**: Pass the commit hash as the prompt
+- **"all" or "codebase" argument**: Pass "all" as the prompt
 
-- `architecture/architecture-guide.md` - high-level patterns
-- `architecture/state-management.md` - correct state tier choice (useState vs Zustand vs TanStack Query)
-- `core-systems/tauri-commands.md` - using tauri-specta bindings, not raw invoke()
-- `ui-ux/i18n-patterns.md` - all UI strings in locale files (if UI was changed)
-- `quality-tooling/testing.md` - sufficient test coverage (if logic was added)
-- `architecture/error-handling.md` - proper error handling patterns (if error paths were added)
-- `python-backend/architecture.md` - Python backend patterns (if Python was changed)
-- `ai/overview.md` - AI provider patterns (if AI features were changed)
+The agent runs in its own context window and returns a structured report of any architecture violations found.
 
-This list is not exhaustive. Read any docs relevant to the work being reviewed.
+## Example Task Invocations
 
-## Output
+Default (uncommitted changes):
 
-Report any architecture violations found with:
+```
+Task(subagent_type="architecture-checker", prompt="Check uncommitted changes for architecture pattern compliance")
+```
 
-- File and line reference
-- Pattern violated
-- Suggested fix
+Since a commit:
+
+```
+Task(subagent_type="architecture-checker", prompt="Check all changes since commit abc1234 for architecture pattern compliance")
+```
+
+Entire codebase:
+
+```
+Task(subagent_type="architecture-checker", prompt="Check the entire codebase for architecture pattern compliance")
+```
