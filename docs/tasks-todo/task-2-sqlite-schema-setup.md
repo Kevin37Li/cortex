@@ -10,8 +10,8 @@ Create the SQLite database schema for storing items, chunks, and embeddings usin
 - [ ] Core tables created:
   - `items` - main content items (web pages, notes, files)
   - `chunks` - semantic chunks of content for embedding
-  - `item_embeddings` - vector embeddings using sqlite-vec
-- [ ] FTS5 virtual table for full-text search on items
+  - `vec_chunks` - vector embeddings using sqlite-vec
+- [ ] FTS5 virtual table for full-text search on chunks (with sync triggers)
 - [ ] sqlite-vec extension loaded and working
 - [ ] Database initialization script/migration system
 - [ ] Proper indexes for common queries
@@ -24,8 +24,9 @@ Create the SQLite database schema for storing items, chunks, and embeddings usin
 
 - sqlite-vec provides vector similarity search (cosine distance)
 - Use embedding dimension 768 (nomic-embed-text) or 1536 (OpenAI)
-- FTS5 for keyword search with BM25 ranking
+- FTS5 for keyword search with BM25 ranking (on chunks for semantic retrieval)
 - Use `aiosqlite` for async operations
+- FTS triggers keep `chunks_fts` synchronized with `chunks` table
 
 ## Schema Design
 
@@ -54,18 +55,31 @@ CREATE TABLE chunks (
 );
 
 -- Vector embeddings (sqlite-vec)
-CREATE VIRTUAL TABLE item_embeddings USING vec0(
+CREATE VIRTUAL TABLE vec_chunks USING vec0(
     chunk_id TEXT PRIMARY KEY,
     embedding FLOAT[768]  -- adjust dimension based on model
 );
 
--- Full-text search
-CREATE VIRTUAL TABLE items_fts USING fts5(
-    title,
+-- Full-text search on chunks
+CREATE VIRTUAL TABLE chunks_fts USING fts5(
     content,
-    content='items',
+    content='chunks',
     content_rowid='rowid'
 );
+
+-- FTS sync triggers
+CREATE TRIGGER chunks_ai AFTER INSERT ON chunks BEGIN
+    INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
+END;
+
+CREATE TRIGGER chunks_ad AFTER DELETE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
+END;
+
+CREATE TRIGGER chunks_au AFTER UPDATE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
+    INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
+END;
 
 -- Indexes
 CREATE INDEX idx_items_status ON items(processing_status);
@@ -75,7 +89,8 @@ CREATE INDEX idx_chunks_item ON chunks(item_id);
 
 ## Files to Create/Modify
 
-- `python-backend/src/db/database.py` - Database connection and initialization
+- `python-backend/pyproject.toml` - Add `sqlite-vec>=0.1.6` dependency
+- `python-backend/src/db/database.py` - Database connection and initialization (ensure `~/.cortex/` directory exists)
 - `python-backend/src/db/schema.sql` - Schema definitions
 - `python-backend/src/db/migrations/` - Future migration support (optional for MVP)
 
@@ -83,8 +98,15 @@ CREATE INDEX idx_chunks_item ON chunks(item_id);
 
 ```python
 # Database should initialize without errors
-# Vector operations should work:
-from sqlite_vec import load
-conn.enable_load_extension(True)
-conn.load_extension(load())
+# Vector operations should work (async pattern):
+import sqlite_vec
+import aiosqlite
+
+async def verify_sqlite_vec():
+    async with aiosqlite.connect(db_path) as db:
+        await db.enable_load_extension(True)
+        await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
+        # Test vector operations
+        result = await db.execute("SELECT vec_version()")
+        print(await result.fetchone())
 ```
