@@ -35,6 +35,7 @@ This list is not exhaustive. Read any docs relevant to the work being reviewed.
 ## Output
 
 Report any architecture violations found with:
+
 - File and line reference
 - Pattern violated
 - Suggested fix

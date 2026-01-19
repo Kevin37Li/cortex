@@ -50,4 +50,3 @@ Provide a summary with:
 2. **Next Steps** (if any)
    - Suggest running `/check` to verify against architecture
    - Note if task should be marked complete with `bun task:complete <name>`
-

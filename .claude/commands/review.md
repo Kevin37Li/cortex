@@ -55,7 +55,6 @@ Provide a summary with:
    - List each ignored nit with a brief reason why it was skipped
    - Format: `[File:Line] Issue description - Reason ignored`
 
-
 ## Critical Issue Examples
 
 Fix these:

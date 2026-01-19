@@ -38,6 +38,7 @@ Gather and record what was actually implemented. This creates a factual record b
 #### 2.1 Gather Implementation Data
 
 1. **Check git history** for commits related to this task:
+
    ```bash
    git log --oneline -20
    git diff HEAD~10 --name-only  # Adjust range to capture task commits
@@ -69,10 +70,10 @@ _Tracked: YYYY-MM-DD_
 
 ### Files Changed
 
-| File | Change | Description |
-|------|--------|-------------|
-| `path/to/file.ts` | Created | Brief description |
-| `path/to/other.py` | Modified | What was changed |
+| File               | Change   | Description       |
+| ------------------ | -------- | ----------------- |
+| `path/to/file.ts`  | Created  | Brief description |
+| `path/to/other.py` | Modified | What was changed  |
 
 ### Dependencies Added
 
@@ -106,25 +107,30 @@ With the implementation details now recorded, analyze the work:
 Based on the tracked implementation details, create a learning report covering:
 
 #### 1. Summary
+
 - High-level overview of what was built
 - Key metrics (files changed, lines of code, test coverage if applicable)
 
 #### 2. Patterns & Decisions
+
 - Architectural patterns used and why
 - Key design decisions and rationale
 - Deviations from original task spec (if any) and why
 
 #### 3. Challenges & Solutions
+
 - Technical challenges encountered
 - How they were resolved
 - Workarounds implemented (if any)
 
 #### 4. Lessons Learned
+
 - What worked well
 - What could be improved
 - Recommendations for similar future tasks
 
 #### 5. Documentation Impact
+
 - Which existing docs might need updates
 - New patterns that should be documented
 - Areas where documentation was helpful or lacking
@@ -141,18 +147,23 @@ Append the learning report to the task file after the Implementation Details sec
 _Generated: YYYY-MM-DD_
 
 ### Summary
+
 [content]
 
 ### Patterns & Decisions
+
 [content]
 
 ### Challenges & Solutions
+
 [content]
 
 ### Lessons Learned
+
 [content]
 
 ### Documentation Impact
+
 [content]
 ```
 

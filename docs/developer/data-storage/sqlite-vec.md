@@ -43,87 +43,103 @@ db.enable_load_extension(False)
 import aiosqlite
 import sqlite_vec
 
-async def connect():
-    db = await aiosqlite.connect("cortex.db")
+async def _load_sqlite_vec(db: aiosqlite.Connection) -> None:
+    """Load the sqlite-vec extension."""
     await db.enable_load_extension(True)
     await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
     await db.enable_load_extension(False)
-    return db
 ```
 
+This pattern is encapsulated in `python-backend/src/db/database.py` and reused for both initialization and connection retrieval.
+
 ## Schema Design
+
+### Important: Schema Separation
+
+The `vec_chunks` virtual table must be created programmatically in Python, not in `schema.sql`. The `vec0` table type is only available after loading the sqlite-vec extension.
+
+See `python-backend/src/db/database.py` for implementation:
+
+```python
+async def _create_vec_table(db: aiosqlite.Connection) -> None:
+    """Create the vector embeddings table after loading extension."""
+    await db.execute(
+        f"""
+        CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
+            chunk_id TEXT PRIMARY KEY,
+            embedding FLOAT[{EMBEDDING_DIMENSION}]
+        )
+        """
+    )
+```
+
+The standard tables, FTS5, and triggers are in `python-backend/src/db/schema.sql`.
 
 ### Vector Table
 
 ```sql
--- Create virtual table for vector storage
-CREATE VIRTUAL TABLE vec_chunks USING vec0(
-    chunk_id INTEGER PRIMARY KEY,
-    embedding FLOAT[768]  -- Dimension must match your model
+-- Created programmatically after loading sqlite-vec extension
+CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
+    chunk_id TEXT PRIMARY KEY,
+    embedding FLOAT[768]  -- Dimension must match your model (768 for nomic-embed-text)
 );
 ```
 
-### Related Tables
+### Core Tables
 
-```sql
--- Main chunks table
-CREATE TABLE chunks (
-    id TEXT PRIMARY KEY,
-    item_id TEXT NOT NULL REFERENCES items(id),
-    content TEXT NOT NULL,
-    position INTEGER NOT NULL,  -- Order within document
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(item_id, position)
-);
-
--- Index for fast item lookups
-CREATE INDEX idx_chunks_item ON chunks(item_id);
-```
-
-### Complete Schema Example
+See `python-backend/src/db/schema.sql` for the full schema. Key tables:
 
 ```sql
 -- Items (saved content)
-CREATE TABLE items (
+CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
-    url TEXT,
     content TEXT NOT NULL,
-    source TEXT NOT NULL,  -- 'browser_extension', 'manual', 'import'
-    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'processing', 'ready', 'failed'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    processed_at TIMESTAMP
+    content_type TEXT NOT NULL,  -- 'webpage', 'note', 'file'
+    source_url TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processing_status TEXT DEFAULT 'pending',  -- 'pending', 'processing', 'completed', 'failed'
+    metadata JSON
 );
 
 -- Chunks (semantic segments)
-CREATE TABLE chunks (
+CREATE TABLE IF NOT EXISTS chunks (
     id TEXT PRIMARY KEY,
     item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    position INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    chunk_index INTEGER NOT NULL,
+    token_count INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+```
 
--- Vector embeddings
-CREATE VIRTUAL TABLE vec_chunks USING vec0(
-    chunk_id TEXT PRIMARY KEY,
-    embedding FLOAT[768]
-);
+### FTS5 Contentless Table with Sync Triggers
 
--- Full-text search
-CREATE VIRTUAL TABLE chunks_fts USING fts5(
+FTS5 contentless tables (`content='chunks'`) require manual synchronization via triggers. The delete operation uses special syntax:
+
+```sql
+-- Full-text search on chunks
+CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     content,
     content='chunks',
     content_rowid='rowid'
 );
 
--- Keep FTS in sync
-CREATE TRIGGER chunks_ai AFTER INSERT ON chunks BEGIN
+-- Insert trigger
+CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
     INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
 END;
 
-CREATE TRIGGER chunks_ad AFTER DELETE ON chunks BEGIN
-    INSERT INTO chunks_fts(chunks_fts, rowid, content) VALUES('delete', old.rowid, old.content);
+-- Delete trigger (note the special first-column syntax for contentless FTS)
+CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
+END;
+
+-- Update trigger
+CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
+    INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
 END;
 ```
 
@@ -131,14 +147,15 @@ END;
 
 ### Insert Embedding
 
-```python
-async def insert_embedding(db, chunk_id: str, embedding: list[float]):
-    # Convert to bytes for sqlite-vec
-    embedding_bytes = struct.pack(f'{len(embedding)}f', *embedding)
+Use `sqlite_vec.serialize_float32()` to convert Python lists to the binary format:
 
+```python
+import sqlite_vec
+
+async def insert_embedding(db, chunk_id: str, embedding: list[float]):
     await db.execute(
         "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
-        [chunk_id, embedding_bytes]
+        [chunk_id, sqlite_vec.serialize_float32(embedding)]
     )
     await db.commit()
 ```
@@ -151,10 +168,9 @@ async def insert_embeddings_batch(
     chunk_embeddings: list[tuple[str, list[float]]]
 ):
     for chunk_id, embedding in chunk_embeddings:
-        embedding_bytes = struct.pack(f'{len(embedding)}f', *embedding)
         await db.execute(
             "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
-            [chunk_id, embedding_bytes]
+            [chunk_id, sqlite_vec.serialize_float32(embedding)]
         )
     await db.commit()
 ```
@@ -167,8 +183,6 @@ async def vector_search(
     query_embedding: list[float],
     limit: int = 10
 ) -> list[dict]:
-    query_bytes = struct.pack(f'{len(query_embedding)}f', *query_embedding)
-
     cursor = await db.execute("""
         SELECT
             v.chunk_id,
@@ -180,7 +194,7 @@ async def vector_search(
         WHERE v.embedding MATCH ?
           AND k = ?
         ORDER BY v.distance
-    """, [query_bytes, limit])
+    """, [sqlite_vec.serialize_float32(query_embedding), limit])
 
     rows = await cursor.fetchall()
     return [
@@ -338,7 +352,7 @@ For very large datasets, consider:
 If you switch embedding models (e.g., from 768 to 1536 dimensions):
 
 ```python
-async def migrate_embeddings(db, new_model_dims: int):
+async def migrate_embeddings(db, new_model_dims: int, provider):
     # 1. Create new vector table
     await db.execute(f"""
         CREATE VIRTUAL TABLE vec_chunks_new USING vec0(
@@ -353,21 +367,14 @@ async def migrate_embeddings(db, new_model_dims: int):
 
     for chunk_id, content in chunks:
         new_embedding = await provider.embed(content)
-        embedding_bytes = struct.pack(f'{len(new_embedding)}f', *new_embedding)
         await db.execute(
             "INSERT INTO vec_chunks_new VALUES (?, ?)",
-            [chunk_id, embedding_bytes]
+            [chunk_id, sqlite_vec.serialize_float32(new_embedding)]
         )
 
     # 3. Swap tables
     await db.execute("DROP TABLE vec_chunks")
     await db.execute("ALTER TABLE vec_chunks_new RENAME TO vec_chunks")
-
-    # 4. Update metadata
-    await db.execute(
-        "UPDATE settings SET value = ? WHERE key = 'embedding_model'",
-        [new_model_name]
-    )
 
     await db.commit()
 ```

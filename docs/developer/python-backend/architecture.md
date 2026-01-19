@@ -141,9 +141,10 @@ PUT    /api/settings           # Update settings
 GET    /api/settings/ai        # Get AI provider settings
 PUT    /api/settings/ai        # Update AI provider
 
-# Health
+# Health & Status
 GET    /api/health             # Backend health check
 GET    /api/health/ollama      # Ollama status
+GET    /api/db/status          # Database verification (versions, tables, counts)
 ```
 
 ### WebSocket for Streaming
@@ -324,39 +325,56 @@ async def chat_websocket(
 
 ## Database Layer
 
+The database module (`src/db/database.py`) provides:
+
+- `init_database()` - Initialize schema and extensions on startup
+- `verify_database()` - Check database status (used by `/api/db/status`)
+- `get_connection()` - Async generator for connection management
+
 ### Connection Management
 
 ```python
 # src/db/database.py
+from collections.abc import AsyncIterator
 import aiosqlite
-from pathlib import Path
+import sqlite_vec
 
-DATABASE_PATH = Path.home() / ".cortex" / "cortex.db"
+async def _load_sqlite_vec(db: aiosqlite.Connection) -> None:
+    """Load the sqlite-vec extension."""
+    await db.enable_load_extension(True)
+    await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
+    await db.enable_load_extension(False)
 
-class Database:
-    def __init__(self):
-        self.conn: aiosqlite.Connection | None = None
-
-    async def connect(self):
-        self.conn = await aiosqlite.connect(DATABASE_PATH)
-        # Enable sqlite-vec extension
-        await self.conn.enable_load_extension(True)
-        await self.conn.load_extension("vec0")
-        await self.conn.enable_load_extension(False)
-
-    async def close(self):
-        if self.conn:
-            await self.conn.close()
-
-# Dependency injection
-async def get_db() -> Database:
-    db = Database()
-    await db.connect()
-    try:
+async def get_connection() -> AsyncIterator[aiosqlite.Connection]:
+    """Async generator yielding configured database connections."""
+    async with aiosqlite.connect(settings.db_path) as db:
+        await db.execute("PRAGMA foreign_keys = ON")
+        await _load_sqlite_vec(db)
+        db.row_factory = aiosqlite.Row
         yield db
-    finally:
-        await db.close()
 ```
+
+### Database Initialization
+
+Database initialization happens during FastAPI startup via the lifespan manager:
+
+```python
+# src/main.py
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_database()  # Create tables, load extension, apply schema
+    yield
+
+app = FastAPI(title="Cortex Backend", lifespan=lifespan)
+```
+
+The `init_database()` function:
+1. Creates the `~/.cortex/` directory if needed
+2. Loads the sqlite-vec extension
+3. Applies schema from `schema.sql` (tables, FTS, triggers, indexes)
+4. Creates `vec_chunks` table programmatically (requires extension to be loaded first)
+
+See [sqlite-vec documentation](../data-storage/sqlite-vec.md) for schema details.
 
 ### Repository Pattern
 
