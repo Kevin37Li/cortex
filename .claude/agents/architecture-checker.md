@@ -55,15 +55,15 @@ git diff --name-only <commit-hash>
 
 **Then select relevant docs based on files being checked:**
 
-| Files involve...             | Read docs in...    |
-| ---------------------------- | ------------------ |
-| State, hooks, stores         | `architecture/`    |
-| AI, embeddings, LLMs         | `ai/`              |
-| Python/FastAPI backend       | `python-backend/`  |
-| Tauri commands, shortcuts    | `core-systems/`    |
-| Database, storage            | `data-storage/`    |
-| UI components, i18n, styles  | `ui-ux/`           |
-| Tests, linting, logging      | `quality-tooling/` |
+| Files involve...            | Read docs in...    |
+| --------------------------- | ------------------ |
+| State, hooks, stores        | `architecture/`    |
+| AI, embeddings, LLMs        | `ai/`              |
+| Python/FastAPI backend      | `python-backend/`  |
+| Tauri commands, shortcuts   | `core-systems/`    |
+| Database, storage           | `data-storage/`    |
+| UI components, i18n, styles | `ui-ux/`           |
+| Tests, linting, logging     | `quality-tooling/` |
 
 ### 3. Read Changed Files
 

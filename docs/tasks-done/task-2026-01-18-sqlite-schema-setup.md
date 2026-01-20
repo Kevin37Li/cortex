@@ -124,14 +124,14 @@ _Tracked: 2026-01-18_
 
 ### Files Changed
 
-| File | Change | Description |
-|------|--------|-------------|
-| `python-backend/pyproject.toml` | Modified | Added `aiosqlite>=0.20.0` and `sqlite-vec>=0.1.6` dependencies |
-| `python-backend/src/db/__init__.py` | Modified | Exports `init_database`, `verify_database`, `get_connection`, `EMBEDDING_DIMENSION` |
-| `python-backend/src/db/database.py` | Created | Core database module with async initialization, connection management, and verification |
-| `python-backend/src/db/schema.sql` | Created | SQL schema with items, chunks, chunks_fts tables, triggers, and indexes |
-| `python-backend/src/main.py` | Modified | Integrated database initialization on startup via lifespan manager, added `/api/db/status` endpoint |
-| `python-backend/tests/test_database.py` | Created | Comprehensive test suite with 20+ tests covering all database functionality |
+| File                                    | Change   | Description                                                                                         |
+| --------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `python-backend/pyproject.toml`         | Modified | Added `aiosqlite>=0.20.0` and `sqlite-vec>=0.1.6` dependencies                                      |
+| `python-backend/src/db/__init__.py`     | Modified | Exports `init_database`, `verify_database`, `get_connection`, `EMBEDDING_DIMENSION`                 |
+| `python-backend/src/db/database.py`     | Created  | Core database module with async initialization, connection management, and verification             |
+| `python-backend/src/db/schema.sql`      | Created  | SQL schema with items, chunks, chunks_fts tables, triggers, and indexes                             |
+| `python-backend/src/main.py`            | Modified | Integrated database initialization on startup via lifespan manager, added `/api/db/status` endpoint |
+| `python-backend/tests/test_database.py` | Created  | Comprehensive test suite with 20+ tests covering all database functionality                         |
 
 ### Dependencies Added
 

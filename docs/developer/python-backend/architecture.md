@@ -86,8 +86,9 @@ python-backend/
 │   ├── db/                    # Database layer
 │   │   ├── __init__.py
 │   │   ├── database.py        # Connection management
-│   │   ├── models.py          # SQLAlchemy/Pydantic models
+│   │   ├── models.py          # Pydantic models (Item, Chunk, etc.)
 │   │   └── repositories/      # Data access patterns
+│   │       ├── base.py        # Abstract BaseRepository
 │   │       ├── items.py
 │   │       ├── chunks.py
 │   │       └── conversations.py
@@ -247,47 +248,26 @@ async def health_check():
 
 ```python
 # src/api/items.py
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, Depends
+from ..db.database import get_connection
+from ..db.models import Item, ItemCreate
+from ..db.repositories import ItemRepository
 
 router = APIRouter()
 
-class CreateItemRequest(BaseModel):
-    url: str | None = None
-    title: str
-    content: str
-    source: str = "manual"
-
-class ItemResponse(BaseModel):
-    id: str
-    title: str
-    status: str
-    created_at: datetime
-
-@router.post("/", response_model=ItemResponse)
+@router.post("/", response_model=Item)
 async def create_item(
-    request: CreateItemRequest,
+    request: ItemCreate,
     background_tasks: BackgroundTasks,
-    db: Database = Depends(get_db)
 ):
-    # Create item record
-    item = await db.items.create(
-        url=request.url,
-        title=request.title,
-        content=request.content,
-        source=request.source,
-        status="pending"
-    )
+    async for db in get_connection():
+        repo = ItemRepository(db)
+        item = await repo.create(request)
 
-    # Queue processing in background
-    background_tasks.add_task(process_item, item.id)
+        # Queue processing in background
+        background_tasks.add_task(process_item, item.id)
 
-    return ItemResponse(
-        id=item.id,
-        title=item.title,
-        status=item.status,
-        created_at=item.created_at
-    )
+        return item
 ```
 
 ### WebSocket Streaming
@@ -369,6 +349,7 @@ app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 ```
 
 The `init_database()` function:
+
 1. Creates the `~/.cortex/` directory if needed
 2. Loads the sqlite-vec extension
 3. Applies schema from `schema.sql` (tables, FTS, triggers, indexes)
@@ -378,41 +359,153 @@ See [sqlite-vec documentation](../data-storage/sqlite-vec.md) for schema details
 
 ### Repository Pattern
 
-```python
-# src/db/repositories/items.py
-from dataclasses import dataclass
-from datetime import datetime
+Repositories provide type-safe database access using Pydantic models. The pattern uses an abstract `BaseRepository` for standard CRUD operations, with flexibility for custom implementations when access patterns differ.
 
-@dataclass
-class Item:
+#### Pydantic Models
+
+```python
+# src/db/models.py
+from pydantic import BaseModel, Field
+
+class ItemCreate(BaseModel):
+    """Input model for creating an item."""
+    title: str
+    content: str
+    content_type: str = Field(description="Type: 'webpage', 'note', 'file'")
+    source_url: str | None = None
+
+class ItemUpdate(BaseModel):
+    """Input model for updating. All fields optional."""
+    title: str | None = None
+    content: str | None = None
+
+class Item(BaseModel):
+    """Output model representing a stored item."""
     id: str
     title: str
-    url: str | None
     content: str
-    status: str
+    content_type: str
+    processing_status: str
     created_at: datetime
-    processed_at: datetime | None
+    updated_at: datetime
 
-class ItemRepository:
-    def __init__(self, db: Database):
+    model_config = {"from_attributes": True}
+```
+
+#### BaseRepository
+
+Generic abstract class defining CRUD interface:
+
+```python
+# src/db/repositories/base.py
+class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
+    """Abstract base repository with generic CRUD operations.
+
+    Exception Handling Strategy:
+        - get() returns None if not found (caller decides to raise)
+        - update() raises ItemNotFoundError if item doesn't exist
+        - delete() returns False if item doesn't exist
+    """
+
+    def __init__(self, db: aiosqlite.Connection) -> None:
         self.db = db
 
-    async def create(self, **kwargs) -> Item:
-        item_id = str(uuid4())
-        await self.db.conn.execute("""
-            INSERT INTO items (id, title, url, content, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, [item_id, kwargs["title"], kwargs.get("url"), kwargs["content"],
-              "pending", datetime.utcnow()])
-        await self.db.conn.commit()
-        return await self.get(item_id)
+    @property
+    @abstractmethod
+    def table_name(self) -> str: ...
 
-    async def get(self, item_id: str) -> Item | None:
-        cursor = await self.db.conn.execute(
-            "SELECT * FROM items WHERE id = ?", [item_id]
+    @abstractmethod
+    async def create(self, data: CreateT) -> T: ...
+
+    @abstractmethod
+    async def get(self, id: str) -> T | None: ...
+
+    @abstractmethod
+    async def list(self, offset: int = 0, limit: int = 20) -> list[T]: ...
+
+    @abstractmethod
+    async def update(self, id: str, data: UpdateT) -> T: ...
+
+    @abstractmethod
+    async def delete(self, id: str) -> bool: ...
+
+    @abstractmethod
+    async def count(self) -> int: ...
+```
+
+#### Concrete Repository
+
+```python
+# src/db/repositories/items.py
+class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
+    @property
+    def table_name(self) -> str:
+        return "items"
+
+    def _row_to_item(self, row: aiosqlite.Row) -> Item:
+        """Convert database row to Pydantic model."""
+        return Item(
+            id=row["id"],
+            title=row["title"],
+            # ... map all fields
         )
-        row = await cursor.fetchone()
-        return Item(**row) if row else None
+
+    async def create(self, data: ItemCreate) -> Item:
+        item_id = str(uuid4())
+        await self.db.execute(...)
+        await self.db.commit()
+
+        result = await self.get(item_id)
+        if result is None:
+            raise DatabaseError(f"Failed to retrieve created item: {item_id}")
+        return result
+
+    async def update(self, id: str, data: ItemUpdate) -> Item:
+        existing = await self.get(id)
+        if existing is None:
+            raise ItemNotFoundError(id)
+        # ... perform update
+```
+
+#### When NOT to Extend BaseRepository
+
+Use a standalone class when access patterns differ significantly. Example: `ChunkRepository` doesn't extend `BaseRepository` because:
+
+- Chunks use batch operations (`create_many`) instead of single-item creates
+- Chunks are always accessed relative to a parent item (`get_by_item`, `delete_by_item`)
+- Standard CRUD semantics don't fit the parent-child relationship
+
+```python
+# src/db/repositories/chunks.py
+class ChunkRepository:
+    """Standalone repository for chunk-specific access patterns."""
+
+    def __init__(self, db: aiosqlite.Connection) -> None:
+        self.db = db
+
+    async def create_many(self, chunks: list[ChunkCreate]) -> list[Chunk]: ...
+    async def get_by_item(self, item_id: str) -> list[Chunk]: ...
+    async def delete_by_item(self, item_id: str) -> int: ...
+```
+
+#### Row-to-Model Conversion
+
+All repositories use a private `_row_to_*` method for consistent database row mapping:
+
+```python
+def _row_to_item(self, row: aiosqlite.Row) -> Item:
+    """Convert database row to Pydantic model."""
+    # Handle JSON fields
+    metadata = row["metadata"]
+    if metadata is not None and isinstance(metadata, str):
+        metadata = json.loads(metadata)
+
+    # Handle datetime conversion
+    return Item(
+        id=row["id"],
+        created_at=datetime.fromisoformat(row["created_at"]),
+        # ...
+    )
 ```
 
 ## Background Processing

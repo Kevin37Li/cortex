@@ -238,7 +238,19 @@ class CortexError(Exception):
     pass
 
 class ItemNotFoundError(CortexError):
-    """Item does not exist."""
+    """Item does not exist. Used by repository update() methods."""
+    def __init__(self, item_id: str) -> None:
+        self.item_id = item_id
+        super().__init__(f"Item not found: {item_id}")
+
+class ChunkNotFoundError(CortexError):
+    """Chunk does not exist."""
+    def __init__(self, chunk_id: str) -> None:
+        self.chunk_id = chunk_id
+        super().__init__(f"Chunk not found: {chunk_id}")
+
+class DatabaseError(CortexError):
+    """Database operation failed (e.g., post-operation validation)."""
     pass
 
 class ProcessingError(CortexError):
@@ -278,6 +290,13 @@ async def ai_provider_error_handler(request: Request, exc: AIProviderError):
     return JSONResponse(
         status_code=503,
         content={"error": "ai_provider_error", "message": str(exc)}
+    )
+
+@app.exception_handler(DatabaseError)
+async def database_error_handler(request: Request, exc: DatabaseError):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "database_error", "message": str(exc)}
     )
 ```
 
