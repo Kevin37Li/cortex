@@ -67,3 +67,15 @@ class Chunk(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# Response models
+
+
+class ItemListResponse(BaseModel):
+    """Paginated response for listing items."""
+
+    items: list[Item]
+    total: int
+    offset: int
+    limit: int

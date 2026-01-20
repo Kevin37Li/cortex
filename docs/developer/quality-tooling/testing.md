@@ -208,7 +208,7 @@ Uses **pytest** with **pytest-asyncio** for async tests. Configuration in `pypro
 
 ### Test File Location
 
-Place tests in a parallel `tests/` directory:
+Place tests in the `tests/` directory with `test_` prefix:
 
 ```
 python-backend/
@@ -218,61 +218,96 @@ python-backend/
 │   └── workflows/
 │       └── processing.py
 └── tests/
-    ├── api/
-    │   └── test_items.py
-    ├── workflows/
-    │   └── test_processing.py
-    └── conftest.py
+    ├── test_api_items.py       # API endpoint tests
+    ├── test_repositories.py    # Repository tests
+    ├── test_workflows.py       # Workflow tests
+    └── conftest.py             # Shared fixtures
 ```
 
 ### Test Setup
 
+Use `httpx.AsyncClient` with `ASGITransport` and patch the database path for isolation:
+
 ```python
-# tests/conftest.py
+# tests/test_api_items.py
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from src.db.database import init_database
 from src.main import app
-from src.db.database import Database
+
 
 @pytest.fixture
-async def db():
-    """In-memory database for tests."""
-    db = Database(":memory:")
-    await db.connect()
-    await db.run_migrations()
-    yield db
-    await db.close()
+def temp_db_path(tmp_path: Path) -> Path:
+    """Create a temporary database path."""
+    return tmp_path / "test.db"
+
 
 @pytest.fixture
-async def client(db):
-    """Test client with mocked database."""
-    app.dependency_overrides[get_db] = lambda: db
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
+async def client(temp_db_path: Path):
+    """Create a test client with temporary database."""
+    with patch("src.config.settings.db_path", temp_db_path):
+        # Initialize database with schema
+        await init_database()
+        # Create async client with ASGITransport
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
 ```
+
+This pattern:
+
+- Uses `tmp_path` fixture for isolated test databases
+- Patches `settings.db_path` to redirect database operations
+- Uses `ASGITransport` for proper async ASGI app testing
+- Initializes the real schema for each test
 
 ### Example Tests
 
 ```python
-# tests/api/test_items.py
-import pytest
+# tests/test_api_items.py
 
-@pytest.mark.asyncio
-async def test_create_item(client):
-    response = await client.post("/api/items", json={
-        "title": "Test Item",
-        "content": "Test content",
-        "source": "test"
-    })
-    assert response.status_code == 200
-    data = response.json()
-    assert data["title"] == "Test Item"
-    assert data["status"] == "pending"
+class TestCreateItem:
+    """Test POST /api/items/ endpoint."""
 
-@pytest.mark.asyncio
-async def test_get_item_not_found(client):
-    response = await client.get("/api/items/nonexistent")
-    assert response.status_code == 404
+    async def test_create_item_success(self, client: AsyncClient):
+        """Test creating an item returns 201 and the item data."""
+        response = await client.post(
+            "/api/items/",
+            json={
+                "title": "Test Item",
+                "content": "Test content",
+                "content_type": "note",
+            },
+        )
+
+        assert response.status_code == 201  # Created
+        data = response.json()
+        assert data["title"] == "Test Item"
+        assert data["processing_status"] == "pending"
+        assert "id" in data
+
+    async def test_create_item_validation_error(self, client: AsyncClient):
+        """Test creating an item with missing fields returns 422."""
+        response = await client.post(
+            "/api/items/",
+            json={"title": "Test Item"},  # missing content and content_type
+        )
+        assert response.status_code == 422
+
+
+class TestGetItem:
+    """Test GET /api/items/{id} endpoint."""
+
+    async def test_get_item_not_found(self, client: AsyncClient):
+        """Test getting a non-existent item returns 404."""
+        response = await client.get("/api/items/nonexistent-id")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["error"] == "item_not_found"
 ```
 
 ### Running Python Tests

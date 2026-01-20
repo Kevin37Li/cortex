@@ -294,9 +294,10 @@ async def ai_provider_error_handler(request: Request, exc: AIProviderError):
 
 @app.exception_handler(DatabaseError)
 async def database_error_handler(request: Request, exc: DatabaseError):
+    # Hide internal database details from API response
     return JSONResponse(
         status_code=500,
-        content={"error": "database_error", "message": str(exc)}
+        content={"error": "database_error", "message": "Internal database error"}
     )
 ```
 

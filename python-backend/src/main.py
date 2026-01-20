@@ -3,11 +3,14 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from .api.items import router as items_router
 from .config import settings
 from .db import init_database, verify_database
+from .exceptions import DatabaseError, ItemNotFoundError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,6 +29,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 
+
+# Exception handlers
+@app.exception_handler(ItemNotFoundError)
+async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
+    """Handle ItemNotFoundError with 404 response."""
+    return JSONResponse(
+        status_code=404,
+        content={"error": "item_not_found", "message": str(exc)},
+    )
+
+
+@app.exception_handler(DatabaseError)
+async def database_error_handler(request: Request, exc: DatabaseError):
+    """Handle DatabaseError with 500 response."""
+    return JSONResponse(
+        status_code=500,
+        content={"error": "database_error", "message": "Internal database error"},
+    )
+
+
 # CORS for Tauri webview
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +63,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register routers
+app.include_router(items_router, prefix="/api")
 
 
 @app.get("/api/health")

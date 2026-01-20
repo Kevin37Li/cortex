@@ -64,6 +64,7 @@ python-backend/
 ├── src/
 │   ├── api/                    # FastAPI routes
 │   │   ├── __init__.py
+│   │   ├── deps.py            # Dependency injection helpers
 │   │   ├── items.py           # CRUD for items
 │   │   ├── search.py          # Search endpoints
 │   │   ├── chat.py            # Chat endpoints
@@ -248,27 +249,75 @@ async def health_check():
 
 ```python
 # src/api/items.py
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, Depends, Query, Response
+
+from ..db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
+from ..db.repositories import ItemRepository
+from ..exceptions import ItemNotFoundError
+from .deps import get_item_repository
+
+router = APIRouter(prefix="/items", tags=["items"])
+
+@router.post("/", response_model=Item, status_code=201,
+             responses={422: {"description": "Validation error"}})
+async def create_item(
+    data: ItemCreate,
+    repo: ItemRepository = Depends(get_item_repository),
+) -> Item:
+    """Create a new item."""
+    return await repo.create(data)
+
+@router.get("/", response_model=ItemListResponse)
+async def list_items(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    repo: ItemRepository = Depends(get_item_repository),
+) -> ItemListResponse:
+    """List items with pagination."""
+    items = await repo.list(offset=offset, limit=limit)
+    total = await repo.count()
+    return ItemListResponse(items=items, total=total, offset=offset, limit=limit)
+
+@router.delete("/{id}", status_code=204,
+               responses={404: {"description": "Item not found"}})
+async def delete_item(
+    id: str,
+    repo: ItemRepository = Depends(get_item_repository),
+) -> Response:
+    """Delete an item."""
+    deleted = await repo.delete(id)
+    if not deleted:
+        raise ItemNotFoundError(id)
+    return Response(status_code=204)
+```
+
+### Dependency Injection
+
+Use `deps.py` to provide repository instances with managed database connections:
+
+```python
+# src/api/deps.py
+from collections.abc import AsyncIterator
+
 from ..db.database import get_connection
-from ..db.models import Item, ItemCreate
 from ..db.repositories import ItemRepository
 
-router = APIRouter()
+async def get_item_repository() -> AsyncIterator[ItemRepository]:
+    """Get an ItemRepository instance with a database connection.
 
-@router.post("/", response_model=Item)
-async def create_item(
-    request: ItemCreate,
-    background_tasks: BackgroundTasks,
-):
+    Yields:
+        ItemRepository connected to the database
+    """
     async for db in get_connection():
-        repo = ItemRepository(db)
-        item = await repo.create(request)
-
-        # Queue processing in background
-        background_tasks.add_task(process_item, item.id)
-
-        return item
+        yield ItemRepository(db)
 ```
+
+This pattern:
+
+- Uses FastAPI's dependency injection with `Depends()`
+- Leverages async generators for automatic connection cleanup
+- Keeps route functions focused on business logic
+- Makes testing easier (dependencies can be overridden)
 
 ### WebSocket Streaming
 
@@ -390,6 +439,13 @@ class Item(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+class ItemListResponse(BaseModel):
+    """Paginated response for listing items."""
+    items: list[Item]
+    total: int
+    offset: int
+    limit: int
 ```
 
 #### BaseRepository
