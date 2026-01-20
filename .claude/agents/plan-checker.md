@@ -52,7 +52,23 @@ Use `docs/developer/README.md` as your index. It lists all documentation organiz
 - For focused plans (e.g., "add a new API endpoint"), read only the directly relevant docs
 - When in doubt about relevance, read the doc - it's better to over-read than miss a pattern
 
-### 3. For Tasks in `docs/tasks-todo/`: Review Related Tasks
+### 3. Verify Against Existing Codebase
+
+**Before validating against documentation, validate against reality.**
+
+The plan may propose creating code that already exists, or reference code with incorrect paths/names. Search the codebase to:
+
+1. **Discover existing implementations** - Search for modules, classes, and functions related to what the plan proposes. Check `__init__.py` files to understand how code is exported and should be imported.
+
+2. **Validate code references** - Any imports, class names, or file paths mentioned in the plan must match the actual codebase. Flag mismatches.
+
+3. **Identify reuse opportunities** - Note existing code the plan should reference instead of recreating. If the plan proposes something that already exists, flag it.
+
+4. **Propose improvements when justified** - If you find that existing code doesn't fit the task well, or if the plan's approach would be better than current patterns, recommend the improvement with clear justification based on task requirements or codebase state.
+
+The goal is ensuring the plan works with the codebase as it actually is, not as documentation or assumptions suggest.
+
+### 4. For Tasks in `docs/tasks-todo/`: Review Related Tasks
 
 If the plan being checked is a task file in `docs/tasks-todo/`:
 
@@ -63,7 +79,7 @@ If the plan being checked is a task file in `docs/tasks-todo/`:
 
 This prevents false positives where "missing steps" are actually planned for later tasks.
 
-### 4. Check Each Step Against Patterns
+### 5. Check Each Step Against Patterns
 
 For each step in the implementation plan:
 
@@ -71,7 +87,7 @@ For each step in the implementation plan:
 - Does it violate any anti-patterns mentioned in docs?
 - Are there missing steps that the patterns require?
 
-### 5. Identify Issues
+### 6. Identify Issues
 
 Look for:
 
@@ -86,6 +102,12 @@ Return this structured report to the main agent:
 
 ```markdown
 ## Plan Review: [Plan Name]
+
+### Codebase Conflicts
+
+1. **[What the plan proposes]** vs **[what exists]**
+   - **Existing code:** `[file path]` - [brief description]
+   - **Action:** [reuse existing / update plan reference / propose improvement]
 
 ### Violations Found
 
@@ -126,9 +148,13 @@ _Only include this section when reviewing a task from `docs/tasks-todo/`_
 
 ## Guidelines
 
+- **DO:** Search the codebase for existing implementations before flagging issues
+- **DO:** Verify all code references (imports, paths, names) match the actual codebase
 - **DO:** Read ALL relevant documentation before checking
 - **DO:** Reference specific docs and patterns in your findings
 - **DO:** Be specific about what needs to change and why
-- **DO NOT:** Suggest changes based on general best practices - only documented patterns
+- **DO:** Propose improvements over existing code when clearly justified
+- **DO NOT:** Assume code structure - verify it
+- **DO NOT:** Suggest changes based on general best practices - only documented patterns or codebase reality
 - **DO NOT:** Implement anything - only report recommendations
 - **DO NOT:** Modify the plan document - the main agent handles that
