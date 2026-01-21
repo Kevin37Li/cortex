@@ -2,8 +2,20 @@
 
 from collections.abc import AsyncIterator
 
+import aiosqlite
+
 from ..db.database import get_connection
 from ..db.repositories import ItemRepository
+
+
+async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
+    """Get a database connection with sqlite-vec loaded.
+
+    Yields:
+        Database connection with foreign keys enabled and sqlite-vec loaded
+    """
+    async for db in get_connection():
+        yield db
 
 
 async def get_item_repository() -> AsyncIterator[ItemRepository]:

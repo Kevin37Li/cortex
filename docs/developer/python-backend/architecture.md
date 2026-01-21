@@ -65,6 +65,7 @@ python-backend/
 │   ├── api/                    # FastAPI routes
 │   │   ├── __init__.py
 │   │   ├── deps.py            # Dependency injection helpers
+│   │   ├── health.py          # Health check endpoint
 │   │   ├── items.py           # CRUD for items
 │   │   ├── search.py          # Search endpoints
 │   │   ├── chat.py            # Chat endpoints
@@ -206,25 +207,23 @@ POST /api/search
 
 ```python
 # src/main.py
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from .api import items, search, chat, settings
-from .db.database import init_db, close_db
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .api.health import router as health_router
+from .api.items import router as items_router
+from .db import init_database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await init_db()
+    await init_database()
     yield
-    # Shutdown
-    await close_db()
+    # Shutdown (cleanup if needed)
 
-app = FastAPI(
-    title="Cortex Backend",
-    lifespan=lifespan
-)
+app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 
 # CORS for Tauri webview
 app.add_middleware(
@@ -235,14 +234,8 @@ app.add_middleware(
 )
 
 # Register routers
-app.include_router(items.router, prefix="/api/items", tags=["items"])
-app.include_router(search.router, prefix="/api/search", tags=["search"])
-app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
-
-@app.get("/api/health")
-async def health_check():
-    return {"status": "healthy"}
+app.include_router(health_router, prefix="/api")
+app.include_router(items_router, prefix="/api")
 ```
 
 ### Route Example
@@ -293,24 +286,40 @@ async def delete_item(
 
 ### Dependency Injection
 
-Use `deps.py` to provide repository instances with managed database connections:
+Use `deps.py` to provide database access to routes. There are two patterns:
 
 ```python
 # src/api/deps.py
 from collections.abc import AsyncIterator
 
+import aiosqlite
+
 from ..db.database import get_connection
 from ..db.repositories import ItemRepository
 
-async def get_item_repository() -> AsyncIterator[ItemRepository]:
-    """Get an ItemRepository instance with a database connection.
+async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
+    """Get a raw database connection.
 
-    Yields:
-        ItemRepository connected to the database
+    Use for simple queries where repository abstraction is unnecessary.
+    """
+    async for db in get_connection():
+        yield db
+
+async def get_item_repository() -> AsyncIterator[ItemRepository]:
+    """Get a repository instance with managed connection.
+
+    Use for standard CRUD operations on domain entities.
     """
     async for db in get_connection():
         yield ItemRepository(db)
 ```
+
+**When to use each:**
+
+| Dependency              | Use For                                             |
+| ----------------------- | --------------------------------------------------- |
+| `get_db_connection()`   | Simple queries (`SELECT 1`), health checks, raw SQL |
+| `get_item_repository()` | Domain entity CRUD, business logic requiring models |
 
 This pattern:
 
@@ -318,6 +327,28 @@ This pattern:
 - Leverages async generators for automatic connection cleanup
 - Keeps route functions focused on business logic
 - Makes testing easier (dependencies can be overridden)
+
+### Dynamic Status Codes
+
+When a response's HTTP status code depends on the response content (e.g., health checks returning 200 or 503), use `JSONResponse` with explicit `status_code`:
+
+```python
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+@router.get("/health", response_model=HealthResponse,
+            responses={200: {...}, 503: {...}})
+async def health_check(db = Depends(get_db_connection)) -> JSONResponse:
+    # ... check components ...
+    status_code = 200 if overall_status == "healthy" else 503
+
+    return JSONResponse(
+        status_code=status_code,
+        content=response.model_dump(mode="json"),
+    )
+```
+
+See `src/api/health.py` for the full implementation.
 
 ### WebSocket Streaming
 
@@ -615,8 +646,17 @@ class ProcessingQueue:
 
 ```python
 # src/config.py
-from pydantic_settings import BaseSettings
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+
+from pydantic_settings import BaseSettings
+
+def get_app_version() -> str:
+    """Get application version from package metadata."""
+    try:
+        return version("cortex-backend")
+    except PackageNotFoundError:
+        return "0.0.0-dev"
 
 class Settings(BaseSettings):
     # Database
@@ -637,8 +677,7 @@ class Settings(BaseSettings):
     chunk_size: int = 500
     chunk_overlap: int = 50
 
-    class Config:
-        env_prefix = "CORTEX_"
+    model_config = {"env_prefix": "CORTEX_"}
 
 settings = Settings()
 ```

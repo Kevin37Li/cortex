@@ -79,3 +79,23 @@ class ItemListResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+# Health check models
+
+
+class ComponentCheck(BaseModel):
+    """Health check result for a single component."""
+
+    status: str  # "healthy" | "unhealthy"
+    latency_ms: int | None = None
+    error: str | None = None
+
+
+class HealthResponse(BaseModel):
+    """Response model for health check endpoint."""
+
+    status: str  # "healthy" | "degraded" | "unhealthy"
+    version: str
+    timestamp: datetime
+    checks: dict[str, ComponentCheck]

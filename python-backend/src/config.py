@@ -1,8 +1,17 @@
 """Configuration settings for Cortex backend."""
 
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
+
+
+def get_app_version() -> str:
+    """Get application version from package metadata."""
+    try:
+        return version("cortex-backend")
+    except PackageNotFoundError:
+        return "0.0.0-dev"
 
 
 class Settings(BaseSettings):
