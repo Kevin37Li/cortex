@@ -258,8 +258,50 @@ class ProcessingError(CortexError):
     pass
 
 class AIProviderError(CortexError):
-    """Error from AI provider."""
+    """Base exception for AI provider errors."""
     pass
+
+class OllamaNotRunningError(AIProviderError):
+    """Ollama server is not accessible."""
+    def __init__(self, base_url: str) -> None:
+        self.base_url = base_url
+        super().__init__(f"Ollama not running at {base_url}")
+
+class OllamaModelNotFoundError(AIProviderError):
+    """Requested model not available in Ollama."""
+    def __init__(self, model: str) -> None:
+        self.model = model
+        super().__init__(f"Model not found: {model}. Run: ollama pull {model}")
+
+class OllamaTimeoutError(AIProviderError):
+    """Ollama operation timed out."""
+    def __init__(self, operation: str, timeout: float) -> None:
+        self.operation = operation
+        self.timeout = timeout
+        super().__init__(f"Ollama {operation} timed out after {timeout}s")
+
+class OllamaAPIResponseError(AIProviderError):
+    """Ollama API returned malformed response."""
+    def __init__(self, operation: str, model: str, response_data: dict | None) -> None:
+        self.operation = operation
+        self.model = model
+        self.response_data = response_data
+        super().__init__(f"Ollama {operation} returned malformed response for model '{model}'")
+```
+
+The hierarchy allows granular exception handling:
+
+```python
+try:
+    embedding = await provider.embed(text)
+except OllamaNotRunningError:
+    # Connection failed - show "start Ollama" message
+except OllamaModelNotFoundError as e:
+    # Offer to pull model: ollama pull {e.model}
+except OllamaTimeoutError:
+    # Request timed out - model may be loading
+except AIProviderError:
+    # Catch-all for other provider errors
 ```
 
 ### FastAPI Exception Handlers
@@ -299,6 +341,44 @@ async def database_error_handler(request: Request, exc: DatabaseError):
         status_code=500,
         content={"error": "database_error", "message": "Internal database error"}
     )
+```
+
+### External Service Error Pattern
+
+For external services (Ollama, cloud APIs), use a two-tier approach:
+
+1. **Availability check** - Returns `bool`, never raises, used for health checks
+2. **Operations** - Raise specific exceptions, used for actual work
+
+```python
+# ✅ GOOD: is_available() for health checks - never raises
+async def is_available(self) -> bool:
+    try:
+        response = await client.get(f"{self.base_url}/api/tags")
+        return response.status_code == 200
+    except (httpx.ConnectError, httpx.TimeoutException):
+        return False
+
+# ✅ GOOD: Operations raise specific exceptions
+async def embed(self, text: str) -> list[float]:
+    try:
+        response = await client.post(...)
+    except httpx.ConnectError:
+        raise OllamaNotRunningError(self.base_url)
+    except httpx.TimeoutException:
+        raise OllamaTimeoutError("embed", self.embed_timeout)
+```
+
+This enables graceful degradation in health checks:
+
+```python
+# Health endpoint shows "degraded" when Ollama down but DB up
+if all_healthy:
+    overall_status = "healthy"
+elif any_healthy:
+    overall_status = "degraded"
+else:
+    overall_status = "unhealthy"
 ```
 
 ### Error Response Format

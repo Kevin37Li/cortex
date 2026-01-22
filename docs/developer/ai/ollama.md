@@ -18,9 +18,9 @@ Ollama is the default AI provider for Cortex, enabling fully local inference:
 │              Cortex App                  │
 │  ┌─────────────────────────────────┐    │
 │  │       OllamaProvider            │    │
-│  │  • Health checks                │    │
+│  │  • Implements AIProvider ABC    │    │
+│  │  • Health checks (is_available) │    │
 │  │  • Model management             │    │
-│  │  • Request batching             │    │
 │  └──────────────┬──────────────────┘    │
 └─────────────────┼───────────────────────┘
                   │ HTTP (localhost:11434)
@@ -31,6 +31,21 @@ Ollama is the default AI provider for Cortex, enabling fully local inference:
 │  • Concurrent request handling          │
 └─────────────────────────────────────────┘
 ```
+
+## Configuration
+
+Settings are defined in `python-backend/src/config.py` with sensible defaults. They can be overridden via environment variables using the `CORTEX_` prefix (pydantic-settings pattern).
+
+| Setting (config.py)        | Env Override                         | Default                   | Description                               |
+| -------------------------- | ------------------------------------ | ------------------------- | ----------------------------------------- |
+| `ollama_host`              | `CORTEX_OLLAMA_HOST`                 | `http://localhost:11434`  | Ollama server URL                         |
+| `embedding_model`          | `CORTEX_EMBEDDING_MODEL`             | `nomic-embed-text`        | Model for embeddings (768 dimensions)     |
+| `chat_model`               | `CORTEX_CHAT_MODEL`                  | `llama3.2:3b`             | Model for chat completions                |
+| `ollama_timeout`           | `CORTEX_OLLAMA_TIMEOUT`              | `30.0`                    | General request timeout (seconds)         |
+| `ollama_embed_timeout`     | `CORTEX_OLLAMA_EMBED_TIMEOUT`        | `60.0`                    | Embedding timeout (model loading)         |
+| `ollama_availability_timeout` | `CORTEX_OLLAMA_AVAILABILITY_TIMEOUT` | `5.0`                  | Quick availability check timeout          |
+
+The longer embed timeout (60s) accounts for initial model loading into memory, which takes 5-15 seconds for large models.
 
 ## Setup Flow
 
@@ -211,7 +226,7 @@ async def pull_model(
 │                                                              │
 │  Embedding Model                                             │
 │  [nomic-embed-text                              ▼]          │
-│  384 dimensions • Required for search                       │
+│  768 dimensions • Required for search                       │
 │                                                              │
 │  Chat Model                                                  │
 │  [llama3.2:3b                                   ▼]          │
@@ -263,44 +278,53 @@ The app should detect GPU availability and adjust expectations in the UI.
 
 ## Error Handling
 
-### Ollama Not Running
+Exception hierarchy defined in `python-backend/src/exceptions.py`:
 
-```python
-class OllamaNotRunningError(Exception):
-    """Raised when Ollama server is not accessible."""
-    pass
-
-# In provider
-async def embed(self, text: str) -> list[float]:
-    try:
-        response = await self.client.post(...)
-    except httpx.ConnectError:
-        raise OllamaNotRunningError(
-            "Cannot connect to Ollama. Is it running?"
-        )
+```
+CortexError
+└── AIProviderError
+    ├── OllamaNotRunningError (connection refused)
+    ├── OllamaModelNotFoundError (model not available)
+    ├── OllamaTimeoutError (request timeout)
+    └── OllamaAPIResponseError (malformed response)
 ```
 
-### Model Not Found
+### Graceful Degradation Pattern
+
+The provider distinguishes availability checks from operations:
 
 ```python
-class ModelNotFoundError(Exception):
-    """Raised when requested model is not available."""
-    pass
+# ✅ GOOD: is_available() for health checks - never raises
+if not await provider.is_available():
+    return "degraded"
 
-# Check before operations
-if model not in await self.list_models():
-    raise ModelNotFoundError(f"Model {model} not found. Run: ollama pull {model}")
+# ✅ GOOD: Operations raise specific exceptions
+try:
+    embedding = await provider.embed(text)
+except OllamaNotRunningError as e:
+    # e.base_url contains the URL that failed
+    logger.error(f"Ollama not running at {e.base_url}")
+except OllamaModelNotFoundError as e:
+    # e.model contains the missing model
+    logger.error(f"Model not found: {e.model}")
+except OllamaTimeoutError as e:
+    # e.operation, e.timeout contain details
+    logger.error(f"Timeout on {e.operation} after {e.timeout}s")
+except OllamaAPIResponseError as e:
+    # e.response_data contains the malformed response
+    logger.error(f"Malformed response: {e.response_data}")
 ```
 
-### Out of Memory
+### Exception Handler
 
-Large models may fail on limited hardware:
+The FastAPI exception handler returns 503 for all AI provider errors:
 
 ```python
-# Detect OOM from Ollama response
-if "out of memory" in response.text.lower():
-    raise OutOfMemoryError(
-        "Model too large for available memory. Try a smaller model."
+@app.exception_handler(AIProviderError)
+async def ai_provider_error_handler(request: Request, exc: AIProviderError):
+    return JSONResponse(
+        status_code=503,  # Service Unavailable
+        content={"detail": str(exc), "error_type": type(exc).__name__},
     )
 ```
 
@@ -328,6 +352,66 @@ if "out of memory" in response.text.lower():
 - Users with powerful hardware can use larger models (70B)
 - Hybrid mode lets users use cloud for complex queries
 - Clear guidance on which tasks benefit from better models
+
+## Health Check Endpoints
+
+Two endpoints for monitoring Ollama status:
+
+### `GET /api/health`
+
+Main health endpoint includes Ollama as a component check:
+
+```json
+{
+  "status": "healthy",  // or "degraded" if Ollama down but DB up
+  "checks": {
+    "database": {"status": "healthy", "latency_ms": 1},
+    "ollama": {"status": "healthy", "latency_ms": 45}
+  }
+}
+```
+
+### `GET /api/health/ollama`
+
+Dedicated endpoint with detailed Ollama status and model list:
+
+```json
+{
+  "status": "healthy",
+  "base_url": "http://localhost:11434",
+  "models": ["nomic-embed-text", "llama3.2:3b"],
+  "latency_ms": 45.2
+}
+```
+
+When Ollama is not running:
+
+```json
+{
+  "status": "unavailable",
+  "base_url": "http://localhost:11434",
+  "error": "Ollama not running at http://localhost:11434"
+}
+```
+
+## Dependency Injection
+
+Use `get_ollama_provider()` from `python-backend/src/api/deps.py`:
+
+```python
+from fastapi import Depends
+from src.api.deps import get_ollama_provider
+from src.providers import OllamaProvider
+
+@router.post("/embed")
+async def embed_text(
+    text: str,
+    provider: OllamaProvider = Depends(get_ollama_provider),
+):
+    return await provider.embed(text)
+```
+
+The provider uses settings-based defaults, so `OllamaProvider()` with no arguments uses configuration values.
 
 ## Related Documentation
 

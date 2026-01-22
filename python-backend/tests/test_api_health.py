@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from src.api.deps import get_db_connection
+from src.api.deps import get_db_connection, get_ollama_provider
 from src.db.database import init_database
 from src.main import app
 
@@ -118,8 +118,17 @@ class TestHealthEndpointFailure:
             async def mock_get_db_connection():
                 yield MockFailingConnection()
 
-            # Use FastAPI's dependency override
+            # Create a mock Ollama provider that also fails
+            class MockFailingOllamaProvider:
+                async def is_available(self):
+                    return False
+
+            async def mock_get_ollama_provider():
+                yield MockFailingOllamaProvider()
+
+            # Use FastAPI's dependency override for both components
             app.dependency_overrides[get_db_connection] = mock_get_db_connection
+            app.dependency_overrides[get_ollama_provider] = mock_get_ollama_provider
             try:
                 transport = ASGITransport(app=app)
                 async with AsyncClient(

@@ -11,7 +11,7 @@ from .api.health import router as health_router
 from .api.items import router as items_router
 from .config import settings
 from .db import init_database, verify_database
-from .exceptions import DatabaseError, ItemNotFoundError
+from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -47,6 +47,15 @@ async def database_error_handler(request: Request, exc: DatabaseError):
     return JSONResponse(
         status_code=500,
         content={"error": "database_error", "message": "Internal database error"},
+    )
+
+
+@app.exception_handler(AIProviderError)
+async def ai_provider_error_handler(request: Request, exc: AIProviderError):
+    """Handle AIProviderError with 503 response."""
+    return JSONResponse(
+        status_code=503,
+        content={"error": type(exc).__name__, "message": str(exc)},
     )
 
 

@@ -6,14 +6,25 @@ How Cortex uses AI for understanding and retrieving knowledge.
 
 ### 1. Provider Agnostic
 
-The application doesn't care whether AI runs locally or in the cloud. All AI operations go through a unified interface:
+The application doesn't care whether AI runs locally or in the cloud. All AI operations go through a unified interface defined in `python-backend/src/providers/base.py`:
 
 ```python
-class AIProvider:
-    async def embed(text: str) -> list[float]
-    async def embed_batch(texts: list[str]) -> list[list[float]]
-    async def chat(messages: list, system: str) -> str
-    async def stream_chat(messages: list) -> AsyncIterator[str]
+class AIProvider(ABC):
+    @abstractmethod
+    async def embed(self, text: str) -> list[float]: ...
+
+    @abstractmethod
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
+
+    @abstractmethod
+    async def chat(
+        self, messages: list[dict[str, str]], system: str | None = None
+    ) -> str: ...
+
+    @abstractmethod
+    async def stream_chat(
+        self, messages: list[dict[str, str]], system: str | None = None
+    ) -> AsyncIterator[str]: ...
 ```
 
 This abstraction allows:
@@ -132,38 +143,26 @@ Users can change providers anytime in Settings > AI:
 
 ## Error Handling
 
-### Provider Unavailable
+Provider operations use a specific exception hierarchy under `AIProviderError` (see `python-backend/src/exceptions.py`). Each provider has specific exceptions (e.g., `OllamaNotRunningError`, `OllamaModelNotFoundError`).
+
+### Key Patterns
+
+- **`is_available()`** returns `bool` for health checks - never raises
+- **Operation methods** (`embed`, `chat`) raise specific exceptions on failure
+- **Fallback chains**: Try local provider, fall back to cloud if configured
 
 ```python
-# Ollama not running
-if not await ollama_provider.health_check():
+# Health check pattern - graceful degradation
+if not await ollama_provider.is_available():
     if user_has_cloud_fallback:
         return await cloud_provider.embed(text)
-    else:
-        raise ProviderUnavailableError(
-            "Ollama is not running. Start Ollama or configure a cloud provider."
-        )
+    return "degraded"  # Don't crash
+
+# Operations raise on failure - handle appropriately
+embedding = await provider.embed(text)  # May raise provider-specific exception
 ```
 
-### Model Not Found
-
-```python
-# Requested model not downloaded
-if model not in await ollama_provider.list_models():
-    # Offer to download
-    await ollama_provider.pull_model(model, progress_callback)
-```
-
-### Rate Limiting (Cloud)
-
-```python
-# Cloud API rate limited
-try:
-    return await cloud_provider.embed(text)
-except RateLimitError:
-    await asyncio.sleep(backoff)
-    return await cloud_provider.embed(text)  # Retry
-```
+See [Ollama Error Handling](./ollama.md#error-handling) for detailed exception hierarchy and handling patterns.
 
 ## Cost Estimation (Cloud)
 
@@ -177,6 +176,21 @@ When using cloud providers, track and display costs:
 
 Display in UI: "Estimated cost this month: $0.12"
 
+## Configuration
+
+Provider settings are defined in `python-backend/src/config.py` and can be overridden via environment variables with the `CORTEX_` prefix (pydantic-settings pattern).
+
+See provider-specific documentation for detailed configuration:
+
+- [Ollama Configuration](./ollama.md#configuration) - Local inference settings
+- [Cloud Providers](./cloud-providers.md) - API keys and cloud settings
+
+## Health Check Integration
+
+The main `/api/health` endpoint includes AI provider status as a component check. The overall status uses "degraded" when some components (like database) are healthy but others (like Ollama) are not.
+
+See [Ollama Health Endpoints](./ollama.md#health-check-endpoints) for detailed endpoint documentation.
+
 ## Testing AI Features
 
 ### Mock Provider
@@ -187,9 +201,10 @@ For tests, use a mock provider that returns deterministic results:
 class MockAIProvider(AIProvider):
     async def embed(self, text: str) -> list[float]:
         # Return consistent embedding based on text hash
-        return [hash(text) % 100 / 100.0] * 384
+        # Use 768 dimensions to match nomic-embed-text
+        return [hash(text) % 100 / 100.0] * 768
 
-    async def chat(self, messages: list, system: str) -> str:
+    async def chat(self, messages: list[dict[str, str]], system: str | None = None) -> str:
         return "Mock response for testing"
 ```
 

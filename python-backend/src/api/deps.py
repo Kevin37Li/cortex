@@ -6,6 +6,7 @@ import aiosqlite
 
 from ..db.database import get_connection
 from ..db.repositories import ItemRepository
+from ..providers import OllamaProvider
 
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
@@ -26,3 +27,12 @@ async def get_item_repository() -> AsyncIterator[ItemRepository]:
     """
     async for db in get_connection():
         yield ItemRepository(db)
+
+
+async def get_ollama_provider() -> AsyncIterator[OllamaProvider]:
+    """Get an OllamaProvider instance configured from settings.
+
+    Yields:
+        OllamaProvider configured with settings values (defaults from config)
+    """
+    yield OllamaProvider()

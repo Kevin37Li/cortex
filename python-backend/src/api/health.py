@@ -9,7 +9,8 @@ from fastapi.responses import JSONResponse
 
 from ..config import get_app_version
 from ..db.models import ComponentCheck, HealthResponse
-from .deps import get_db_connection
+from ..providers import OllamaHealthResponse, OllamaProvider
+from .deps import get_db_connection, get_ollama_provider
 
 router = APIRouter(tags=["health"])
 
@@ -25,6 +26,19 @@ async def _check_database(db: aiosqlite.Connection) -> ComponentCheck:
         return ComponentCheck(status="unhealthy", error=str(e))
 
 
+async def _check_ollama(provider: OllamaProvider) -> ComponentCheck:
+    """Check Ollama server connectivity and measure latency."""
+    start = time.perf_counter()
+    try:
+        is_available = await provider.is_available()
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        if is_available:
+            return ComponentCheck(status="healthy", latency_ms=latency_ms)
+        return ComponentCheck(status="unhealthy", error="Ollama server not responding")
+    except Exception as e:
+        return ComponentCheck(status="unhealthy", error=str(e))
+
+
 @router.get(
     "/health",
     response_model=HealthResponse,
@@ -35,8 +49,9 @@ async def _check_database(db: aiosqlite.Connection) -> ComponentCheck:
 )
 async def health_check(
     db: aiosqlite.Connection = Depends(get_db_connection),
+    ollama: OllamaProvider = Depends(get_ollama_provider),
 ) -> JSONResponse:
-    """Health check endpoint with database connectivity verification.
+    """Health check endpoint with database and Ollama connectivity verification.
 
     Returns overall health status, version, timestamp, and component checks.
     """
@@ -44,6 +59,9 @@ async def health_check(
 
     # Check database
     checks["database"] = await _check_database(db)
+
+    # Check Ollama
+    checks["ollama"] = await _check_ollama(ollama)
 
     # Determine overall status
     all_healthy = all(check.status == "healthy" for check in checks.values())
@@ -73,3 +91,35 @@ async def health_check(
         status_code=status_code,
         content=response.model_dump(mode="json"),
     )
+
+
+@router.get(
+    "/health/ollama",
+    response_model=OllamaHealthResponse,
+    responses={
+        200: {"description": "Ollama health status retrieved"},
+    },
+)
+async def check_ollama_health(
+    provider: OllamaProvider = Depends(get_ollama_provider),
+) -> OllamaHealthResponse:
+    """Dedicated Ollama health check endpoint with model listing.
+
+    Returns detailed Ollama status including available models.
+    """
+    start = time.perf_counter()
+    try:
+        models = await provider.list_models()
+        latency_ms = (time.perf_counter() - start) * 1000
+        return OllamaHealthResponse(
+            status="healthy",
+            base_url=provider.base_url,
+            models=[m.name for m in models],
+            latency_ms=latency_ms,
+        )
+    except Exception as e:
+        return OllamaHealthResponse(
+            status="unavailable",
+            base_url=provider.base_url,
+            error=str(e),
+        )

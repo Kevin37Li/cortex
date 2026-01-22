@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     embedding_model: str = "nomic-embed-text"
     chat_model: str = "llama3.2:3b"
 
+    # Ollama Timeouts
+    ollama_timeout: float = 30.0  # General request timeout (seconds)
+    ollama_embed_timeout: float = 60.0  # Embedding timeout (model loading)
+    ollama_availability_timeout: float = 5.0  # Quick check if server is running
+
     # Processing
     max_concurrent_processing: int = 2
     chunk_size: int = 500
