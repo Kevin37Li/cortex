@@ -328,21 +328,21 @@ _Tracked: 2026-01-22_
 
 ### Files Changed
 
-| File | Change | Description |
-|------|--------|-------------|
-| `python-backend/src/providers/base.py` | Created | AIProvider abstract base class with embed, embed_batch, chat, stream_chat methods |
-| `python-backend/src/providers/models.py` | Created | Pydantic models: ModelInfo, OllamaHealthResponse |
-| `python-backend/src/providers/ollama.py` | Created | OllamaProvider implementing AIProvider with is_available, list_models |
-| `python-backend/src/providers/__init__.py` | Modified | Export AIProvider, OllamaProvider, ModelInfo, OllamaHealthResponse |
-| `python-backend/src/exceptions.py` | Modified | Added AIProviderError, OllamaNotRunningError, OllamaModelNotFoundError, OllamaTimeoutError, OllamaAPIResponseError |
-| `python-backend/src/api/health.py` | Modified | Added /health/ollama endpoint and Ollama component check in /health |
-| `python-backend/src/api/deps.py` | Modified | Added get_ollama_provider() dependency |
-| `python-backend/src/config.py` | Modified | Added ollama_timeout, ollama_embed_timeout, ollama_availability_timeout settings |
-| `python-backend/src/main.py` | Modified | Added AIProviderError exception handler returning 503 |
-| `python-backend/pyproject.toml` | Modified | Moved httpx from dev to main dependencies |
-| `python-backend/tests/test_providers_ollama.py` | Created | 24 tests for OllamaProvider class |
-| `python-backend/tests/test_api_health_ollama.py` | Created | 7 tests for Ollama health endpoints |
-| `python-backend/tests/test_api_health.py` | Modified | Updated mock to include Ollama provider dependency |
+| File                                             | Change   | Description                                                                                                        |
+| ------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `python-backend/src/providers/base.py`           | Created  | AIProvider abstract base class with embed, embed_batch, chat, stream_chat methods                                  |
+| `python-backend/src/providers/models.py`         | Created  | Pydantic models: ModelInfo, OllamaHealthResponse                                                                   |
+| `python-backend/src/providers/ollama.py`         | Created  | OllamaProvider implementing AIProvider with is_available, list_models                                              |
+| `python-backend/src/providers/__init__.py`       | Modified | Export AIProvider, OllamaProvider, ModelInfo, OllamaHealthResponse                                                 |
+| `python-backend/src/exceptions.py`               | Modified | Added AIProviderError, OllamaNotRunningError, OllamaModelNotFoundError, OllamaTimeoutError, OllamaAPIResponseError |
+| `python-backend/src/api/health.py`               | Modified | Added /health/ollama endpoint and Ollama component check in /health                                                |
+| `python-backend/src/api/deps.py`                 | Modified | Added get_ollama_provider() dependency                                                                             |
+| `python-backend/src/config.py`                   | Modified | Added ollama_timeout, ollama_embed_timeout, ollama_availability_timeout settings                                   |
+| `python-backend/src/main.py`                     | Modified | Added AIProviderError exception handler returning 503                                                              |
+| `python-backend/pyproject.toml`                  | Modified | Moved httpx from dev to main dependencies                                                                          |
+| `python-backend/tests/test_providers_ollama.py`  | Created  | 24 tests for OllamaProvider class                                                                                  |
+| `python-backend/tests/test_api_health_ollama.py` | Created  | 7 tests for Ollama health endpoints                                                                                |
+| `python-backend/tests/test_api_health.py`        | Modified | Updated mock to include Ollama provider dependency                                                                 |
 
 ### Code Metrics
 
@@ -472,6 +472,7 @@ if embedding is None:
 #### 2. Multiple Timeout Requirements
 
 **Challenge:** Different operations need different timeouts:
+
 - Health checks: fast (5s) - don't want to wait long
 - Chat: moderate (30s) - user-facing operations
 - Embeddings: long (60s) - first request loads model into memory

@@ -36,14 +36,14 @@ Ollama is the default AI provider for Cortex, enabling fully local inference:
 
 Settings are defined in `python-backend/src/config.py` with sensible defaults. They can be overridden via environment variables using the `CORTEX_` prefix (pydantic-settings pattern).
 
-| Setting (config.py)        | Env Override                         | Default                   | Description                               |
-| -------------------------- | ------------------------------------ | ------------------------- | ----------------------------------------- |
-| `ollama_host`              | `CORTEX_OLLAMA_HOST`                 | `http://localhost:11434`  | Ollama server URL                         |
-| `embedding_model`          | `CORTEX_EMBEDDING_MODEL`             | `nomic-embed-text`        | Model for embeddings (768 dimensions)     |
-| `chat_model`               | `CORTEX_CHAT_MODEL`                  | `llama3.2:3b`             | Model for chat completions                |
-| `ollama_timeout`           | `CORTEX_OLLAMA_TIMEOUT`              | `30.0`                    | General request timeout (seconds)         |
-| `ollama_embed_timeout`     | `CORTEX_OLLAMA_EMBED_TIMEOUT`        | `60.0`                    | Embedding timeout (model loading)         |
-| `ollama_availability_timeout` | `CORTEX_OLLAMA_AVAILABILITY_TIMEOUT` | `5.0`                  | Quick availability check timeout          |
+| Setting (config.py)           | Env Override                         | Default                  | Description                           |
+| ----------------------------- | ------------------------------------ | ------------------------ | ------------------------------------- |
+| `ollama_host`                 | `CORTEX_OLLAMA_HOST`                 | `http://localhost:11434` | Ollama server URL                     |
+| `embedding_model`             | `CORTEX_EMBEDDING_MODEL`             | `nomic-embed-text`       | Model for embeddings (768 dimensions) |
+| `chat_model`                  | `CORTEX_CHAT_MODEL`                  | `llama3.2:3b`            | Model for chat completions            |
+| `ollama_timeout`              | `CORTEX_OLLAMA_TIMEOUT`              | `30.0`                   | General request timeout (seconds)     |
+| `ollama_embed_timeout`        | `CORTEX_OLLAMA_EMBED_TIMEOUT`        | `60.0`                   | Embedding timeout (model loading)     |
+| `ollama_availability_timeout` | `CORTEX_OLLAMA_AVAILABILITY_TIMEOUT` | `5.0`                    | Quick availability check timeout      |
 
 The longer embed timeout (60s) accounts for initial model loading into memory, which takes 5-15 seconds for large models.
 
@@ -363,10 +363,10 @@ Main health endpoint includes Ollama as a component check:
 
 ```json
 {
-  "status": "healthy",  // or "degraded" if Ollama down but DB up
+  "status": "healthy", // or "degraded" if Ollama down but DB up
   "checks": {
-    "database": {"status": "healthy", "latency_ms": 1},
-    "ollama": {"status": "healthy", "latency_ms": 45}
+    "database": { "status": "healthy", "latency_ms": 1 },
+    "ollama": { "status": "healthy", "latency_ms": 45 }
   }
 }
 ```
