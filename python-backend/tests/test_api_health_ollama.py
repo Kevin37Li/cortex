@@ -13,12 +13,6 @@ from src.providers.models import ModelInfo
 
 
 @pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
 def mock_ollama_provider():
     """Create a mock OllamaProvider."""
     provider = MagicMock(spec=OllamaProvider)

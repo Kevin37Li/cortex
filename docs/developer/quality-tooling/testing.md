@@ -226,16 +226,17 @@ python-backend/
 
 ### Test Setup
 
-Use `httpx.AsyncClient` with `ASGITransport` and patch the database path for isolation:
+Shared fixtures are defined in `tests/conftest.py`. There are two main fixtures for different test levels:
 
 ```python
-# tests/test_api_items.py
+# tests/conftest.py
 from pathlib import Path
 from unittest.mock import patch
 
+import aiosqlite
 import pytest
 from httpx import ASGITransport, AsyncClient
-from src.db.database import init_database
+from src.db.database import _apply_schema, init_database
 from src.main import app
 
 
@@ -246,23 +247,46 @@ def temp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+async def db_connection(temp_db_path: Path):
+    """Database connection with schema applied.
+
+    Use for repository and database-level tests that need direct DB access.
+    """
+    async with aiosqlite.connect(temp_db_path) as db:
+        await db.execute("PRAGMA foreign_keys = ON")
+        db.row_factory = aiosqlite.Row
+        await _apply_schema(db)
+        await db.commit()
+        yield db
+
+
+@pytest.fixture
 async def client(temp_db_path: Path):
-    """Create a test client with temporary database."""
+    """Async test client with temporary database.
+
+    Use for API endpoint tests that make HTTP requests.
+    """
     with patch("src.config.settings.db_path", temp_db_path):
-        # Initialize database with schema
         await init_database()
-        # Create async client with ASGITransport
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
 ```
 
+**Fixture hierarchy:**
+
+- `temp_db_path` - Base fixture creating a temporary database path
+- `db_connection` - Direct database connection for repository tests (uses `_apply_schema`)
+- `client` - HTTP client for API tests (uses `init_database` which calls `_apply_schema`)
+
+**Important:** Use file-based SQLite with `tmp_path`, not `:memory:`. The sqlite-vec extension requires file-based databases for its vector index operations.
+
 This pattern:
 
-- Uses `tmp_path` fixture for isolated test databases
+- Uses `tmp_path` fixture for isolated file-based test databases
 - Patches `settings.db_path` to redirect database operations
 - Uses `ASGITransport` for proper async ASGI app testing
-- Initializes the real schema for each test
+- Applies the real schema from `schema.sql` for each test
 
 ### Example Tests
 
@@ -320,7 +344,7 @@ cd python-backend && pytest
 pytest --cov=src --cov-report=html
 
 # Run specific test file
-pytest tests/api/test_items.py
+pytest tests/test_api_items.py
 
 # Run with verbose output
 pytest -v
@@ -334,5 +358,5 @@ pytest -v
 | Use `vi.mocked()` for type-safe mocks | Use untyped mock assertions   |
 | Test user-visible behavior            | Test implementation details   |
 | Use `tempfile` for Rust file tests    | Write to real file system     |
-| Use in-memory SQLite for Python tests | Connect to real database      |
+| Use file-based SQLite with `tmp_path` | Connect to real database      |
 | Use `pytest.fixture` for test setup   | Duplicate setup in each test  |

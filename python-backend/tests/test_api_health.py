@@ -4,29 +4,10 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from httpx import ASGITransport, AsyncClient
 from src.api.deps import get_db_connection, get_ollama_provider
 from src.db.database import init_database
 from src.main import app
-
-
-@pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
-async def client(temp_db_path: Path):
-    """Create a test client with temporary database."""
-    with patch("src.config.settings.db_path", temp_db_path):
-        # Initialize database
-        await init_database()
-        # Create async client
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            yield ac
 
 
 class TestHealthEndpoint:

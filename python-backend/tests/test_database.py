@@ -17,12 +17,6 @@ from src.db.database import (
 
 
 @pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
 def mock_settings(temp_db_path: Path):
     """Mock settings with temporary database path."""
     with patch("src.db.database.settings") as mock:

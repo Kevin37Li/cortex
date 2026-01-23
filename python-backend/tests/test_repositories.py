@@ -1,30 +1,10 @@
 """Tests for repository classes."""
 
-from pathlib import Path
-
 import aiosqlite
 import pytest
-from src.db.database import _apply_schema
 from src.db.models import ChunkCreate, ItemCreate, ItemUpdate
 from src.db.repositories import ChunkRepository, ItemRepository
 from src.exceptions import ItemNotFoundError
-
-
-@pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
-async def db_connection(temp_db_path: Path):
-    """Create a database connection with schema applied."""
-    async with aiosqlite.connect(temp_db_path) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        db.row_factory = aiosqlite.Row
-        await _apply_schema(db)
-        await db.commit()
-        yield db
 
 
 class TestItemRepository:
