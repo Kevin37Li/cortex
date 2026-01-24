@@ -1,6 +1,5 @@
 export { TitleBar } from '../titlebar/TitleBar'
 export { LeftSideBar } from './LeftSideBar'
 export { RightSideBar } from './RightSideBar'
-export { MainWindowContent } from './MainWindowContent'
-export { MainWindow } from './MainWindow'
+export { MainWindowShell } from './MainWindowShell'
 export { MacOSWindowControls } from '../titlebar/MacOSWindowControls'

@@ -2,6 +2,13 @@ import React, { useState } from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
+import {
+  RouterProvider,
+  createRouter,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+} from '@tanstack/react-router'
 import i18n from '@/i18n/config'
 import {
   ThemeProviderContext,
@@ -43,22 +50,74 @@ function MockThemeProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-const AllTheProviders = ({ children }: AllTheProvidersProps) => {
-  const queryClient = createTestQueryClient()
+interface AllTheProvidersOptions {
+  initialPath?: string
+}
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <I18nextProvider i18n={i18n}>
-        <MockThemeProvider>{children}</MockThemeProvider>
-      </I18nextProvider>
-    </QueryClientProvider>
-  )
+function createAllTheProviders(options: AllTheProvidersOptions = {}) {
+  const { initialPath = '/' } = options
+
+  return function AllTheProviders({ children }: AllTheProvidersProps) {
+    const queryClient = createTestQueryClient()
+
+    // Create router with children as the component to render
+    const rootRoute = createRootRoute({
+      component: () => <>{children}</>,
+    })
+
+    const routeTree = rootRoute.addChildren([
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/',
+        component: () => null,
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/items',
+        component: () => null,
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/conversations',
+        component: () => null,
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '$',
+        component: () => null,
+      }),
+    ])
+
+    const memoryHistory = createMemoryHistory({ initialEntries: [initialPath] })
+    const testRouter = createRouter({
+      routeTree,
+      history: memoryHistory,
+    })
+
+    return (
+      <QueryClientProvider client={queryClient}>
+        <I18nextProvider i18n={i18n}>
+          <MockThemeProvider>
+            <RouterProvider router={testRouter} />
+          </MockThemeProvider>
+        </I18nextProvider>
+      </QueryClientProvider>
+    )
+  }
+}
+
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  initialPath?: string
 }
 
 const customRender = (
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllTheProviders, ...options })
+  options?: CustomRenderOptions
+) => {
+  const { initialPath, ...renderOptions } = options ?? {}
+  const wrapper = createAllTheProviders({ initialPath })
+  return render(ui, { wrapper, ...renderOptions })
+}
 
 export * from '@testing-library/react'
 export { customRender as render }

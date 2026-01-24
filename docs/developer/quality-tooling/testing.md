@@ -122,6 +122,31 @@ test('component with query', () => {
 })
 ```
 
+### Testing with Router
+
+Components using `useRouterState` or navigation need a router wrapper. The test utils create a memory-based router:
+
+```typescript
+// src/test/test-utils.tsx provides customRender with router support
+import { render } from '@/test/test-utils'
+
+test('component with routing', () => {
+  render(<MyComponent />, { initialPath: '/items' })
+})
+```
+
+**Key pattern**: Test utils create a separate router instance with `createMemoryHistory` to control routing state without affecting the app router:
+
+```typescript
+const memoryHistory = createMemoryHistory({ initialEntries: [initialPath] })
+const testRouter = createRouter({
+  routeTree,
+  history: memoryHistory,
+})
+```
+
+This allows setting initial route state and testing navigation without hash-based URLs.
+
 ### Testing Zustand Stores
 
 ```typescript

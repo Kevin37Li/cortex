@@ -83,33 +83,23 @@ The hybrid architecture adds complexity but is essential: Rust handles security-
 
 ## Mental Models
 
-### 1. The "Onion" State Architecture
+### 1. State Ownership
 
-State management follows a three-layer hierarchy:
-
-```
-┌─────────────────────────────────────┐
-│           useState                  │  ← Component UI State
-│  ┌─────────────────────────────────┐│
-│  │          Zustand                ││  ← Global UI State
-│  │  ┌─────────────────────────────┐││
-│  │  │      TanStack Query         │││  ← Persistent Data
-│  │  └─────────────────────────────┘││
-│  └─────────────────────────────────┘│
-└─────────────────────────────────────┘
-```
+State is owned by different systems based on its nature—URL state in TanStack Router, component state in useState, global UI state in Zustand, and server data in TanStack Query.
 
 **Decision Tree:**
 
 ```
-Is this data needed across multiple components?
-├─ No → useState
-└─ Yes → Does this data persist between sessions?
-    ├─ No → Zustand
-    └─ Yes → TanStack Query
+Is this state derived from the URL?
+├─ Yes → TanStack Router (route params)
+└─ No → Is this data needed across multiple components?
+    ├─ No → useState
+    └─ Yes → Does this data persist between sessions?
+        ├─ No → Zustand
+        └─ Yes → TanStack Query
 ```
 
-See [state-management.md](./state-management.md) for implementation details.
+See [state-management.md](./state-management.md) for the full ownership table and implementation details.
 
 ### 2. Command-Centric Design
 
@@ -262,13 +252,15 @@ MainWindow (Top-level orchestrator)
 ```
 src/                          # React frontend
 ├── components/
-│   ├── layout/              # MainWindow, sidebars
+│   ├── layout/              # MainWindowShell, sidebars
 │   ├── command-palette/     # Command palette system
 │   └── ui/                  # shadcn/ui components
 ├── hooks/                   # Custom React hooks
 ├── lib/
 │   ├── commands/            # Command system
+│   ├── router.ts            # TanStack Router configuration
 │   └── tauri-bindings/      # Generated type-safe commands
+├── routes/                  # File-based route components
 ├── services/                # TanStack Query + API calls
 └── store/                   # Zustand stores
 

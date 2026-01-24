@@ -1,6 +1,22 @@
 {
   "app.name": "Tauri Template",
 
+  "nav.allItems": "All Items",
+  "nav.conversations": "Conversations",
+  "nav.settings": "Settings",
+
+  "items.emptyState": "No items yet. Start by adding your first item.",
+  "items.detail.title": "Item Details",
+  "items.detail.viewing": "Viewing item {{id}}",
+
+  "conversations.emptyState": "No conversations yet. Start a new conversation.",
+  "conversations.detail.title": "Conversation",
+  "conversations.detail.viewing": "Viewing conversation {{id}}",
+
+  "notFound.title": "Page Not Found",
+  "notFound.description": "The page you're looking for doesn't exist.",
+  "notFound.backToItems": "Back to Items",
+
   "menu.about": "About {{appName}}",
   "menu.checkForUpdates": "Check for Updates...",
   "menu.preferences": "Preferences...",
@@ -83,6 +99,13 @@
 
   "commands.testToast.label": "Test Toast Notification",
   "commands.testToast.description": "Show a test toast notification",
+
+  "commands.goToItems.label": "Go to Items",
+  "commands.goToItems.description": "Navigate to the items list",
+  "commands.goToConversations.label": "Go to Conversations",
+  "commands.goToConversations.description": "Navigate to the conversations list",
+  "commands.goToSettings.label": "Go to Settings",
+  "commands.goToSettings.description": "Navigate to settings",
 
   "commandPalette.title": "Command Palette",
   "commandPalette.placeholder": "Type a command or search...",

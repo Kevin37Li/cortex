@@ -219,12 +219,42 @@ export function useCommandContext(): CommandContext {
 
 Organize commands into logical groups (used in command palette headings):
 
-- **navigation**: Sidebar toggles, view switching
+- **navigation**: Route navigation, sidebar toggles, view switching
 - **settings**: Preferences, configuration
 - **notifications**: Notification actions
 - **window**: Window management (minimize, close, etc.)
 
 Group labels are translated via `commands.group.{groupName}` keys.
+
+## Navigation Commands
+
+Navigation commands use `router.navigate()` directly (not hooks) since execute functions aren't React components:
+
+```typescript
+// src/lib/commands/route-commands.ts
+import { router } from '@/lib/router'
+
+export const routeCommands: AppCommand[] = [
+  {
+    id: 'go-to-items',
+    labelKey: 'commands.goToItems.label',
+    group: 'navigation',
+
+    // ✅ GOOD: Direct router.navigate() in execute
+    execute: () => {
+      router.navigate({ to: '/items' })
+    },
+  },
+]
+
+// ❌ BAD: Using hooks in execute functions
+execute: () => {
+  const navigate = useNavigate() // Error: hooks can't be called here
+  navigate('/items')
+}
+```
+
+This pattern works because the router instance is a singleton exported from `src/lib/router.ts`.
 
 ## Best Practices
 

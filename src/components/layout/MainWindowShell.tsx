@@ -6,7 +6,6 @@ import {
 import { TitleBar } from '@/components/titlebar/TitleBar'
 import { LeftSideBar } from './LeftSideBar'
 import { RightSideBar } from './RightSideBar'
-import { MainWindowContent } from './MainWindowContent'
 import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { PreferencesDialog } from '@/components/preferences/PreferencesDialog'
 import { Toaster } from 'sonner'
@@ -30,7 +29,11 @@ const LAYOUT = {
 const MAIN_CONTENT_DEFAULT =
   100 - LAYOUT.leftSidebar.default - LAYOUT.rightSidebar.default
 
-export function MainWindow() {
+interface MainWindowShellProps {
+  children: React.ReactNode
+}
+
+export function MainWindowShell({ children }: MainWindowShellProps) {
   const { theme } = useTheme()
   const leftSidebarVisible = useUIStore(state => state.leftSidebarVisible)
   const rightSidebarVisible = useUIStore(state => state.rightSidebarVisible)
@@ -59,7 +62,7 @@ export function MainWindow() {
             defaultSize={MAIN_CONTENT_DEFAULT}
             minSize={LAYOUT.main.min}
           >
-            <MainWindowContent />
+            <div className="flex h-full flex-col bg-background">{children}</div>
           </ResizablePanel>
 
           <ResizableHandle className={cn(!rightSidebarVisible && 'hidden')} />

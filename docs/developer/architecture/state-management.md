@@ -1,8 +1,17 @@
 # State Management
 
-Three-layer "onion" architecture for state management.
+Four-layer architecture for state management, with clear ownership boundaries.
 
-## The Three Layers
+## State Ownership
+
+| State Type       | Owner           | Example                     |
+| ---------------- | --------------- | --------------------------- |
+| URL/route params | TanStack Router | Current route, item ID      |
+| Component UI     | useState        | Dropdown open, form input   |
+| Global UI        | Zustand         | Sidebar visible, modal open |
+| Server data      | TanStack Query  | Items list, conversations   |
+
+## The Three Layers (UI State)
 
 ```
 ┌─────────────────────────────────────┐
@@ -15,6 +24,8 @@ Three-layer "onion" architecture for state management.
 │  └─────────────────────────────────┘│
 └─────────────────────────────────────┘
 ```
+
+TanStack Router sits alongside this model, owning URL-derived state separately.
 
 ### Layer 1: TanStack Query (Persistent Data)
 
@@ -172,4 +183,57 @@ rule:
   any:
     - pattern: const { $$$PROPS } = useUIStore($$$ARGS)
     - pattern: const { $$$PROPS } = useNewStore($$$ARGS) # Add new store
+```
+
+## Routing State
+
+TanStack Router owns URL-derived state. Use hash history for Tauri compatibility:
+
+```typescript
+// src/lib/router.ts
+import { createRouter, createHashHistory } from '@tanstack/react-router'
+
+const hashHistory = createHashHistory()
+export const router = createRouter({ routeTree, history: hashHistory })
+```
+
+**Why hash history?** Tauri uses `file://` protocol where browser history API doesn't work. Hash-based URLs (`/#/items`) work correctly with local file protocols.
+
+### Route File Structure
+
+File-based routing with folder organization:
+
+```
+src/routes/
+├── __root.tsx           # Root layout (wraps all routes)
+├── index.tsx            # / (redirect to /items)
+├── $.tsx                # Catch-all 404
+├── items/
+│   ├── route.tsx        # /items layout (contains Outlet)
+│   ├── index.tsx        # /items list view
+│   └── $id.tsx          # /items/:id detail view
+├── conversations/
+│   ├── route.tsx        # /conversations layout
+│   ├── index.tsx        # /conversations list view
+│   └── $id.tsx          # /conversations/:id detail view
+└── settings/
+    └── route.tsx        # /settings
+```
+
+**Naming conventions:**
+
+- `route.tsx` - Layout wrapper containing `<Outlet />`
+- `index.tsx` - Index route content
+- `$param.tsx` - Dynamic parameter route
+
+### Accessing Route State
+
+```typescript
+// ✅ GOOD: Type-safe params from route module
+import { Route } from './items/$id'
+const { id } = Route.useParams()
+
+// ✅ GOOD: Navigation in non-React code
+import { router } from '@/lib/router'
+router.navigate({ to: '/items' })
 ```

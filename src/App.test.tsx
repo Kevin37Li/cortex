@@ -1,28 +1,45 @@
-import { render, screen } from '@/test/test-utils'
+import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nextProvider } from 'react-i18next'
 import { describe, it, expect } from 'vitest'
 import App from './App'
+import i18n from '@/i18n/config'
 
 // Tauri bindings are mocked globally in src/test/setup.ts
 
+// Simple wrapper without router for testing App component
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return (
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+    </QueryClientProvider>
+  )
+}
+
 describe('App', () => {
-  it('renders main window layout', () => {
-    render(<App />)
-    expect(
-      screen.getByRole('heading', { name: /hello world/i })
-    ).toBeInTheDocument()
+  it('renders children passed to it', () => {
+    render(
+      <App>
+        <div data-testid="test-child">Test Content</div>
+      </App>,
+      { wrapper: TestWrapper }
+    )
+    expect(screen.getByTestId('test-child')).toBeInTheDocument()
+    expect(screen.getByText('Test Content')).toBeInTheDocument()
   })
 
-  it('renders title bar with traffic light buttons', () => {
-    render(<App />)
-    // Find specifically the window control buttons in the title bar
-    const titleBarButtons = screen
-      .getAllByRole('button')
-      .filter(
-        button =>
-          button.getAttribute('aria-label')?.includes('window') ||
-          button.className.includes('window-control')
-      )
-    // Should have at least the window control buttons
-    expect(titleBarButtons.length).toBeGreaterThan(0)
+  it('wraps children in theme provider', () => {
+    // Theme provider is applied - we verify by checking the component renders
+    // without errors (ThemeProvider would throw if not properly configured)
+    render(
+      <App>
+        <span>Themed content</span>
+      </App>,
+      { wrapper: TestWrapper }
+    )
+    expect(screen.getByText('Themed content')).toBeInTheDocument()
   })
 })
