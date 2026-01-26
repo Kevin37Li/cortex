@@ -1,9 +1,9 @@
 # Cortex MVP Implementation Plan
 
-**Status:** Draft - Pending Stakeholder Approval
-**Version:** 1.1
+**Status:** Phase 1 Complete - In Progress
+**Version:** 1.2
 **Date:** January 2026
-**Last Reviewed:** Architecture patterns validated against `docs/developer/`
+**Last Reviewed:** Phase 1 audit completed 2026-01-26; architecture patterns validated against `docs/developer/`
 
 ---
 
@@ -267,6 +267,7 @@ Setup and management of local vs cloud AI.
 | **AI Processing**     | Python + FastAPI           | Mature AI ecosystem (LangGraph, LangChain), rapid development |
 | **Database**          | SQLite + sqlite-vec        | Single-file local storage, vector search built-in             |
 | **Local AI**          | Ollama                     | Easy setup, good model selection, active community            |
+| **Cloud AI**          | LiteLLM                    | Unified interface for OpenAI (MVP) and future providers       |
 | **IPC**               | localhost HTTP + WebSocket | Standard, debuggable, Python-native                           |
 
 ### Performance Targets
@@ -330,6 +331,13 @@ useState (component-local) → Zustand (global UI) → TanStack Query (persisten
 | `await invoke('command')`        | No type safety                                     | `import { commands } from '@/lib/tauri-bindings'` |
 | Synchronous AI calls             | Blocks UI                                          | Use async patterns with progress indicators       |
 
+### Additional Cross-Cutting Notes
+
+- **New Zustand stores**: When adding new stores, update `.ast-grep/rules/zustand/no-destructure.yml` per `state-management.md`
+- **TanStack Query service hooks**: All Python backend API calls must be wrapped in TanStack Query hooks (in `src/services/`), not called directly with `fetch()` in components
+- **Cloud AI abstraction**: Use LiteLLM as the unified interface for cloud providers (OpenAI at MVP, designed for Anthropic later) per `cloud-providers.md`
+- **Embedding model consistency**: Never mix embeddings from different models in the same database per `embeddings.md`. Track active model in metadata
+
 ### Quality Gate (Per Phase)
 
 Before marking any phase complete:
@@ -343,40 +351,44 @@ Before marking any phase complete:
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Weeks 1-2)
+### Phase 1: Foundation (Weeks 1-2) ✅ COMPLETE
 
 **Goal:** Working desktop shell communicating with Python backend
 
 **Backend Tasks:**
 
-- [ ] FastAPI project structure with proper layering
-- [ ] SQLite schema with sqlite-vec extension
-- [ ] Database repository pattern implementation
-- [ ] CRUD endpoints for items (`/api/items`)
-- [ ] Health check endpoint (`/api/health`)
-- [ ] Ollama provider integration and health check
-- [ ] Set up pytest infrastructure with fixtures for in-memory SQLite database
-- [ ] Write tests for repository patterns and CRUD endpoints
+- [x] FastAPI project structure with proper layering
+- [x] SQLite schema with sqlite-vec extension
+- [x] Database repository pattern implementation
+- [x] CRUD endpoints for items (`/api/items`)
+- [x] Health check endpoint (`/api/health`)
+- [x] Ollama provider integration and health check
+- [x] Set up pytest infrastructure with fixtures for file-based SQLite using `tmp_path` (sqlite-vec requires file-based databases)
+- [x] Write tests for repository patterns and CRUD endpoints (92% coverage)
 
 **Frontend Tasks:**
 
-- [ ] Tauri project with React 19 + Tailwind v4
-- [ ] Main window three-pane layout (state: Zustand for sidebar visibility)
-- [ ] Theme system (light/dark/system)
-- [ ] Command palette (Cmd+K) shell - register in `src/lib/commands/`
-- [ ] Preferences dialog skeleton
-- [ ] Window state persistence
-- [ ] Basic routing and navigation
-- [ ] Add translation keys for all UI strings in `/locales/en.json`
-- [ ] Run `bun run rust:bindings` after adding Rust commands
+- [x] Tauri project with React 19 + Tailwind v4
+- [x] Main window three-pane layout (state: Zustand for sidebar visibility)
+- [x] Theme system (light/dark/system)
+- [x] Command palette (Cmd+K) shell - registered in `src/lib/commands/`
+- [x] Preferences dialog skeleton (General, Appearance, Advanced panes)
+- [x] Window state persistence (via `tauri-plugin-window-state`)
+- [x] Basic routing and navigation (TanStack Router with hash-based routing)
+- [x] Add translation keys for all UI strings in `/locales/en.json` (139 keys, English + Chinese)
+- [x] Run `bun run rust:bindings` after adding Rust commands (6 commands generated)
 
 **Quality Gate:**
 
-- [ ] `bun run check:all` passes
-- [ ] All UI strings use translation keys
-- [ ] Python tests pass
+- [x] `bun run check:all` passes
+- [x] All UI strings use translation keys
+- [x] Python tests pass
 
-**Milestone:** Can launch app, see empty item list, backend responds to health checks
+**Remaining items deferred from Phase 1 to Phase 2:**
+
+- [ ] Python sidecar lifecycle management in Rust (spawn, health poll, restart, shutdown) per `docs/developer/architecture/python-sidecar.md`
+
+**Milestone:** ✅ Can launch app, see empty item list, backend responds to health checks
 
 ### Phase 2: Content Pipeline (Weeks 2-3)
 
@@ -384,18 +396,23 @@ Before marking any phase complete:
 
 **Backend Tasks:**
 
-- [ ] LangGraph processing workflow implementation
+- [ ] Python sidecar lifecycle management in Rust (spawn, health poll, restart, shutdown) per `python-sidecar.md`
+- [ ] Create `workflows/processing.py` implementing the LangGraph content processing graph
 - [ ] Content parsing (HTML via Readability, plain text)
 - [ ] Semantic chunking with RecursiveCharacterTextSplitter
 - [ ] Embedding generation (Ollama + OpenAI providers)
+- [ ] Embedding dimension consistency enforcement — track model in chunk metadata, prevent mixing (768 vs 1536 dims)
 - [ ] Metadata extraction (summary, entities, concepts)
-- [ ] Background processing queue with status updates
+- [ ] Implement `ProcessingQueue` in `services/processing.py` for background processing with status updates
+- [ ] Implement embedding management in `services/embeddings.py`
 - [ ] Processing status events (WebSocket)
-- [ ] Implement error handling per `error-handling.md` (Python exception hierarchy)
+- [ ] Add `ProcessingError` to `exceptions.py` and register its FastAPI exception handler in `main.py`
+- [ ] Add processing queue endpoints: `GET /api/processing/queue`, `POST /api/processing/retry`
 - [ ] Write tests for processing workflow steps
 
 **Frontend Tasks:**
 
+- [ ] Create TanStack Query service hooks in `src/services/items.ts` wrapping API calls
 - [ ] Quick note creation UI (state: useState for form, TanStack Query for submission)
 - [ ] File import dialog
 - [ ] Item list with processing status indicators (state: TanStack Query)
@@ -417,14 +434,17 @@ Before marking any phase complete:
 
 **Backend Tasks:**
 
+- [ ] Create `workflows/search.py` implementing the LangGraph search graph
 - [ ] Vector search implementation (sqlite-vec)
 - [ ] Full-text search (FTS5)
 - [ ] Hybrid search with Reciprocal Rank Fusion
+- [ ] Create `api/search.py` route file and register router in `main.py`
 - [ ] Search endpoint (`POST /api/search`)
 - [ ] Write tests for search ranking and fusion
 
 **Frontend Tasks:**
 
+- [ ] Create TanStack Query service hooks in `src/services/search.ts`
 - [ ] Search input with keyboard shortcut (Cmd+F) - register per `command-system.md`
 - [ ] Search results display with relevance scores (state: TanStack Query)
 - [ ] Click-through to item detail
@@ -445,9 +465,11 @@ Before marking any phase complete:
 
 **Backend Tasks:**
 
-- [ ] Conversation and message data models
-- [ ] LangGraph RAG workflow (retrieve → grade → generate)
+- [ ] Conversation and message data models (schema additions for `conversations` and `messages` tables)
+- [ ] Create `ConversationRepository` and `MessageRepository` in `db/repositories/`
+- [ ] Create `workflows/chat.py` implementing the LangGraph RAG graph (retrieve → grade → generate)
 - [ ] Citation extraction and formatting
+- [ ] Create `api/chat.py` route file and register router in `main.py`
 - [ ] WebSocket streaming endpoint with error handling per `error-handling.md`
 - [ ] Conversation persistence
 - [ ] Implement FastAPI exception handlers for streaming errors
@@ -455,6 +477,7 @@ Before marking any phase complete:
 
 **Frontend Tasks:**
 
+- [ ] Create TanStack Query service hooks in `src/services/chat.ts`
 - [ ] Chat panel UI (state: TanStack Query for messages with WebSocket updates)
 - [ ] Message input and streaming display
 - [ ] Citation links to source items
@@ -506,8 +529,11 @@ Before marking any phase complete:
 
 **Feature Tasks:**
 
+- [ ] Create `workflows/connections.py` implementing similarity-based connection discovery
 - [ ] Connection discovery (similarity-based)
 - [ ] Connections display in item detail
+- [ ] Implement `CloudProvider` in `providers/cloud.py` using LiteLLM per `cloud-providers.md` (designed to support multiple providers, MVP configures OpenAI only)
+- [ ] Create `api/settings.py` route file and register router in `main.py`
 - [ ] AI provider setup wizard (first-run)
 - [ ] Ollama status and model selection UI
 - [ ] OpenAI API key configuration
@@ -640,12 +666,20 @@ DELETE /api/items/{id}         Delete item
 POST   /api/search             Execute search query
 ```
 
+### Processing
+
+```
+GET    /api/processing/queue   Get processing queue status
+POST   /api/processing/retry   Retry failed processing
+```
+
 ### Chat
 
 ```
 POST   /api/conversations                    Create conversation
 GET    /api/conversations                    List conversations
 GET    /api/conversations/{id}               Get conversation with messages
+DELETE /api/conversations/{id}               Delete conversation
 POST   /api/conversations/{id}/messages      Send message (returns sync)
 WS     /api/ws/chat/{conversation_id}        Stream responses
 ```
