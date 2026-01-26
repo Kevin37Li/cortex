@@ -16,7 +16,7 @@ This app uses [react-i18next](https://react.i18next.com/) for internationalizati
 ```
 /locales/
 ├── en.json              # English (default)
-├── ar.json              # Arabic (RTL example)
+├── zh.json              # Chinese Simplified
 └── [lang].json          # Additional languages
 
 /src/i18n/
@@ -60,7 +60,7 @@ function MyComponent() {
 
 ### Step 3: Add to Other Languages
 
-Add the same keys to all other language files (e.g., `/locales/ar.json`).
+Add the same keys to all other language files (e.g., `/locales/zh.json`).
 
 ## Key Naming Conventions
 
@@ -137,12 +137,12 @@ Update `/src/i18n/config.ts`:
 
 ```typescript
 import en from '../../locales/en.json'
-import ar from '../../locales/ar.json'
+import zh from '../../locales/zh.json'
 import es from '../../locales/es.json' // NEW
 
 const resources = {
   en: { translation: en },
-  ar: { translation: ar },
+  zh: { translation: zh },
   es: { translation: es }, // NEW
 }
 ```
@@ -286,27 +286,32 @@ t('nonexistent.key') // TypeScript error
 t('preferences.title') // ✅ Works
 ```
 
-## Using Translations Outside React
+## Using Translations Outside Hooks
 
-For non-React contexts (like menu building), import i18n directly:
+For contexts where `useTranslation()` is unavailable, import `i18n` directly. This applies to:
+
+- **Non-React code** (menu building, utility functions)
+- **React class components** (e.g., `ErrorBoundary` which requires `getDerivedStateFromError`)
 
 ```typescript
 import i18n from '@/i18n/config'
 
-// Get the t function
+// Bind for many calls (menus, class component render methods)
 const t = i18n.t.bind(i18n)
 const text = t('menu.about', { appName: 'My App' })
 
-// Or use i18n directly
+// Or call directly for occasional use
 const currentLanguage = i18n.language
-await i18n.changeLanguage('ar')
+await i18n.changeLanguage('zh')
 ```
+
+Note: `i18n.t()` calls are not reactive -- the component will not re-render on language change. This is acceptable for class components like `ErrorBoundary` where a page reload picks up the new language. See `src/components/ErrorBoundary.tsx` for a working example.
 
 ## Testing with RTL
 
-To test RTL layout:
+No RTL languages are currently bundled, but the infrastructure supports them. To test RTL layout:
 
-1. Open Preferences > Appearance
-2. Change language to Arabic (ar)
+1. Temporarily add an RTL language (e.g., Arabic) following the "Adding a New Language" steps above
+2. Open Preferences > Appearance and switch to that language
 3. Verify layout mirrors correctly
 4. Check all text alignment uses logical properties

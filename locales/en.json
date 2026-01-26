@@ -129,5 +129,11 @@
   "toast.error.windowMinimizeFailed": "Failed to minimize window: {{message}}",
   "toast.error.windowMaximizeFailed": "Failed to toggle maximize: {{message}}",
   "toast.error.fullscreenEnterFailed": "Failed to enter fullscreen: {{message}}",
-  "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}"
+  "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}",
+
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.description": "The application encountered an unexpected error. You can try reloading or attempting the action again.",
+  "errorBoundary.reloadButton": "Reload Application",
+  "errorBoundary.retryButton": "Try Again",
+  "errorBoundary.detailsTitle": "Error Details (Development Only)"
 }

@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { saveCrashState } from '@/lib/recovery'
 import { logger } from '@/lib/logger'
+import i18n from '@/i18n/config'
 
 interface Props {
   children: ReactNode
@@ -98,11 +99,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 </svg>
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-2">
-                Something went wrong
+                {i18n.t('errorBoundary.title')}
               </h1>
               <p className="text-muted-foreground mb-6">
-                The application encountered an unexpected error. Your data has
-                been saved automatically.
+                {i18n.t('errorBoundary.description')}
               </p>
             </div>
 
@@ -111,21 +111,21 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReload}
                 className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
-                Reload Application
+                {i18n.t('errorBoundary.reloadButton')}
               </button>
 
               <button
                 onClick={this.handleReset}
                 className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors"
               >
-                Try Again
+                {i18n.t('errorBoundary.retryButton')}
               </button>
             </div>
 
             {import.meta.env.DEV && this.state.error && (
-              <details className="mt-6 text-left">
+              <details className="mt-6 text-start">
                 <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                  Error Details (Development Only)
+                  {i18n.t('errorBoundary.detailsTitle')}
                 </summary>
                 <div className="mt-2 p-3 bg-muted rounded-md text-xs font-mono">
                   <div className="text-destructive font-semibold mb-1">

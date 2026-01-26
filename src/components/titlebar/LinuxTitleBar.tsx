@@ -29,7 +29,7 @@ export function LinuxTitleBar({ className, title }: LinuxTitleBarProps) {
       )}
     >
       {/* Left side - Actions */}
-      <div className="flex items-center pl-2">
+      <div className="flex items-center ps-2">
         <TitleBarLeftActions />
       </div>
 
@@ -37,7 +37,7 @@ export function LinuxTitleBar({ className, title }: LinuxTitleBarProps) {
       <TitleBarTitle title={title} />
 
       {/* Right side - Actions */}
-      <div className="flex items-center pr-2">
+      <div className="flex items-center pe-2">
         <TitleBarRightActions />
       </div>
     </div>

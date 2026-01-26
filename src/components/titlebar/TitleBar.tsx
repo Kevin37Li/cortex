@@ -55,7 +55,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
         )}
       >
         {/* Left side - Actions */}
-        <div className="flex items-center pl-2">
+        <div className="flex items-center ps-2">
           <TitleBarLeftActions />
         </div>
 
@@ -90,7 +90,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
       <TitleBarTitle title={displayTitle} />
 
       {/* Right side - Actions */}
-      <div className="flex items-center pr-2">
+      <div className="flex items-center pe-2">
         <TitleBarRightActions />
       </div>
     </div>

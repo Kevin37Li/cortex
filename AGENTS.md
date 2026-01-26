@@ -98,7 +98,7 @@ function MyComponent() {
   return <h1>{t('myFeature.title')}</h1>
 }
 
-// ✅ GOOD: Non-React contexts - bind for many calls, or use directly
+// ✅ GOOD: Class components or non-React contexts (menus, utilities)
 import i18n from '@/i18n/config'
 const t = i18n.t.bind(i18n)  // Bind once for many translations
 i18n.t('key')                 // Or call directly for occasional use
