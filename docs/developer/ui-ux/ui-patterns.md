@@ -242,7 +242,7 @@ src/components/
 
 - **layout/** - Structural components that define app regions
 - **titlebar/** - Platform-specific window controls
-- **ui/** - shadcn/ui primitives (don't modify directly)
+- **ui/** - shadcn/ui primitives (vendored; modified for project conventions -- see below)
 - **Feature folders** - Group related components together
 
 ## shadcn/ui Usage
@@ -255,6 +255,14 @@ npx shadcn@latest add dialog
 ```
 
 Components are copied to `src/components/ui/` and can be customized.
+
+### Post-Vendor Checklist
+
+After adding a new shadcn/ui component, apply these project conventions:
+
+1. **Convert physical CSS to logical properties** -- Replace `pl-`/`pr-` with `ps-`/`pe-`, `ml-`/`mr-` with `ms-`/`me-`, `text-left`/`text-right` with `text-start`/`text-end`, `left-`/`right-` with `start-`/`end-` where the property is layout-directional (not animation or absolute centering). See [i18n-patterns.md](./i18n-patterns.md) for the full mapping table.
+2. **Verify no `invoke()` calls** -- Should use typed commands from `@/lib/tauri-bindings`
+3. **Keep upstream `useMemo`/`useCallback`** -- The React Compiler handles memoization for app code, but vendored components retain their upstream memoization to minimize merge friction on updates
 
 ### Customizing Components
 

@@ -197,6 +197,12 @@ Use CSS logical properties instead of physical properties for automatic RTL supp
 <div className="text-start ps-4 me-2">
 ```
 
+### Vendored Components
+
+shadcn/ui components ship with physical CSS properties. After adding a new component via `npx shadcn@latest add`, convert its directional properties to logical equivalents using the table above. See the [post-vendor checklist](./ui-patterns.md#post-vendor-checklist) in `ui-patterns.md` for the full process.
+
+**Note:** Not all `left-`/`right-` usages need conversion. Keep physical properties for animation directions (`slide-in-from-left-2`), absolute centering (`left-[50%] -translate-x-1/2`), and component-prop-based positioning (e.g., sidebar `data-[side=left]`).
+
 ## Native Menus
 
 Native menus are built from JavaScript to use the same i18n system as React components.

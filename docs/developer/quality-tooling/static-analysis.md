@@ -4,19 +4,22 @@ All static analysis tools configured in this app and how to use them.
 
 ## Quick Reference
 
-| Tool           | Purpose                  | Command                  | In check:all |
-| -------------- | ------------------------ | ------------------------ | ------------ |
-| TypeScript     | Type checking            | `bun run typecheck`      | Yes          |
-| ESLint         | Syntax, style, TS rules  | `bun run lint`           | Yes          |
-| Prettier       | Code formatting          | `bun run format:check`   | Yes          |
-| ast-grep       | Architecture patterns    | `bun run ast:lint`       | Yes          |
-| React Compiler | Automatic memoization    | Build-time               | Yes          |
-| cargo fmt      | Rust formatting          | `bun run rust:fmt:check` | Yes          |
-| clippy         | Rust linting             | `bun run rust:clippy`    | Yes          |
-| Vitest         | Frontend tests           | `bun run test:run`       | Yes          |
-| cargo test     | Rust tests               | `bun run rust:test`      | Yes          |
-| knip           | Unused code detection    | `bun run knip`           | No           |
-| jscpd          | Duplicate code detection | `bun run jscpd`          | No           |
+| Tool           | Purpose                  | Command                    | In check:all |
+| -------------- | ------------------------ | -------------------------- | ------------ |
+| TypeScript     | Type checking            | `bun run typecheck`        | Yes          |
+| ESLint         | Syntax, style, TS rules  | `bun run lint`             | Yes          |
+| Prettier       | Code formatting          | `bun run format:check`     | Yes          |
+| ast-grep       | Architecture patterns    | `bun run ast:lint`         | Yes          |
+| React Compiler | Automatic memoization    | Build-time                 | Yes          |
+| cargo fmt      | Rust formatting          | `bun run rust:fmt:check`   | Yes          |
+| clippy         | Rust linting             | `bun run rust:clippy`      | Yes          |
+| ruff format    | Python formatting        | `bun run python:fmt:check` | Yes          |
+| ruff check     | Python linting           | `bun run python:lint`      | Yes          |
+| Vitest         | Frontend tests           | `bun run test:run`         | Yes          |
+| cargo test     | Rust tests               | `bun run rust:test`        | Yes          |
+| pytest         | Python tests             | `bun run python:test`      | Yes          |
+| knip           | Unused code detection    | `bun run knip`             | No           |
+| jscpd          | Duplicate code detection | `bun run jscpd`            | No           |
 
 ## Running All Checks
 
@@ -87,6 +90,18 @@ bun run rust:clippy      # Lint with clippy
 bun run rust:clippy:fix  # Auto-fix clippy warnings
 bun run rust:test        # Run Rust tests
 ```
+
+### Python Tooling
+
+```bash
+bun run python:fmt:check   # Check formatting (ruff)
+bun run python:fmt         # Fix formatting
+bun run python:lint        # Lint with ruff
+bun run python:lint:fix    # Auto-fix ruff warnings
+bun run python:test        # Run pytest
+```
+
+Configuration in `python-backend/pyproject.toml`.
 
 ### knip (Periodic Cleanup)
 

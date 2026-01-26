@@ -28,6 +28,7 @@
     "rust:clippy": "source ~/.cargo/env && cd src-tauri && cargo clippy -- -D warnings",
     "rust:clippy:fix": "source ~/.cargo/env && cd src-tauri && cargo clippy --fix --allow-dirty",
     "rust:test": "source ~/.cargo/env && cd src-tauri && cargo test",
+    "python:dev": "cd python-backend && uv run python -m src.main",
     "python:fmt": "cd python-backend && uv run ruff format .",
     "python:fmt:check": "cd python-backend && uv run ruff format --check .",
     "python:lint": "cd python-backend && uv run ruff check .",
