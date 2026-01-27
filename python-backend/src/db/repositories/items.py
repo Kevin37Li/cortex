@@ -140,7 +140,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         # Check if item exists
         existing = await self.get(id)
         if existing is None:
-            raise ItemNotFoundError(id)
+            raise ItemNotFoundError(item_id=id)
 
         # Build update query with only non-None fields
         updates: list[str] = []
@@ -235,7 +235,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         """
         existing = await self.get(id)
         if existing is None:
-            raise ItemNotFoundError(id)
+            raise ItemNotFoundError(item_id=id)
 
         now = datetime.now(UTC).isoformat()
         await self.db.execute(

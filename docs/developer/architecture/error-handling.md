@@ -235,59 +235,107 @@ Define a hierarchy of exceptions for the Python backend:
 # src/exceptions.py
 class CortexError(Exception):
     """Base exception for Cortex backend."""
-    pass
+    error_code: str = "cortex_error"
 
 class ItemNotFoundError(CortexError):
     """Item does not exist. Used by repository update() methods."""
-    def __init__(self, item_id: str) -> None:
+    error_code: str = "item_not_found"
+
+    def __init__(self, *, item_id: str) -> None:
         self.item_id = item_id
         super().__init__(f"Item not found: {item_id}")
 
 class ChunkNotFoundError(CortexError):
     """Chunk does not exist."""
-    def __init__(self, chunk_id: str) -> None:
+    error_code: str = "chunk_not_found"
+
+    def __init__(self, *, chunk_id: str) -> None:
         self.chunk_id = chunk_id
         super().__init__(f"Chunk not found: {chunk_id}")
 
 class DatabaseError(CortexError):
     """Database operation failed (e.g., post-operation validation)."""
-    pass
+    error_code: str = "database_error"
 
 class ProcessingError(CortexError):
-    """Error during content processing."""
-    pass
+    """Error during content processing pipeline."""
+    error_code: str = "processing_error"
+
+    def __init__(self, message: str, *, item_id: str | None = None, step: str | None = None) -> None:
+        self.item_id = item_id
+        self.step = step
+        super().__init__(message)
 
 class AIProviderError(CortexError):
     """Base exception for AI provider errors."""
-    pass
+    error_code: str = "ai_provider_error"
 
 class OllamaNotRunningError(AIProviderError):
     """Ollama server is not accessible."""
-    def __init__(self, base_url: str) -> None:
+    error_code: str = "ollama_not_running"
+
+    def __init__(self, *, base_url: str) -> None:
         self.base_url = base_url
         super().__init__(f"Ollama not running at {base_url}")
 
 class OllamaModelNotFoundError(AIProviderError):
     """Requested model not available in Ollama."""
-    def __init__(self, model: str) -> None:
+    error_code: str = "ollama_model_not_found"
+
+    def __init__(self, *, model: str) -> None:
         self.model = model
         super().__init__(f"Model not found: {model}. Run: ollama pull {model}")
 
 class OllamaTimeoutError(AIProviderError):
     """Ollama operation timed out."""
-    def __init__(self, operation: str, timeout: float) -> None:
+    error_code: str = "ollama_timeout"
+
+    def __init__(self, *, operation: str, timeout: float) -> None:
         self.operation = operation
         self.timeout = timeout
         super().__init__(f"Ollama {operation} timed out after {timeout}s")
 
 class OllamaAPIResponseError(AIProviderError):
     """Ollama API returned malformed response."""
-    def __init__(self, operation: str, model: str, response_data: dict | None) -> None:
+    error_code: str = "ollama_api_response_error"
+
+    def __init__(self, *, operation: str, model: str, response_data: dict | None) -> None:
         self.operation = operation
         self.model = model
         self.response_data = response_data
-        super().__init__(f"Ollama {operation} returned malformed response for model '{model}'")
+        super().__init__(f"Ollama {operation} returned malformed response for model '{model}': {response_data}")
+
+class ProcessingError(CortexError):
+    """Error during content processing pipeline."""
+    error_code: str = "processing_error"
+
+    def __init__(self, message: str, *, item_id: str | None = None, step: str | None = None) -> None:
+        self.item_id = item_id
+        self.step = step
+        super().__init__(message)
+
+class ContentParsingError(ProcessingError):
+    """HTML/text content cannot be parsed."""
+    error_code: str = "content_parsing_error"
+
+class ChunkingError(ProcessingError):
+    """Text splitting/chunking failed."""
+    error_code: str = "chunking_error"
+
+class EmbeddingError(ProcessingError):
+    """Embedding generation failed during processing (distinct from AIProviderError)."""
+    error_code: str = "embedding_error"
+
+class EmbeddingModelMismatchError(ProcessingError):
+    """Embedding dimensions or model are inconsistent."""
+    error_code: str = "embedding_model_mismatch"
+
+class MetadataExtractionError(ProcessingError):
+    """LLM-based metadata extraction failed."""
+    error_code: str = "metadata_extraction_error"
 ```
+
+All constructors use **keyword-only arguments** for structured fields (the `*` in the signature), with human-readable message strings as the only positional parameter where applicable. Each class defines a static `error_code` used in API responses. Processing error subclasses inherit `ProcessingError`'s constructor and only override `error_code`. Original exceptions are preserved via Python's `raise ... from e` chaining pattern rather than a redundant `original_error` parameter.
 
 The hierarchy allows granular exception handling:
 
@@ -317,21 +365,21 @@ from fastapi.responses import JSONResponse
 async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
     return JSONResponse(
         status_code=404,
-        content={"error": "item_not_found", "message": str(exc)}
+        content={"error": exc.error_code, "message": str(exc)}
     )
 
 @app.exception_handler(ProcessingError)
 async def processing_error_handler(request: Request, exc: ProcessingError):
     return JSONResponse(
         status_code=500,
-        content={"error": "processing_error", "message": str(exc)}
+        content={"error": exc.error_code, "message": str(exc)}
     )
 
 @app.exception_handler(AIProviderError)
 async def ai_provider_error_handler(request: Request, exc: AIProviderError):
     return JSONResponse(
         status_code=503,
-        content={"error": "ai_provider_error", "message": str(exc)}
+        content={"error": exc.error_code, "message": str(exc)}
     )
 
 @app.exception_handler(DatabaseError)
@@ -339,7 +387,7 @@ async def database_error_handler(request: Request, exc: DatabaseError):
     # Hide internal database details from API response
     return JSONResponse(
         status_code=500,
-        content={"error": "database_error", "message": "Internal database error"}
+        content={"error": exc.error_code, "message": "Internal database error"}
     )
 ```
 
@@ -364,9 +412,9 @@ async def embed(self, text: str) -> list[float]:
     try:
         response = await client.post(...)
     except httpx.ConnectError:
-        raise OllamaNotRunningError(self.base_url)
+        raise OllamaNotRunningError(base_url=self.base_url)
     except httpx.TimeoutException:
-        raise OllamaTimeoutError("embed", self.embed_timeout)
+        raise OllamaTimeoutError(operation="embed", timeout=self.embed_timeout)
 ```
 
 This enables graceful degradation in health checks:

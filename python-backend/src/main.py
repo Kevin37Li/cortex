@@ -11,7 +11,12 @@ from .api.health import router as health_router
 from .api.items import router as items_router
 from .config import settings
 from .db import init_database, verify_database
-from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError
+from .exceptions import (
+    AIProviderError,
+    DatabaseError,
+    ItemNotFoundError,
+    ProcessingError,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,7 +42,7 @@ async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
     """Handle ItemNotFoundError with 404 response."""
     return JSONResponse(
         status_code=404,
-        content={"error": "item_not_found", "message": str(exc)},
+        content={"error": exc.error_code, "message": str(exc)},
     )
 
 
@@ -46,7 +51,7 @@ async def database_error_handler(request: Request, exc: DatabaseError):
     """Handle DatabaseError with 500 response."""
     return JSONResponse(
         status_code=500,
-        content={"error": "database_error", "message": "Internal database error"},
+        content={"error": exc.error_code, "message": "Internal database error"},
     )
 
 
@@ -55,7 +60,16 @@ async def ai_provider_error_handler(request: Request, exc: AIProviderError):
     """Handle AIProviderError with 503 response."""
     return JSONResponse(
         status_code=503,
-        content={"error": type(exc).__name__, "message": str(exc)},
+        content={"error": exc.error_code, "message": str(exc)},
+    )
+
+
+@app.exception_handler(ProcessingError)
+async def processing_error_handler(request: Request, exc: ProcessingError):
+    """Handle ProcessingError with 500 response."""
+    return JSONResponse(
+        status_code=500,
+        content={"error": exc.error_code, "message": str(exc)},
     )
 
 

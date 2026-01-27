@@ -98,9 +98,11 @@ class OllamaProvider(AIProvider):
                     )
                 return models
         except httpx.ConnectError as e:
-            raise OllamaNotRunningError(self.base_url) from e
+            raise OllamaNotRunningError(base_url=self.base_url) from e
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError("list_models", self.timeout) from e
+            raise OllamaTimeoutError(
+                operation="list_models", timeout=self.timeout
+            ) from e
 
     async def embed(self, text: str) -> list[float]:
         """Generate embedding vector for a single text.
@@ -124,18 +126,24 @@ class OllamaProvider(AIProvider):
                 )
 
                 if response.status_code == 404:
-                    raise OllamaModelNotFoundError(self.embedding_model)
+                    raise OllamaModelNotFoundError(model=self.embedding_model)
 
                 response.raise_for_status()
                 data = response.json()
                 embedding = data.get("embedding")
                 if embedding is None:
-                    raise OllamaAPIResponseError("embed", self.embedding_model, data)
+                    raise OllamaAPIResponseError(
+                        operation="embed",
+                        model=self.embedding_model,
+                        response_data=data,
+                    )
                 return embedding
         except httpx.ConnectError as e:
-            raise OllamaNotRunningError(self.base_url) from e
+            raise OllamaNotRunningError(base_url=self.base_url) from e
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError("embed", self.embed_timeout) from e
+            raise OllamaTimeoutError(
+                operation="embed", timeout=self.embed_timeout
+            ) from e
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embedding vectors for multiple texts.
@@ -191,18 +199,20 @@ class OllamaProvider(AIProvider):
                 )
 
                 if response.status_code == 404:
-                    raise OllamaModelNotFoundError(self.chat_model)
+                    raise OllamaModelNotFoundError(model=self.chat_model)
 
                 response.raise_for_status()
                 data = response.json()
                 message = data.get("message")
                 if message is None or "content" not in message:
-                    raise OllamaAPIResponseError("chat", self.chat_model, data)
+                    raise OllamaAPIResponseError(
+                        operation="chat", model=self.chat_model, response_data=data
+                    )
                 return message["content"]
         except httpx.ConnectError as e:
-            raise OllamaNotRunningError(self.base_url) from e
+            raise OllamaNotRunningError(base_url=self.base_url) from e
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError("chat", self.timeout) from e
+            raise OllamaTimeoutError(operation="chat", timeout=self.timeout) from e
 
     async def stream_chat(
         self, messages: list[dict[str, str]], system: str | None = None
@@ -238,7 +248,7 @@ class OllamaProvider(AIProvider):
                     json=payload,
                 ) as response:
                     if response.status_code == 404:
-                        raise OllamaModelNotFoundError(self.chat_model)
+                        raise OllamaModelNotFoundError(model=self.chat_model)
 
                     response.raise_for_status()
 
@@ -252,6 +262,8 @@ class OllamaProvider(AIProvider):
                             except json.JSONDecodeError:
                                 continue
         except httpx.ConnectError as e:
-            raise OllamaNotRunningError(self.base_url) from e
+            raise OllamaNotRunningError(base_url=self.base_url) from e
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError("stream_chat", self.timeout) from e
+            raise OllamaTimeoutError(
+                operation="stream_chat", timeout=self.timeout
+            ) from e

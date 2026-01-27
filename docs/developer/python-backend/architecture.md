@@ -100,6 +100,8 @@ python-backend/
 │   │   ├── processing.py      # Item processing service
 │   │   └── embeddings.py      # Embedding management
 │   │
+│   ├── config.py              # Application configuration (pydantic-settings)
+│   ├── exceptions.py          # Custom exception hierarchy
 │   └── main.py                # FastAPI app entry point
 │
 ├── tests/
@@ -207,28 +209,58 @@ POST /api/search
 
 ```python
 # src/main.py
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .api.health import router as health_router
 from .api.items import router as items_router
 from .db import init_database
+from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError, ProcessingError
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    logger.info("Starting Cortex backend...")
     await init_database()
     yield
-    # Shutdown (cleanup if needed)
+    logger.info("Shutting down Cortex backend...")
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)
+
+# Exception handlers (see error-handling.md for patterns)
+@app.exception_handler(ItemNotFoundError)
+async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
+    return JSONResponse(status_code=404, content={"error": exc.error_code, "message": str(exc)})
+
+@app.exception_handler(DatabaseError)
+async def database_error_handler(request: Request, exc: DatabaseError):
+    return JSONResponse(status_code=500, content={"error": exc.error_code, "message": "Internal database error"})
+
+@app.exception_handler(AIProviderError)
+async def ai_provider_error_handler(request: Request, exc: AIProviderError):
+    return JSONResponse(status_code=503, content={"error": exc.error_code, "message": str(exc)})
+
+@app.exception_handler(ProcessingError)
+async def processing_error_handler(request: Request, exc: ProcessingError):
+    return JSONResponse(status_code=500, content={"error": exc.error_code, "message": str(exc)})
 
 # CORS for Tauri webview
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["tauri://localhost", "http://localhost:*"],
+    allow_origins=[
+        "tauri://localhost",
+        "http://localhost",
+        "http://localhost:1420",
+        "http://127.0.0.1",
+        "http://127.0.0.1:1420",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -280,7 +312,7 @@ async def delete_item(
     """Delete an item."""
     deleted = await repo.delete(id)
     if not deleted:
-        raise ItemNotFoundError(id)
+        raise ItemNotFoundError(item_id=id)
     return Response(status_code=204)
 ```
 
@@ -544,13 +576,13 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
 
         result = await self.get(item_id)
         if result is None:
-            raise DatabaseError(f"Failed to retrieve created item: {item_id}")
+            raise DatabaseError(f"Failed to retrieve newly created item: {item_id}")
         return result
 
     async def update(self, id: str, data: ItemUpdate) -> Item:
         existing = await self.get(id)
         if existing is None:
-            raise ItemNotFoundError(id)
+            raise ItemNotFoundError(item_id=id)
         # ... perform update
 ```
 

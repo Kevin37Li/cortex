@@ -54,7 +54,7 @@ async def get_item(
     """Get a single item by ID."""
     item = await repo.get(id)
     if item is None:
-        raise ItemNotFoundError(id)
+        raise ItemNotFoundError(item_id=id)
     return item
 
 
@@ -87,5 +87,5 @@ async def delete_item(
     """Delete an item."""
     deleted = await repo.delete(id)
     if not deleted:
-        raise ItemNotFoundError(id)
+        raise ItemNotFoundError(item_id=id)
     return Response(status_code=204)
