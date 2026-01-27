@@ -38,12 +38,14 @@ Connect the frontend to the processing status WebSocket to display real-time pro
 // src/hooks/use-processing-updates.ts
 export function useProcessingUpdates() {
   const queryClient = useQueryClient()
-  const [processingItems, setProcessingItems] = useState<Map<string, ProcessingUpdate>>()
+  const [processingItems, setProcessingItems] = useState<
+    Map<string, ProcessingUpdate>
+  >(new Map())
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8742/api/ws/processing')
 
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       const update: ProcessingUpdate = JSON.parse(event.data)
       setProcessingItems(prev => new Map(prev).set(update.item_id, update))
 

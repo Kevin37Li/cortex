@@ -83,7 +83,8 @@ const API_BASE = 'http://localhost:8742'
 const itemKeys = {
   all: ['items'] as const,
   lists: () => [...itemKeys.all, 'list'] as const,
-  list: (params: { offset?: number; limit?: number }) => [...itemKeys.lists(), params] as const,
+  list: (params: { offset?: number; limit?: number }) =>
+    [...itemKeys.lists(), params] as const,
   details: () => [...itemKeys.all, 'detail'] as const,
   detail: (id: string) => [...itemKeys.details(), id] as const,
 }

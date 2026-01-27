@@ -33,12 +33,12 @@ Create a WebSocket endpoint that streams real-time processing status updates to 
 
 ```json
 {
-    "type": "processing_update",
-    "item_id": "abc-123",
-    "status": "processing",
-    "step": "embedding",
-    "progress": 0.6,
-    "message": "Generating embeddings for 12 chunks"
+  "type": "processing_update",
+  "item_id": "abc-123",
+  "status": "processing",
+  "step": "embedding",
+  "progress": 0.6,
+  "message": "Generating embeddings for 12 chunks"
 }
 ```
 
