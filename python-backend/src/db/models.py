@@ -26,6 +26,16 @@ class ChunkResult(BaseModel):
     token_count: int
 
 
+class ExtractedMetadata(BaseModel):
+    """Metadata extracted from content via LLM."""
+
+    summary: str = ""  # 2-3 sentence summary (default empty for partial results)
+    concepts: list[str] = Field(default_factory=list)  # Key topics/concepts (3-7 items)
+    entities: list[str] = Field(
+        default_factory=list
+    )  # Named entities: people, orgs, places (0-10 items)
+
+
 # Item models
 
 

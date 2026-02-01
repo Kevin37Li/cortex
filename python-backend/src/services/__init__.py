@@ -2,6 +2,7 @@
 
 from .chunking import ChunkingService
 from .embeddings import EmbeddingService
+from .extraction import MetadataExtractor
 from .parsing import ContentParser
 
-__all__ = ["ChunkingService", "ContentParser", "EmbeddingService"]
+__all__ = ["ChunkingService", "ContentParser", "EmbeddingService", "MetadataExtractor"]

@@ -100,7 +100,8 @@ python-backend/
 │   │   ├── __init__.py
 │   │   ├── parsing.py         # Content parsing (HTML to text)
 │   │   ├── chunking.py        # Semantic text chunking
-│   │   └── embeddings.py      # Embedding generation and storage
+│   │   ├── embeddings.py      # Embedding generation and storage
+│   │   └── extraction.py      # Metadata extraction via LLM
 │   │
 │   ├── config.py              # Application configuration (pydantic-settings)
 │   ├── exceptions.py          # Custom exception hierarchy

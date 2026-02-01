@@ -157,15 +157,15 @@ _Tracked: 2026-02-01_
 
 ### Files Changed
 
-| File | Change | Description |
-|------|--------|-------------|
-| `python-backend/src/services/embeddings.py` | Created | EmbeddingService class with `embed_chunks()` and `embed_query()` methods |
-| `python-backend/src/db/repositories/app_metadata.py` | Created | AppMetadataRepository for key-value metadata storage |
-| `python-backend/tests/services/test_embeddings.py` | Created | 20 unit tests covering all acceptance criteria |
-| `python-backend/src/db/schema.sql` | Modified | Added `app_metadata` table for embedding model tracking |
-| `python-backend/src/api/deps.py` | Modified | Added `get_ai_provider()` and `get_embedding_service()` dependency factories |
-| `python-backend/src/db/repositories/__init__.py` | Modified | Exported `AppMetadataRepository` |
-| `python-backend/src/services/__init__.py` | Modified | Exported `EmbeddingService` |
+| File                                                 | Change   | Description                                                                  |
+| ---------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| `python-backend/src/services/embeddings.py`          | Created  | EmbeddingService class with `embed_chunks()` and `embed_query()` methods     |
+| `python-backend/src/db/repositories/app_metadata.py` | Created  | AppMetadataRepository for key-value metadata storage                         |
+| `python-backend/tests/services/test_embeddings.py`   | Created  | 20 unit tests covering all acceptance criteria                               |
+| `python-backend/src/db/schema.sql`                   | Modified | Added `app_metadata` table for embedding model tracking                      |
+| `python-backend/src/api/deps.py`                     | Modified | Added `get_ai_provider()` and `get_embedding_service()` dependency factories |
+| `python-backend/src/db/repositories/__init__.py`     | Modified | Exported `AppMetadataRepository`                                             |
+| `python-backend/src/services/__init__.py`            | Modified | Exported `EmbeddingService`                                                  |
 
 ### Dependencies Added
 
@@ -196,6 +196,7 @@ _Generated: 2026-02-01_
 Implemented a complete embedding management service that bridges the AI provider layer and database layer. The service handles vector embedding generation, storage in sqlite-vec, and enforces strict model consistency to prevent mixing embeddings from different models.
 
 **Key metrics:**
+
 - 3 new files created, 4 files modified
 - 230 lines of production code in `EmbeddingService`
 - 432 lines of test code with 20 unit tests
