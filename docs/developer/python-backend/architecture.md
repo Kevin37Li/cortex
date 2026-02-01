@@ -350,12 +350,12 @@ async def get_item_repository() -> AsyncIterator[ItemRepository]:
 
 **When to use each:**
 
-| Dependency              | Use For                                             |
-| ----------------------- | --------------------------------------------------- |
-| `get_db_connection()`   | Simple queries (`SELECT 1`), health checks, raw SQL |
-| `get_item_repository()` | Domain entity CRUD, business logic requiring models |
-| `get_ai_provider()`     | AI operations (embedding, chat, extraction)         |
-| `get_embedding_service()` | Embedding generation with model consistency       |
+| Dependency                | Use For                                             |
+| ------------------------- | --------------------------------------------------- |
+| `get_db_connection()`     | Simple queries (`SELECT 1`), health checks, raw SQL |
+| `get_item_repository()`   | Domain entity CRUD, business logic requiring models |
+| `get_ai_provider()`       | AI operations (embedding, chat, extraction)         |
+| `get_embedding_service()` | Embedding generation with model consistency         |
 
 ### Service Dependencies
 

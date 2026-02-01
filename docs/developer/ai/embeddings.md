@@ -104,6 +104,7 @@ query_embedding = await service.embed_query("machine learning basics", db=db)
 ```
 
 Key behaviors:
+
 - **Model consistency**: Tracks embedding model in `app_metadata` table; raises `EmbeddingModelMismatchError` if model changes
 - **Deferred recording**: Records model name only after successful embedding storage (atomic with commit)
 - **Batch processing**: Embeds chunks in configurable batches (default 32)
