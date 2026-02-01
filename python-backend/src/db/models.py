@@ -18,6 +18,14 @@ class ParsedContent(BaseModel):
     )
 
 
+class ChunkResult(BaseModel):
+    """A single chunk produced by the chunking service."""
+
+    content: str
+    chunk_index: int
+    token_count: int
+
+
 # Item models
 
 
