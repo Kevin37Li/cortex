@@ -173,17 +173,17 @@ _Tracked: 2025-01-31_
 
 ### Files Changed
 
-| File | Change | Description |
-| ---- | ------ | ----------- |
-| `src-tauri/src/sidecar.rs` | Created | Core sidecar lifecycle module: spawn, health polling, monitoring, crash recovery, shutdown |
-| `src-tauri/src/commands/sidecar.rs` | Created | Tauri command `get_sidecar_status` with specta bindings |
-| `src-tauri/src/types.rs` | Modified | Added `SidecarStatus` enum with `#[derive(Type)]`, `SidecarState` struct, and constants |
-| `src-tauri/src/lib.rs` | Modified | Initialize sidecar state, call `initialize_sidecar()` in setup, handle `RunEvent::Exit` for shutdown |
-| `src-tauri/src/commands/mod.rs` | Modified | Added `pub mod sidecar;` export |
-| `src-tauri/src/bindings.rs` | Modified | Registered `sidecar::get_sidecar_status` in `collect_commands![]` |
-| `src-tauri/Cargo.toml` | Modified | Added `reqwest`, `tokio` (with process/time/sync features), and `libc` (unix-only) |
-| `src-tauri/Cargo.lock` | Modified | Lock file updated with new dependencies |
-| `src/lib/bindings.ts` | Modified | Auto-generated TypeScript bindings including `SidecarStatus` type and `getSidecarStatus` command |
+| File                                | Change   | Description                                                                                          |
+| ----------------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `src-tauri/src/sidecar.rs`          | Created  | Core sidecar lifecycle module: spawn, health polling, monitoring, crash recovery, shutdown           |
+| `src-tauri/src/commands/sidecar.rs` | Created  | Tauri command `get_sidecar_status` with specta bindings                                              |
+| `src-tauri/src/types.rs`            | Modified | Added `SidecarStatus` enum with `#[derive(Type)]`, `SidecarState` struct, and constants              |
+| `src-tauri/src/lib.rs`              | Modified | Initialize sidecar state, call `initialize_sidecar()` in setup, handle `RunEvent::Exit` for shutdown |
+| `src-tauri/src/commands/mod.rs`     | Modified | Added `pub mod sidecar;` export                                                                      |
+| `src-tauri/src/bindings.rs`         | Modified | Registered `sidecar::get_sidecar_status` in `collect_commands![]`                                    |
+| `src-tauri/Cargo.toml`              | Modified | Added `reqwest`, `tokio` (with process/time/sync features), and `libc` (unix-only)                   |
+| `src-tauri/Cargo.lock`              | Modified | Lock file updated with new dependencies                                                              |
+| `src/lib/bindings.ts`               | Modified | Auto-generated TypeScript bindings including `SidecarStatus` type and `getSidecarStatus` command     |
 
 ### Dependencies Added
 
@@ -217,6 +217,7 @@ _Generated: 2025-01-31_
 Implemented complete Python sidecar lifecycle management in Rust for the Tauri application. The implementation enables automatic spawning of the Python FastAPI backend when the app launches, with health polling, continuous monitoring, crash recovery (up to 3 restarts), and graceful shutdown via SIGTERM/SIGKILL. Added 14 unit tests covering environment variable handling, status serialization, and restart logic. All 190 tests across the stack pass.
 
 **Key metrics:**
+
 - 2 new Rust files created (~500 lines of code)
 - 5 existing Rust files modified
 - 3 new dependencies added (reqwest, tokio features, libc)
@@ -242,6 +243,7 @@ Used conditional compilation (`#[cfg(unix)]`) for SIGTERM handling on Unix platf
 
 **6. Module organization**
 Split implementation into:
+
 - `sidecar.rs` - Core lifecycle logic (spawn, poll, monitor, shutdown)
 - `commands/sidecar.rs` - Tauri command wrapper for frontend access
 - `types.rs` - Shared types (`SidecarStatus`, `SidecarState`, constants)
@@ -263,17 +265,20 @@ Multiple tests modify the same environment variables and run in parallel. Soluti
 ### Lessons Learned
 
 **What worked well:**
+
 - The task spec was thorough with clear acceptance criteria and code snippets
 - Having the documented patterns (event-driven bridge, tauri-specta) made integration straightforward
 - Separating the command layer from the lifecycle module kept code clean
 - Unit tests for pure logic (port parsing, skip flag, serialization) were easy to write and valuable
 
 **What could be improved:**
+
 - Integration tests for the full lifecycle would catch spawn/health failures
 - The health monitor loop continues on failed status - could add exponential backoff
 - No logging for health check success during monitoring (only failures)
 
 **Recommendations for similar tasks:**
+
 - When adding Tauri commands with managed state, define the state struct and command in separate modules to avoid circular dependencies
 - Use `kill_on_drop(true)` on child processes to ensure cleanup even on panic
 - Test serialization roundtrips for any enum exposed to TypeScript
@@ -281,10 +286,12 @@ Multiple tests modify the same environment variables and run in parallel. Soluti
 ### Documentation Impact
 
 **Existing docs that are accurate:**
+
 - `docs/developer/architecture/python-sidecar.md` - Sequences and patterns are correctly implemented
 - `docs/developer/core-systems/tauri-commands.md` - Command pattern with specta worked as documented
 
 **Potential updates:**
+
 - `docs/developer/architecture/python-sidecar.md` could add a note about the `libc` dependency for Unix shutdown
 - Consider adding `CORTEX_SKIP_SIDECAR` to a developer environment variables reference doc
 
