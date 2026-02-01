@@ -97,6 +97,7 @@ python-backend/
 │   │
 │   ├── services/              # Business logic
 │   │   ├── __init__.py
+│   │   ├── parsing.py         # Content parsing (HTML to text)
 │   │   ├── processing.py      # Item processing service
 │   │   └── embeddings.py      # Embedding management
 │   │

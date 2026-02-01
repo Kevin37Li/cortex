@@ -4,6 +4,20 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+# Content processing models
+
+
+class ParsedContent(BaseModel):
+    """Result of parsing raw content."""
+
+    text: str  # Clean extracted text
+    title: str | None = None  # Extracted title (HTML) or None
+    word_count: int
+    language: str | None = (
+        None  # Always None for MVP; reserved for future language detection
+    )
+
+
 # Item models
 
 
