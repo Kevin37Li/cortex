@@ -89,17 +89,18 @@ python-backend/
 │   │   ├── __init__.py
 │   │   ├── database.py        # Connection management
 │   │   ├── models.py          # Pydantic models (Item, Chunk, etc.)
+│   │   ├── schema.sql         # Table definitions (applied by init_database)
 │   │   └── repositories/      # Data access patterns
 │   │       ├── base.py        # Abstract BaseRepository
 │   │       ├── items.py
 │   │       ├── chunks.py
-│   │       └── conversations.py
+│   │       └── app_metadata.py # Key-value metadata storage
 │   │
 │   ├── services/              # Business logic
 │   │   ├── __init__.py
 │   │   ├── parsing.py         # Content parsing (HTML to text)
-│   │   ├── processing.py      # Item processing service
-│   │   └── embeddings.py      # Embedding management
+│   │   ├── chunking.py        # Semantic text chunking
+│   │   └── embeddings.py      # Embedding generation and storage
 │   │
 │   ├── config.py              # Application configuration (pydantic-settings)
 │   ├── exceptions.py          # Custom exception hierarchy
@@ -353,6 +354,40 @@ async def get_item_repository() -> AsyncIterator[ItemRepository]:
 | ----------------------- | --------------------------------------------------- |
 | `get_db_connection()`   | Simple queries (`SELECT 1`), health checks, raw SQL |
 | `get_item_repository()` | Domain entity CRUD, business logic requiring models |
+| `get_ai_provider()`     | AI operations (embedding, chat, extraction)         |
+| `get_embedding_service()` | Embedding generation with model consistency       |
+
+### Service Dependencies
+
+Services that need transaction control receive the database connection via method parameters, not constructor:
+
+```python
+# src/api/deps.py
+async def get_ai_provider() -> AsyncIterator[AIProvider]:
+    """Get the configured AI provider."""
+    yield OllamaProvider()  # MVP: Ollama; later: switch based on settings
+
+async def get_embedding_service(
+    provider: AIProvider = Depends(get_ai_provider),
+) -> AsyncIterator[EmbeddingService]:
+    """Get embedding service with injected provider."""
+    yield EmbeddingService(provider=provider)
+```
+
+**Pattern: DB via method parameter.** Services like `EmbeddingService` accept `db` in method calls rather than constructor:
+
+```python
+# ✅ GOOD: Service works with any connection, caller controls transaction
+async def embed_chunks(self, db: aiosqlite.Connection, chunks: list[Chunk]) -> None:
+    # ... generates embeddings, stores in vec_chunks ...
+    await db.commit()  # Caller-controlled transaction
+
+# Usage in endpoint or workflow
+service = EmbeddingService(provider)
+await service.embed_chunks(db, chunks)
+```
+
+This enables the same service instance to work with different connections and supports transaction batching across multiple operations.
 
 This pattern:
 

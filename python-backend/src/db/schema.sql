@@ -52,3 +52,10 @@ CREATE INDEX IF NOT EXISTS idx_items_created ON items(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_items_content_type ON items(content_type);
 CREATE INDEX IF NOT EXISTS idx_chunks_item ON chunks(item_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_item_index ON chunks(item_id, chunk_index);
+
+-- App metadata - key-value store for application-wide settings
+-- Used for embedding model tracking and other app-wide state
+CREATE TABLE IF NOT EXISTS app_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);

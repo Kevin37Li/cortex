@@ -1,6 +1,7 @@
 """Business logic services."""
 
-from src.services.chunking import ChunkingService
-from src.services.parsing import ContentParser
+from .chunking import ChunkingService
+from .embeddings import EmbeddingService
+from .parsing import ContentParser
 
-__all__ = ["ChunkingService", "ContentParser"]
+__all__ = ["ChunkingService", "ContentParser", "EmbeddingService"]

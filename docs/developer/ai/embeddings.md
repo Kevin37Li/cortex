@@ -85,6 +85,30 @@ Higher dimensions = more precision but more storage:
 
 For most use cases, 768-1536 dimensions are sufficient.
 
+## EmbeddingService
+
+The `EmbeddingService` class (`src/services/embeddings.py`) handles embedding generation and storage:
+
+```python
+from src.services import EmbeddingService
+from src.api.deps import get_ai_provider
+
+# Inject via FastAPI dependency
+service = EmbeddingService(provider=ai_provider)
+
+# Generate embeddings for persisted chunks (must have IDs)
+await service.embed_chunks(db, chunks)
+
+# Generate embedding for search query
+query_embedding = await service.embed_query("machine learning basics", db=db)
+```
+
+Key behaviors:
+- **Model consistency**: Tracks embedding model in `app_metadata` table; raises `EmbeddingModelMismatchError` if model changes
+- **Deferred recording**: Records model name only after successful embedding storage (atomic with commit)
+- **Batch processing**: Embeds chunks in configurable batches (default 32)
+- **Dimension validation**: Validates all embeddings match `EMBEDDING_DIMENSION` (768)
+
 ## Storage with sqlite-vec
 
 Embeddings are stored using the [sqlite-vec](https://github.com/asg017/sqlite-vec) extension:
@@ -96,9 +120,6 @@ CREATE VIRTUAL TABLE vec_chunks USING vec0(
     embedding FLOAT[768]  -- Match your model's dimensions
 );
 
--- Insert embedding
-INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?);
-
 -- Vector similarity search (cosine distance)
 SELECT
     chunk_id,
@@ -107,6 +128,19 @@ FROM vec_chunks
 WHERE embedding MATCH ?
 ORDER BY distance
 LIMIT 10;
+```
+
+**Inserting embeddings requires serialization:**
+
+```python
+import sqlite_vec
+
+# Must serialize before INSERT - raw lists won't work
+serialized = sqlite_vec.serialize_float32(embedding)
+await db.execute(
+    "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
+    [chunk_id, serialized]
+)
 ```
 
 ### Index Configuration
@@ -206,18 +240,21 @@ def reciprocal_rank_fusion(
 
 **Critical**: Never mix embeddings from different models in the same database.
 
-If you change embedding models:
+The `EmbeddingService` enforces this automatically:
 
-1. Re-embed all existing content
-2. Or maintain separate vector tables per model
+1. On first embedding, records the model name in `app_metadata` table
+2. On subsequent embeddings, validates configured model matches stored model
+3. Raises `EmbeddingModelMismatchError` if models differ
 
 ```python
-# Track embedding model in metadata
-class ChunkMetadata:
-    embedding_model: str  # e.g., "nomic-embed-text"
-    embedding_version: str  # e.g., "v1.5"
-    embedded_at: datetime
+# Model tracking via AppMetadataRepository
+from src.db.repositories import AppMetadataRepository
+
+repo = AppMetadataRepository(db)
+current_model = await repo.get("embedding_model")  # e.g., "nomic-embed-text"
 ```
+
+If you need to change embedding models, you must re-embed all existing content.
 
 ### Migration Strategy
 
@@ -244,24 +281,25 @@ async def migrate_embeddings(new_model: str):
     db.execute("ALTER TABLE vec_chunks_new RENAME TO vec_chunks")
 
     # 4. Update metadata
-    db.execute("UPDATE settings SET embedding_model = ?", [new_model])
+    db.execute(
+        "INSERT OR REPLACE INTO app_metadata (key, value) VALUES ('embedding_model', ?)",
+        [new_model]
+    )
 ```
 
 ## Performance Optimization
 
 ### Batch Embedding
 
-Embed multiple chunks at once to reduce overhead:
+The `EmbeddingService` handles batching automatically:
 
 ```python
-async def embed_batch(texts: list[str], batch_size: int = 32) -> list[list[float]]:
-    embeddings = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-        batch_embeddings = await provider.embed_batch(batch)
-        embeddings.extend(batch_embeddings)
-    return embeddings
+# Chunks are processed in batches (default 32)
+service = EmbeddingService(provider, batch_size=32)
+await service.embed_chunks(db, chunks)  # Batched internally
 ```
+
+Embeddings are generated in batches via `provider.embed_batch()` but stored one-by-one (sqlite-vec constraint), with a single commit at the end for atomicity.
 
 ### Caching
 
