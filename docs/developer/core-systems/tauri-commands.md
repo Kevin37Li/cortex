@@ -100,14 +100,22 @@ const handleSave = async () => {
 
 ### 1. Define the Rust command
 
+Create a new file or add to an existing module in `src-tauri/src/commands/`:
+
 ```rust
-// src-tauri/src/lib.rs
+// src-tauri/src/commands/my_feature.rs
 
 #[tauri::command]
 #[specta::specta]  // Add this attribute
 pub async fn my_new_command(arg: String) -> Result<MyType, String> {
     // implementation
 }
+```
+
+If creating a new module, export it in `commands/mod.rs`:
+
+```rust
+pub mod my_feature;
 ```
 
 ### 2. Add Type derive to structs
@@ -127,9 +135,11 @@ pub struct MyType {
 // src-tauri/src/bindings.rs
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
+    use crate::commands::{my_feature, /* other modules */};
+
     Builder::<tauri::Wry>::new().commands(collect_commands![
         // ... existing commands
-        crate::my_new_command,  // Add here
+        my_feature::my_new_command,  // Add here
     ])
 }
 ```
@@ -161,8 +171,16 @@ Always commit:
 
 ```
 src-tauri/src/
-├── lib.rs              # Commands with #[specta::specta]
+├── lib.rs              # App setup and plugin initialization
 ├── bindings.rs         # Command registration + export test
+├── types.rs            # Shared types with #[derive(Type)]
+├── commands/           # Command implementations
+│   ├── mod.rs          # Module exports
+│   ├── preferences.rs  # Preferences commands
+│   ├── notifications.rs
+│   ├── recovery.rs
+│   ├── quick_pane.rs
+│   └── sidecar.rs      # get_sidecar_status command
 └── Cargo.toml          # specta, tauri-specta dependencies
 
 src/lib/
@@ -230,6 +248,7 @@ vi.mock('@/lib/tauri-bindings', () => ({
 | `saveEmergencyData`       | `filename: string, data: JsonValue`   | `Result<null, string>`           | Save recovery data  |
 | `loadEmergencyData`       | `filename: string`                    | `Result<JsonValue, string>`      | Load recovery data  |
 | `cleanupOldRecoveryFiles` | none                                  | `Result<number, string>`         | Cleanup old files   |
+| `getSidecarStatus`        | none                                  | `Result<SidecarStatus, string>`  | Get sidecar status  |
 
 ## Dependencies
 

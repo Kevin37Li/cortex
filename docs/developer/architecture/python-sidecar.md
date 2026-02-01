@@ -138,24 +138,29 @@ client.post("http://localhost:8742/api/items")
 ```
 1. User launches Cortex.app
 2. Tauri main process starts
-3. Rust spawns Python sidecar as child process
-4. Python starts FastAPI on localhost:8742
-5. Rust polls /api/health until ready (max 30s)
-6. Frontend renders, makes first API call
-7. App is ready for use
+3. Check CORTEX_SKIP_SIDECAR — if "true", skip sidecar spawn
+4. Rust spawns Python sidecar as child process
+5. Python starts FastAPI on localhost:8742
+6. Rust polls /api/health until ready (max 30s), accepts 200 or 503
+7. Frontend renders, makes first API call
+8. App is ready for use
 ```
+
+**Development tip:** Set `CORTEX_SKIP_SIDECAR=true` to disable automatic sidecar spawning when running the Python backend separately (e.g., with hot reload).
 
 ### Shutdown Sequence
 
 ```
-1. User closes main window
-2. Tauri's on_window_event fires
-3. Rust sends SIGTERM to Python process
+1. User quits the application
+2. Tauri fires RunEvent::Exit
+3. Rust sends SIGTERM to Python process (Unix) or kills directly (Windows)
 4. Python gracefully shuts down (closes DB, stops workers)
 5. Rust waits for Python exit (max 5s)
 6. If timeout, Rust sends SIGKILL
 7. Tauri exits
 ```
+
+**Note:** On macOS, closing all windows does NOT quit the app. The shutdown hook is triggered by `RunEvent::Exit`, not window close events.
 
 ### Crash Recovery
 

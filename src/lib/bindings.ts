@@ -142,6 +142,17 @@ async updateQuickPaneShortcut(shortcut: string | null) : Promise<Result<null, st
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Returns the current status of the Python sidecar process.
+ */
+async getSidecarStatus() : Promise<Result<SidecarStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_sidecar_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -195,6 +206,11 @@ export type RecoveryError =
  * JSON serialization/deserialization error
  */
 { type: "ParseError"; message: string }
+/**
+ * Status of the Python backend sidecar process.
+ * Emitted to the frontend via the `sidecar-status` event.
+ */
+export type SidecarStatus = "starting" | "ready" | "restarting" | "failed"
 
 /** tauri-specta globals **/
 

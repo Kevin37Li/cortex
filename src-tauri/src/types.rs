@@ -4,6 +4,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::sync::LazyLock;
+use tokio::process::Child;
 
 /// Default shortcut for the quick pane
 pub const DEFAULT_QUICK_PANE_SHORTCUT: &str = "CommandOrControl+Shift+.";
@@ -119,4 +120,33 @@ pub fn validate_theme(theme: &str) -> Result<(), String> {
         "light" | "dark" | "system" => Ok(()),
         _ => Err("Invalid theme: must be 'light', 'dark', or 'system'".to_string()),
     }
+}
+
+// ============================================================================
+// Sidecar
+// ============================================================================
+
+/// Status of the Python backend sidecar process.
+/// Emitted to the frontend via the `sidecar-status` event.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum SidecarStatus {
+    Starting,
+    Ready,
+    Restarting,
+    Failed,
+}
+
+/// Maximum number of sidecar restart attempts before giving up.
+pub const MAX_RESTART_ATTEMPTS: u32 = 3;
+
+/// Default port for the Python backend.
+pub const DEFAULT_SIDECAR_PORT: u16 = 8742;
+
+/// Internal state of the Python sidecar process.
+/// Wrapped in `Arc<Mutex<>>` and registered as Tauri managed state.
+pub struct SidecarState {
+    pub child: Option<Child>,
+    pub status: SidecarStatus,
+    pub restart_count: u32,
 }

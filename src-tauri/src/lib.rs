@@ -6,10 +6,15 @@
 
 mod bindings;
 mod commands;
+mod sidecar;
 mod types;
 mod utils;
 
+use std::sync::Arc;
+
 use tauri::Manager;
+use tauri::RunEvent;
+use tokio::sync::Mutex;
 
 // Re-export only what's needed externally
 pub use types::DEFAULT_QUICK_PANE_SHORTCUT;
@@ -86,7 +91,16 @@ pub fn run() {
         app_builder = app_builder.plugin(tauri_nspanel::init());
     }
 
+    // Initialize sidecar managed state
+    let sidecar_state = Arc::new(Mutex::new(types::SidecarState {
+        child: None,
+        status: types::SidecarStatus::Starting,
+        restart_count: 0,
+    }));
+    let shutdown_state = sidecar_state.clone();
+
     app_builder
+        .manage(sidecar_state)
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_dialog::init())
@@ -129,12 +143,23 @@ pub fn run() {
                 // Non-fatal: app can still run without quick pane
             }
 
+            // Initialize the Python sidecar (spawns async task)
+            sidecar::initialize_sidecar(app.handle());
+
             // NOTE: Application menu is built from JavaScript for i18n support
             // See src/lib/menu.ts for the menu implementation
 
             Ok(())
         })
         .invoke_handler(builder.invoke_handler())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(move |_app, event| {
+            if let RunEvent::Exit = event {
+                log::info!("Application exiting — shutting down sidecar");
+                tauri::async_runtime::block_on(async {
+                    sidecar::shutdown_sidecar(&shutdown_state).await;
+                });
+            }
+        });
 }
