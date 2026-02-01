@@ -72,9 +72,18 @@ function completeTask(taskIdentifier) {
   console.log(`Completing task: ${taskIdentifier}\n`)
 
   const todoFiles = fs.readdirSync(TODO_DIR)
+  const searchTerm = taskIdentifier.toLowerCase()
+
+  // If identifier is a number, match task-{number}- exactly
+  const isNumeric = /^\d+$/.test(searchTerm)
+
   const matchingFile = todoFiles.find(f => {
     const normalized = f.toLowerCase().replace('.md', '')
-    const searchTerm = taskIdentifier.toLowerCase()
+    if (isNumeric) {
+      // Exact match for task number: task-4- but not task-14-
+      return normalized.startsWith(`task-${searchTerm}-`)
+    }
+    // Fuzzy match for name-based searches
     return normalized.includes(searchTerm) || normalized.endsWith(searchTerm)
   })
 
