@@ -19,6 +19,10 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
     must define the table name, model type, and how to map between database
     rows and Pydantic models.
 
+    Repositories are stateless - database connections are passed via method
+    parameters. This allows callers to control transaction boundaries and
+    commit timing.
+
     Type Parameters:
         T: The output Pydantic model type
         CreateT: The input model for create operations
@@ -28,15 +32,11 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         - get() returns None if not found (caller decides to raise)
         - update() raises ItemNotFoundError if item doesn't exist
         - delete() returns False if item doesn't exist
+
+    Transaction Strategy:
+        - Methods do NOT commit - caller is responsible for committing
+        - This allows atomic transactions across multiple operations
     """
-
-    def __init__(self, db: aiosqlite.Connection) -> None:
-        """Initialize the repository with a database connection.
-
-        Args:
-            db: An aiosqlite connection with row_factory set
-        """
-        self.db = db
 
     @property
     @abstractmethod
@@ -45,12 +45,14 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         ...
 
     @abstractmethod
-    async def create(self, data: CreateT) -> T:
+    async def create(self, db: aiosqlite.Connection, data: CreateT) -> T:
         """Create a new record and return it.
 
         UUID is generated internally using uuid4().
+        Does NOT commit - caller is responsible for committing.
 
         Args:
+            db: Database connection
             data: The input data for the new record
 
         Returns:
@@ -59,10 +61,11 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         ...
 
     @abstractmethod
-    async def get(self, id: str) -> T | None:
+    async def get(self, db: aiosqlite.Connection, id: str) -> T | None:
         """Get a record by ID.
 
         Args:
+            db: Database connection
             id: The record's unique identifier
 
         Returns:
@@ -71,10 +74,13 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         ...
 
     @abstractmethod
-    async def list(self, offset: int = 0, limit: int = 20) -> list[T]:
+    async def list(
+        self, db: aiosqlite.Connection, offset: int = 0, limit: int = 20
+    ) -> list[T]:
         """List records with pagination.
 
         Args:
+            db: Database connection
             offset: Number of records to skip
             limit: Maximum number of records to return
 
@@ -84,10 +90,13 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         ...
 
     @abstractmethod
-    async def update(self, id: str, data: UpdateT) -> T:
+    async def update(self, db: aiosqlite.Connection, id: str, data: UpdateT) -> T:
         """Update a record.
 
+        Does NOT commit - caller is responsible for committing.
+
         Args:
+            db: Database connection
             id: The record's unique identifier
             data: The fields to update (None fields are skipped)
 
@@ -100,10 +109,13 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         ...
 
     @abstractmethod
-    async def delete(self, id: str) -> bool:
+    async def delete(self, db: aiosqlite.Connection, id: str) -> bool:
         """Delete a record.
 
+        Does NOT commit - caller is responsible for committing.
+
         Args:
+            db: Database connection
             id: The record's unique identifier
 
         Returns:
@@ -112,8 +124,11 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
         ...
 
     @abstractmethod
-    async def count(self) -> int:
+    async def count(self, db: aiosqlite.Connection) -> int:
         """Count total records in the table.
+
+        Args:
+            db: Database connection
 
         Returns:
             Total number of records

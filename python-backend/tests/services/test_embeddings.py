@@ -140,6 +140,7 @@ class TestEmbedChunks:
     ) -> None:
         """Chunks should be embedded and stored in vec_chunks table."""
         await service.embed_chunks(db_with_vec, sample_chunks)
+        await db_with_vec.commit()  # Caller commits
 
         # Verify embeddings were stored
         cursor = await db_with_vec.execute("SELECT COUNT(*) FROM vec_chunks")
@@ -180,6 +181,7 @@ class TestEmbedChunks:
         ]
 
         await service.embed_chunks(db_with_vec, chunks)
+        await db_with_vec.commit()
 
         # Should have made 4 batch calls (10 / 3 = 3.33, rounded up to 4)
         assert len(mock_provider.embed_batch_calls) == 4
@@ -196,6 +198,7 @@ class TestEmbedChunks:
     ) -> None:
         """First embedding should record the model name."""
         await service.embed_chunks(db_with_vec, sample_chunks)
+        await db_with_vec.commit()
 
         cursor = await db_with_vec.execute(
             "SELECT value FROM app_metadata WHERE key = ?", [EMBEDDING_MODEL_KEY]
@@ -398,6 +401,7 @@ class TestModelConsistency:
 
         # Should not raise
         await service.embed_chunks(db_with_vec, sample_chunks)
+        await db_with_vec.commit()
 
     async def test_uses_configured_model_name(
         self, mock_provider: MockAIProvider

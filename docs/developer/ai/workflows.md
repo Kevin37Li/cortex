@@ -381,23 +381,58 @@ class DigestState(TypedDict):
 
 ### Error Handling in Workflows
 
-Each workflow should handle failures gracefully:
+Each node should catch exceptions and return error state for routing:
 
 ```python
-class ProcessingState(TypedDict):
+class ProcessingState(TypedDict, total=False):
+    item_id: str
     # ... other fields
     error: str | None
+    error_step: str | None
     retry_count: int
 
-def should_retry(state: ProcessingState) -> bool:
-    return state["error"] is not None and state["retry_count"] < 3
+@log_node_execution("parse")
+async def parse_node(state: ProcessingState) -> dict:
+    try:
+        parser = ContentParser()
+        result = parser.parse(state["raw_content"], state["content_type"])
+        return {"parsed_text": result.text}
+    except Exception as e:
+        return {"error": str(e), "error_step": "parse"}
+```
 
-def handle_error(state: ProcessingState) -> ProcessingState:
-    return {
-        **state,
-        "retry_count": state["retry_count"] + 1,
-        "error": None  # Clear for retry
-    }
+Use a `route_or_error()` factory for conditional edges:
+
+```python
+def route_or_error(next_node: str):
+    """Route to next_node or handle_error if error is set."""
+    def router(state: ProcessingState) -> str:
+        if state.get("error"):
+            return "handle_error"
+        return next_node
+    return router
+
+# Usage in graph definition
+builder.add_conditional_edges(
+    "parse",
+    route_or_error("chunk"),
+    {"chunk": "chunk", "handle_error": "handle_error"}
+)
+```
+
+### Validation Retry Loop
+
+For validation with retry:
+
+```python
+def route_after_validation(state: ProcessingState) -> str:
+    if state.get("error"):
+        return "handle_error"
+    if state.get("validation_passed"):
+        return "persist"
+    if state.get("retry_count", 0) < MAX_RETRIES:
+        return "retry"  # Routes back to earlier node
+    return "handle_error"  # Max retries exceeded
 ```
 
 ### Checkpointing
@@ -417,18 +452,49 @@ result = await graph.ainvoke(state, config)
 
 ### Observability
 
-Log workflow execution for debugging:
+Log workflow execution for debugging with a decorator:
 
 ```python
+import functools
+
 def log_node_execution(node_name: str):
+    """Decorator for logging workflow node execution."""
     def decorator(func):
-        async def wrapper(state):
-            logger.info(f"Entering {node_name}", extra={"state": state})
-            result = await func(state)
-            logger.info(f"Exiting {node_name}", extra={"result": result})
-            return result
+        @functools.wraps(func)
+        async def wrapper(state: ProcessingState) -> dict:
+            item_id = state.get("item_id", "unknown")
+            logger.info(f"Starting node: {node_name}", extra={"item_id": item_id})
+            try:
+                result = await func(state)
+                logger.info(f"Completed node: {node_name}", extra={"item_id": item_id})
+                return result
+            except Exception as e:
+                logger.error(f"Failed node: {node_name}", extra={"item_id": item_id, "error": str(e)})
+                raise
         return wrapper
     return decorator
+```
+
+### Database Access in Nodes
+
+Workflow nodes manage their own database connections:
+
+```python
+from src.db.database import db_connection
+from src.db.repositories import item_repo
+
+@log_node_execution("persist")
+async def persist_node(state: ProcessingState) -> dict:
+    try:
+        async with db_connection() as db:
+            # Multiple operations, single atomic commit
+            chunks = await chunk_repo.create_many(db, chunk_creates)
+            await embedding_service.embed_chunks(db, chunks)
+            await item_repo.update(db, item_id, ItemUpdate(metadata=metadata))
+            await db.commit()
+        return {"chunks": chunks, "embeddings_stored": True}
+    except Exception as e:
+        return {"error": str(e), "error_step": "persist"}
 ```
 
 ## Related Documentation

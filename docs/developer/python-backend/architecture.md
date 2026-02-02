@@ -321,7 +321,7 @@ async def delete_item(
 
 ### Dependency Injection
 
-Use `deps.py` to provide database access to routes. There are two patterns:
+Use `deps.py` to provide database connections and repositories to routes:
 
 ```python
 # src/api/deps.py
@@ -329,38 +329,52 @@ from collections.abc import AsyncIterator
 
 import aiosqlite
 
-from ..db.database import get_connection
-from ..db.repositories import ItemRepository
+from ..db.database import db_connection
+from ..db.repositories import ItemRepository, item_repo
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
-    """Get a raw database connection.
+    """Async generator for FastAPI Depends().
 
-    Use for simple queries where repository abstraction is unnecessary.
+    Wraps db_connection() context manager for dependency injection.
     """
-    async for db in get_connection():
+    async with db_connection() as db:
         yield db
 
-async def get_item_repository() -> AsyncIterator[ItemRepository]:
-    """Get a repository instance with managed connection.
+def get_item_repo() -> ItemRepository:
+    """Get the ItemRepository singleton.
 
-    Use for standard CRUD operations on domain entities.
+    Repositories are stateless - db connection is passed per method.
     """
-    async for db in get_connection():
-        yield ItemRepository(db)
+    return item_repo
+```
+
+**Usage in routes:**
+
+```python
+@router.post("/", response_model=Item)
+async def create_item(
+    data: ItemCreate,
+    db: aiosqlite.Connection = Depends(get_db_connection),
+    repo: ItemRepository = Depends(get_item_repo),
+) -> Item:
+    item = await repo.create(db, data)
+    await db.commit()  # Caller controls transaction
+    return item
 ```
 
 **When to use each:**
 
 | Dependency                | Use For                                             |
 | ------------------------- | --------------------------------------------------- |
-| `get_db_connection()`     | Simple queries (`SELECT 1`), health checks, raw SQL |
-| `get_item_repository()`   | Domain entity CRUD, business logic requiring models |
+| `get_db_connection()`     | All database operations - routes manage connections |
+| `get_item_repo()`         | Item CRUD - stateless singleton                     |
+| `get_chunk_repo()`        | Chunk CRUD - stateless singleton                    |
 | `get_ai_provider()`       | AI operations (embedding, chat, extraction)         |
 | `get_embedding_service()` | Embedding generation with model consistency         |
 
 ### Service Dependencies
 
-Services that need transaction control receive the database connection via method parameters, not constructor:
+Services receive the database connection via method parameters, not constructor. This enables transaction batching across multiple operations.
 
 ```python
 # src/api/deps.py
@@ -375,20 +389,19 @@ async def get_embedding_service(
     yield EmbeddingService(provider=provider)
 ```
 
-**Pattern: DB via method parameter.** Services like `EmbeddingService` accept `db` in method calls rather than constructor:
+**Pattern: DB via method parameter, caller commits.**
 
 ```python
 # ✅ GOOD: Service works with any connection, caller controls transaction
 async def embed_chunks(self, db: aiosqlite.Connection, chunks: list[Chunk]) -> None:
     # ... generates embeddings, stores in vec_chunks ...
-    await db.commit()  # Caller-controlled transaction
+    # Does NOT commit - caller is responsible
 
-# Usage in endpoint or workflow
+# Usage in endpoint
 service = EmbeddingService(provider)
 await service.embed_chunks(db, chunks)
+await db.commit()  # Route commits after all operations succeed
 ```
-
-This enables the same service instance to work with different connections and supports transaction batching across multiple operations.
 
 This pattern:
 
@@ -465,6 +478,7 @@ The database module (`src/db/database.py`) provides:
 ```python
 # src/db/database.py
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 import aiosqlite
 import sqlite_vec
 
@@ -474,14 +488,29 @@ async def _load_sqlite_vec(db: aiosqlite.Connection) -> None:
     await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
     await db.enable_load_extension(False)
 
-async def get_connection() -> AsyncIterator[aiosqlite.Connection]:
-    """Async generator yielding configured database connections."""
+async def _configure_connection(db: aiosqlite.Connection) -> None:
+    """Shared connection setup (PRAGMA, extensions, row factory)."""
+    await db.execute("PRAGMA foreign_keys = ON")
+    await _load_sqlite_vec(db)
+    db.row_factory = aiosqlite.Row
+
+@asynccontextmanager
+async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
+    """Context manager for database connections.
+
+    Use directly for LangGraph nodes, scripts, background tasks.
+    For FastAPI routes, use get_db_connection() from api.deps.
+    """
     async with aiosqlite.connect(settings.db_path) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        await _load_sqlite_vec(db)
-        db.row_factory = aiosqlite.Row
+        await _configure_connection(db)
         yield db
 ```
+
+**Usage patterns:**
+
+- **FastAPI routes**: `Depends(get_db_connection)` - wraps context manager
+- **LangGraph nodes**: `async with db_connection() as db:` - direct usage
+- **Scripts/tests**: `async with db_connection() as db:` - direct usage
 
 ### Database Initialization
 
@@ -508,7 +537,13 @@ See [sqlite-vec documentation](../data-storage/sqlite-vec.md) for schema details
 
 ### Repository Pattern
 
-Repositories provide type-safe database access using Pydantic models. The pattern uses an abstract `BaseRepository` for standard CRUD operations, with flexibility for custom implementations when access patterns differ.
+Repositories provide type-safe database access using Pydantic models. **Repositories are stateless** - database connections are passed via method parameters, enabling callers to control transaction boundaries.
+
+#### Key Principles
+
+1. **Stateless**: No `__init__` with db connection - db passed per method
+2. **Caller commits**: Methods do NOT commit - atomic transactions are caller's responsibility
+3. **Singleton instances**: Module-level singletons for shared access
 
 #### Pydantic Models
 
@@ -539,54 +574,51 @@ class Item(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-class ItemListResponse(BaseModel):
-    """Paginated response for listing items."""
-    items: list[Item]
-    total: int
-    offset: int
-    limit: int
 ```
 
 #### BaseRepository
 
-Generic abstract class defining CRUD interface:
+Generic abstract class defining stateless CRUD interface:
 
 ```python
 # src/db/repositories/base.py
 class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
     """Abstract base repository with generic CRUD operations.
 
+    Repositories are stateless - db connections passed via method parameters.
+    This allows callers to control transaction boundaries and commit timing.
+
     Exception Handling Strategy:
         - get() returns None if not found (caller decides to raise)
         - update() raises ItemNotFoundError if item doesn't exist
         - delete() returns False if item doesn't exist
-    """
 
-    def __init__(self, db: aiosqlite.Connection) -> None:
-        self.db = db
+    Transaction Strategy:
+        - Methods do NOT commit - caller is responsible for committing
+        - This allows atomic transactions across multiple operations
+    """
 
     @property
     @abstractmethod
     def table_name(self) -> str: ...
 
     @abstractmethod
-    async def create(self, data: CreateT) -> T: ...
+    async def create(self, db: aiosqlite.Connection, data: CreateT) -> T: ...
 
     @abstractmethod
-    async def get(self, id: str) -> T | None: ...
+    async def get(self, db: aiosqlite.Connection, id: str) -> T | None: ...
 
     @abstractmethod
-    async def list(self, offset: int = 0, limit: int = 20) -> list[T]: ...
+    async def list(self, db: aiosqlite.Connection, offset: int = 0, limit: int = 20) -> list[T]: ...
 
     @abstractmethod
-    async def update(self, id: str, data: UpdateT) -> T: ...
+    async def update(self, db: aiosqlite.Connection, id: str, data: UpdateT) -> T: ...
 
     @abstractmethod
-    async def delete(self, id: str) -> bool: ...
+    async def delete(self, db: aiosqlite.Connection, id: str) -> bool: ...
 
     @abstractmethod
-    async def count(self) -> int: ...
+    async def count(self, db: aiosqlite.Connection) -> int: ...
 ```
 
 #### Concrete Repository
@@ -594,33 +626,55 @@ class BaseRepository(ABC, Generic[T, CreateT, UpdateT]):
 ```python
 # src/db/repositories/items.py
 class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
+    """Repository for managing items. Stateless - db passed per method."""
+
     @property
     def table_name(self) -> str:
         return "items"
 
-    def _row_to_item(self, row: aiosqlite.Row) -> Item:
-        """Convert database row to Pydantic model."""
-        return Item(
-            id=row["id"],
-            title=row["title"],
-            # ... map all fields
-        )
-
-    async def create(self, data: ItemCreate) -> Item:
+    async def create(self, db: aiosqlite.Connection, data: ItemCreate) -> Item:
         item_id = str(uuid4())
-        await self.db.execute(...)
-        await self.db.commit()
+        await db.execute(...)
+        # Does NOT commit - caller is responsible
+        return await self.get(db, item_id)
 
-        result = await self.get(item_id)
-        if result is None:
-            raise DatabaseError(f"Failed to retrieve newly created item: {item_id}")
-        return result
-
-    async def update(self, id: str, data: ItemUpdate) -> Item:
-        existing = await self.get(id)
+    async def update(self, db: aiosqlite.Connection, id: str, data: ItemUpdate) -> Item:
+        existing = await self.get(db, id)
         if existing is None:
             raise ItemNotFoundError(item_id=id)
-        # ... perform update
+        # ... perform update, no commit
+```
+
+#### Singleton Instances
+
+Module-level singletons are exported for shared access:
+
+```python
+# src/db/repositories/__init__.py
+from .items import ItemRepository
+from .chunks import ChunkRepository
+from .app_metadata import AppMetadataRepository
+
+# Singleton instances (stateless repos)
+item_repo = ItemRepository()
+chunk_repo = ChunkRepository()
+metadata_repo = AppMetadataRepository()
+```
+
+Usage:
+
+```python
+# In FastAPI routes (via dependency injection)
+from ..db.repositories import item_repo
+item = await item_repo.create(db, data)
+await db.commit()
+
+# In LangGraph workflows (direct usage)
+from src.db.repositories import item_repo
+async with db_connection() as db:
+    item = await item_repo.get(db, item_id)
+    await item_repo.update_status(db, item_id, "processing")
+    await db.commit()
 ```
 
 #### When NOT to Extend BaseRepository
@@ -634,14 +688,32 @@ Use a standalone class when access patterns differ significantly. Example: `Chun
 ```python
 # src/db/repositories/chunks.py
 class ChunkRepository:
-    """Standalone repository for chunk-specific access patterns."""
+    """Standalone repository for chunk-specific access patterns.
 
-    def __init__(self, db: aiosqlite.Connection) -> None:
-        self.db = db
+    Stateless - db passed per method. Does NOT commit.
+    """
 
-    async def create_many(self, chunks: list[ChunkCreate]) -> list[Chunk]: ...
-    async def get_by_item(self, item_id: str) -> list[Chunk]: ...
-    async def delete_by_item(self, item_id: str) -> int: ...
+    async def create_many(self, db: aiosqlite.Connection, chunks: list[ChunkCreate]) -> list[Chunk]: ...
+    async def get_by_item(self, db: aiosqlite.Connection, item_id: str) -> list[Chunk]: ...
+    async def delete_by_item(self, db: aiosqlite.Connection, item_id: str) -> int: ...
+```
+
+#### Transaction Boundaries
+
+The caller controls when to commit, enabling atomic multi-operation transactions:
+
+```python
+# ✅ GOOD: Single atomic commit after multiple operations
+async with db_connection() as db:
+    chunks = await chunk_repo.create_many(db, chunk_creates)
+    await embedding_service.embed_chunks(db, chunks)
+    await item_repo.update(db, item_id, ItemUpdate(metadata=metadata))
+    await db.commit()  # All-or-nothing
+
+# ❌ BAD: Auto-commit in repository leaves orphaned data on failure
+async def create(self, db, data):
+    await db.execute(...)
+    await db.commit()  # Don't do this - caller should commit
 ```
 
 #### Row-to-Model Conversion

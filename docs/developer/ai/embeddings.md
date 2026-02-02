@@ -248,11 +248,10 @@ The `EmbeddingService` enforces this automatically:
 3. Raises `EmbeddingModelMismatchError` if models differ
 
 ```python
-# Model tracking via AppMetadataRepository
-from src.db.repositories import AppMetadataRepository
+# Model tracking via AppMetadataRepository singleton
+from src.db.repositories import metadata_repo
 
-repo = AppMetadataRepository(db)
-current_model = await repo.get("embedding_model")  # e.g., "nomic-embed-text"
+current_model = await metadata_repo.get(db, "embedding_model")  # e.g., "nomic-embed-text"
 ```
 
 If you need to change embedding models, you must re-embed all existing content.

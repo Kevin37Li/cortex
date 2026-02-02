@@ -8,7 +8,7 @@ import sqlite_vec
 from src.config import settings
 from src.db.database import EMBEDDING_DIMENSION
 from src.db.models import Chunk
-from src.db.repositories import AppMetadataRepository
+from src.db.repositories import metadata_repo
 from src.exceptions import (
     AIProviderError,
     EmbeddingError,
@@ -30,6 +30,8 @@ class EmbeddingService:
     - Store embeddings in sqlite-vec
     - Enforce model consistency (prevent mixed embeddings)
     - Track embedding metadata
+
+    Note: Methods do NOT commit - caller is responsible for transaction management.
     """
 
     def __init__(
@@ -56,6 +58,8 @@ class EmbeddingService:
         Embeddings are generated in batches and stored in the vec_chunks
         virtual table.
 
+        Does NOT commit - caller is responsible for committing.
+
         Args:
             db: Database connection with sqlite-vec loaded
             chunks: List of Chunk objects (must have IDs from database)
@@ -68,12 +72,9 @@ class EmbeddingService:
             logger.debug("No chunks to embed")
             return
 
-        # Create metadata repo with the connection
-        metadata_repo = AppMetadataRepository(db)
-
         # Check model consistency before generating any embeddings
         # Returns True if this is first use and model needs to be recorded
-        should_record_model = await self._check_model_consistency(metadata_repo)
+        should_record_model = await self._check_model_consistency(db)
 
         logger.debug(f"Embedding {len(chunks)} chunks in batches of {self._batch_size}")
 
@@ -106,20 +107,17 @@ class EmbeddingService:
             # This ensures we don't record a model if embedding fails
             if should_record_model:
                 logger.debug(f"Recording embedding model: {self._model_name}")
-                await metadata_repo.set(EMBEDDING_MODEL_KEY, self._model_name)
+                await metadata_repo.set(db, EMBEDDING_MODEL_KEY, self._model_name)
 
-            await db.commit()
             logger.debug(f"Successfully embedded and stored {len(chunks)} chunks")
 
         except AIProviderError as e:
             logger.error(f"AI provider error during embedding: {e}")
-            await db.rollback()  # Rollback partial inserts
             raise EmbeddingError(
                 f"Failed to generate embeddings: {e}",
                 step="embed_chunks",
             ) from e
         except Exception as e:
-            await db.rollback()  # Rollback partial inserts
             if isinstance(e, (EmbeddingError, EmbeddingModelMismatchError)):
                 raise
             logger.exception("Unexpected error during embedding")
@@ -153,8 +151,7 @@ class EmbeddingService:
 
         # Check model consistency if db connection provided
         if db is not None:
-            metadata_repo = AppMetadataRepository(db)
-            await self._check_model_consistency(metadata_repo)
+            await self._check_model_consistency(db)
 
         logger.debug(f"Generating query embedding ({len(query)} chars)")
 
@@ -178,16 +175,14 @@ class EmbeddingService:
                 step="embed_query",
             ) from e
 
-    async def _check_model_consistency(
-        self, metadata_repo: AppMetadataRepository
-    ) -> bool:
+    async def _check_model_consistency(self, db: aiosqlite.Connection) -> bool:
         """Check if the configured model matches what's stored in DB.
 
         On first use, returns True to indicate the model should be recorded.
         On subsequent uses, verifies the configured model matches.
 
         Args:
-            metadata_repo: Repository for app metadata
+            db: Database connection
 
         Returns:
             True if this is the first use and model should be recorded after
@@ -196,7 +191,7 @@ class EmbeddingService:
         Raises:
             EmbeddingModelMismatchError: If models don't match
         """
-        stored_model = await metadata_repo.get(EMBEDDING_MODEL_KEY)
+        stored_model = await metadata_repo.get(db, EMBEDDING_MODEL_KEY)
 
         if stored_model is None:
             # First time: caller should record model after successful embedding

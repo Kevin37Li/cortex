@@ -5,30 +5,43 @@ from collections.abc import AsyncIterator
 import aiosqlite
 from fastapi import Depends
 
-from ..db.database import get_connection
-from ..db.repositories import ItemRepository
+from ..db.database import db_connection
+from ..db.repositories import (
+    ChunkRepository,
+    ItemRepository,
+    chunk_repo,
+    item_repo,
+)
 from ..providers import AIProvider, OllamaProvider
 from ..services.embeddings import EmbeddingService
 
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
-    """Get a database connection with sqlite-vec loaded.
+    """Async generator for FastAPI Depends().
 
     Yields:
         Database connection with foreign keys enabled and sqlite-vec loaded
     """
-    async for db in get_connection():
+    async with db_connection() as db:
         yield db
 
 
-async def get_item_repository() -> AsyncIterator[ItemRepository]:
-    """Get an ItemRepository instance with a database connection.
+def get_item_repo() -> ItemRepository:
+    """Get the ItemRepository singleton for FastAPI dependency injection.
 
-    Yields:
-        ItemRepository connected to the database
+    Returns:
+        ItemRepository instance for item data access
     """
-    async for db in get_connection():
-        yield ItemRepository(db)
+    return item_repo
+
+
+def get_chunk_repo() -> ChunkRepository:
+    """Get the ChunkRepository singleton for FastAPI dependency injection.
+
+    Returns:
+        ChunkRepository instance for chunk data access
+    """
+    return chunk_repo
 
 
 async def get_ollama_provider() -> AsyncIterator[OllamaProvider]:

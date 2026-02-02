@@ -19,15 +19,10 @@ class ChunkRepository:
 
     Unlike ItemRepository, this doesn't extend BaseRepository because chunks
     have a different access pattern (batch operations, parent-child relationship).
+
+    Stateless - db connection passed via method parameters.
+    Methods do NOT commit - caller is responsible for transaction management.
     """
-
-    def __init__(self, db: aiosqlite.Connection) -> None:
-        """Initialize the repository with a database connection.
-
-        Args:
-            db: An aiosqlite connection with row_factory set
-        """
-        self.db = db
 
     def _row_to_chunk(self, row: aiosqlite.Row) -> Chunk:
         """Convert a database row to a Chunk model."""
@@ -40,12 +35,16 @@ class ChunkRepository:
             created_at=datetime.fromisoformat(row["created_at"]),
         )
 
-    async def create_many(self, chunks: list[ChunkCreate]) -> list[Chunk]:
+    async def create_many(
+        self, db: aiosqlite.Connection, chunks: list[ChunkCreate]
+    ) -> list[Chunk]:
         """Create multiple chunks in a batch operation.
 
         UUIDs are generated using uuid4() for each chunk.
+        Does NOT commit - caller is responsible for committing.
 
         Args:
+            db: Database connection
             chunks: List of chunk data to create
 
         Returns:
@@ -60,7 +59,7 @@ class ChunkRepository:
         for chunk_data in chunks:
             chunk_id = str(uuid4())
 
-            await self.db.execute(
+            await db.execute(
                 """
                 INSERT INTO chunks (id, item_id, chunk_index, content, token_count, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -86,51 +85,54 @@ class ChunkRepository:
                 )
             )
 
-        await self.db.commit()
         return created_chunks
 
-    async def get_by_item(self, item_id: str) -> list[Chunk]:
+    async def get_by_item(self, db: aiosqlite.Connection, item_id: str) -> list[Chunk]:
         """Get all chunks for a specific item, ordered by chunk_index.
 
         Args:
+            db: Database connection
             item_id: The parent item's unique identifier
 
         Returns:
             List of chunks belonging to the item, in order
         """
-        cursor = await self.db.execute(
+        cursor = await db.execute(
             "SELECT * FROM chunks WHERE item_id = ? ORDER BY chunk_index",
             [item_id],
         )
         rows = await cursor.fetchall()
         return [self._row_to_chunk(row) for row in rows]
 
-    async def delete_by_item(self, item_id: str) -> int:
+    async def delete_by_item(self, db: aiosqlite.Connection, item_id: str) -> int:
         """Delete all chunks for a specific item.
 
+        Does NOT commit - caller is responsible for committing.
+
         Args:
+            db: Database connection
             item_id: The parent item's unique identifier
 
         Returns:
             Number of chunks deleted
         """
-        cursor = await self.db.execute(
+        cursor = await db.execute(
             "DELETE FROM chunks WHERE item_id = ?",
             [item_id],
         )
-        await self.db.commit()
         return cursor.rowcount
 
-    async def count_by_item(self, item_id: str) -> int:
+    async def count_by_item(self, db: aiosqlite.Connection, item_id: str) -> int:
         """Count chunks for a specific item.
 
         Args:
+            db: Database connection
             item_id: The parent item's unique identifier
 
         Returns:
             Number of chunks belonging to the item
         """
-        cursor = await self.db.execute(
+        cursor = await db.execute(
             "SELECT COUNT(*) FROM chunks WHERE item_id = ?",
             [item_id],
         )

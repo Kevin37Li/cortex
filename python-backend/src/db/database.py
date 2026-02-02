@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aiosqlite
@@ -23,6 +24,25 @@ async def _load_sqlite_vec(db: aiosqlite.Connection) -> None:
     await db.enable_load_extension(True)
     await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
     await db.enable_load_extension(False)
+
+
+async def _configure_connection(db: aiosqlite.Connection) -> None:
+    """Shared connection setup (PRAGMA, extensions, row factory)."""
+    await db.execute("PRAGMA foreign_keys = ON")
+    await _load_sqlite_vec(db)
+    db.row_factory = aiosqlite.Row
+
+
+@asynccontextmanager
+async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
+    """Context manager for database connections.
+
+    Use directly for LangGraph nodes, scripts, background tasks.
+    For FastAPI routes, use get_db_connection() from api.deps.
+    """
+    async with aiosqlite.connect(settings.db_path) as db:
+        await _configure_connection(db)
+        yield db
 
 
 async def _create_vec_table(db: aiosqlite.Connection) -> None:
@@ -81,25 +101,6 @@ async def init_database() -> None:
         await db.commit()
 
     logger.info("Database initialization complete")
-
-
-async def get_connection() -> AsyncIterator[aiosqlite.Connection]:
-    """Get a database connection with sqlite-vec loaded.
-
-    Yields an async database connection configured with:
-    - Foreign keys enabled
-    - sqlite-vec extension loaded
-    - Row factory for dict-like access
-
-    Usage:
-        async for db in get_connection():
-            await db.execute(...)
-    """
-    async with aiosqlite.connect(settings.db_path) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        await _load_sqlite_vec(db)
-        db.row_factory = aiosqlite.Row
-        yield db
 
 
 async def verify_database() -> dict:
