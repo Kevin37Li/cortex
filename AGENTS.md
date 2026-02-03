@@ -148,3 +148,7 @@ Task-focused agents that leverage separate context for focused work:
 - `docs-reviewer` - Review developer docs for accuracy and codebase consistency
 - `userguide-reviewer` - Review user guide against actual system features
 - `cleanup-analyzer` - Analyze static analysis output (used by `/cleanup`)
+
+### Codex Skills
+
+Codex skills mirroring the Claude workflows live in `.codex/skills/`.
