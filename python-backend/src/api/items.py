@@ -1,14 +1,18 @@
 """CRUD endpoints for items."""
 
+import logging
+
 import aiosqlite
 from fastapi import APIRouter, Depends, Query, Response
 
 from ..db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
 from ..db.repositories import ItemRepository
 from ..exceptions import ItemNotFoundError
-from .deps import get_db_connection, get_item_repo
+from ..services.processing import ProcessingQueue
+from .deps import get_db_connection, get_item_repo, get_processing_queue
 
 router = APIRouter(prefix="/items", tags=["items"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -21,13 +25,22 @@ async def create_item(
     data: ItemCreate,
     db: aiosqlite.Connection = Depends(get_db_connection),
     repo: ItemRepository = Depends(get_item_repo),
+    queue: ProcessingQueue = Depends(get_processing_queue),
 ) -> Item:
     """Create a new item.
 
     Returns the created item with generated ID and timestamps.
+    The item is automatically enqueued for background processing.
     """
     item = await repo.create(db, data)
-    await db.commit()
+    await db.commit()  # Commit before enqueue so worker can see the item
+
+    # Do not fail the already-committed create request if enqueue fails.
+    try:
+        await queue.enqueue(item.id)
+    except Exception:
+        logger.exception(f"Failed to enqueue item {item.id} after create")
+
     return item
 
 

@@ -1,13 +1,14 @@
 """Shared fixtures for pytest tests."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import aiosqlite
 import pytest
 from httpx import ASGITransport, AsyncClient
 from src.db.database import _apply_schema, init_database
 from src.main import app
+from src.services.processing import ProcessingQueue
 
 
 @pytest.fixture
@@ -41,6 +42,9 @@ async def client(temp_db_path: Path):
     """
     with patch("src.config.settings.db_path", temp_db_path):
         await init_database()
+        # Set up a mock processing queue on app state (lifespan is not invoked in tests)
+        mock_queue = AsyncMock(spec=ProcessingQueue)
+        app.state.processing_queue = mock_queue
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac

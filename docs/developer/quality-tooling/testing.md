@@ -240,9 +240,13 @@ python-backend/
 ├── src/
 │   ├── api/
 │   │   └── items.py
+│   ├── services/
+│   │   └── processing.py
 │   └── workflows/
 │       └── processing.py
 └── tests/
+    ├── services/
+    │   └── test_processing.py  # Service-level tests
     ├── test_api_items.py       # API endpoint tests
     ├── test_repositories.py    # Repository tests
     ├── test_workflows.py       # Workflow tests
@@ -256,13 +260,14 @@ Shared fixtures are defined in `tests/conftest.py`. There are two main fixtures 
 ```python
 # tests/conftest.py
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import aiosqlite
 import pytest
 from httpx import ASGITransport, AsyncClient
 from src.db.database import _apply_schema, init_database
 from src.main import app
+from src.services.processing import ProcessingQueue
 
 
 @pytest.fixture
@@ -293,6 +298,9 @@ async def client(temp_db_path: Path):
     """
     with patch("src.config.settings.db_path", temp_db_path):
         await init_database()
+        # Mock processing queue (lifespan is not invoked in tests)
+        mock_queue = AsyncMock(spec=ProcessingQueue)
+        app.state.processing_queue = mock_queue
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
@@ -303,6 +311,8 @@ async def client(temp_db_path: Path):
 - `temp_db_path` - Base fixture creating a temporary database path
 - `db_connection` - Direct database connection for repository tests (uses `_apply_schema`)
 - `client` - HTTP client for API tests (uses `init_database` which calls `_apply_schema`)
+
+**Mock processing queue:** Since the `client` fixture bypasses FastAPI's lifespan (no real startup/shutdown), it sets a mock `ProcessingQueue` on `app.state`. This satisfies `get_processing_queue()` in routes like `create_item` without actually running workers. Use `AsyncMock(spec=ProcessingQueue)` to get type-checked mock methods.
 
 **Important:** Use file-based SQLite with `tmp_path`, not `:memory:`. The sqlite-vec extension requires file-based databases for its vector index operations.
 

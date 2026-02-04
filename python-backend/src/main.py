@@ -17,6 +17,7 @@ from .exceptions import (
     ItemNotFoundError,
     ProcessingError,
 )
+from .services.processing import ProcessingQueue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,9 +29,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Cortex backend...")
     await init_database()
+    queue = ProcessingQueue()
+    app.state.processing_queue = queue
+    await queue.start()
     yield
     # Shutdown
     logger.info("Shutting down Cortex backend...")
+    await queue.stop()
 
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)

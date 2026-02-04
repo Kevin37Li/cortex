@@ -3,7 +3,8 @@
 from collections.abc import AsyncIterator
 
 import aiosqlite
-from fastapi import Depends
+from fastapi import Depends, HTTPException
+from starlette.requests import Request
 
 from ..db.database import db_connection
 from ..db.repositories import (
@@ -14,6 +15,7 @@ from ..db.repositories import (
 )
 from ..providers import AIProvider, OllamaProvider
 from ..services.embeddings import EmbeddingService
+from ..services.processing import ProcessingQueue
 
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
@@ -73,3 +75,14 @@ async def get_embedding_service(
         EmbeddingService with configured AI provider
     """
     yield EmbeddingService(provider=provider)
+
+
+def get_processing_queue(request: Request) -> ProcessingQueue:
+    """Get the processing queue singleton from app state."""
+    queue = getattr(request.app.state, "processing_queue", None)
+    if queue is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Processing queue is not available",
+        )
+    return queue

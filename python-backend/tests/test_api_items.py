@@ -1,6 +1,7 @@
 """Tests for items API endpoints."""
 
 from httpx import AsyncClient
+from src.main import app
 
 
 class TestCreateItem:
@@ -26,6 +27,7 @@ class TestCreateItem:
         assert "id" in data
         assert "created_at" in data
         assert "updated_at" in data
+        app.state.processing_queue.enqueue.assert_awaited_once_with(data["id"])
 
     async def test_create_item_with_optional_fields(self, client: AsyncClient):
         """Test creating an item with all fields."""
@@ -44,6 +46,7 @@ class TestCreateItem:
         data = response.json()
         assert data["source_url"] == "https://example.com"
         assert data["metadata"] == {"key": "value"}
+        app.state.processing_queue.enqueue.assert_awaited_once_with(data["id"])
 
     async def test_create_item_validation_error(self, client: AsyncClient):
         """Test creating an item with missing required fields returns 422."""
@@ -56,6 +59,7 @@ class TestCreateItem:
         )
 
         assert response.status_code == 422
+        app.state.processing_queue.enqueue.assert_not_awaited()
 
 
 class TestListItems:

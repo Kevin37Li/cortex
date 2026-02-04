@@ -101,7 +101,8 @@ python-backend/
 │   │   ├── parsing.py         # Content parsing (HTML to text)
 │   │   ├── chunking.py        # Semantic text chunking
 │   │   ├── embeddings.py      # Embedding generation and storage
-│   │   └── extraction.py      # Metadata extraction via LLM
+│   │   ├── extraction.py      # Metadata extraction via LLM
+│   │   └── processing.py      # Background processing queue
 │   │
 │   ├── config.py              # Application configuration (pydantic-settings)
 │   ├── exceptions.py          # Custom exception hierarchy
@@ -109,6 +110,7 @@ python-backend/
 │
 ├── tests/
 │   ├── api/
+│   ├── services/
 │   ├── workflows/
 │   └── conftest.py
 │
@@ -223,6 +225,7 @@ from .api.health import router as health_router
 from .api.items import router as items_router
 from .db import init_database
 from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError, ProcessingError
+from .services.processing import ProcessingQueue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -231,8 +234,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting Cortex backend...")
     await init_database()
+    queue = ProcessingQueue()
+    app.state.processing_queue = queue
+    await queue.start()
     yield
     logger.info("Shutting down Cortex backend...")
+    await queue.stop()
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 
@@ -282,7 +289,8 @@ from fastapi import APIRouter, Depends, Query, Response
 from ..db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
 from ..db.repositories import ItemRepository
 from ..exceptions import ItemNotFoundError
-from .deps import get_item_repository
+from ..services.processing import ProcessingQueue
+from .deps import get_db_connection, get_item_repo, get_processing_queue
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -290,32 +298,40 @@ router = APIRouter(prefix="/items", tags=["items"])
              responses={422: {"description": "Validation error"}})
 async def create_item(
     data: ItemCreate,
-    repo: ItemRepository = Depends(get_item_repository),
+    db: aiosqlite.Connection = Depends(get_db_connection),
+    repo: ItemRepository = Depends(get_item_repo),
+    queue: ProcessingQueue = Depends(get_processing_queue),
 ) -> Item:
-    """Create a new item."""
-    return await repo.create(data)
+    """Create a new item and enqueue for background processing."""
+    item = await repo.create(db, data)
+    await db.commit()
+    await queue.enqueue(item.id)
+    return item
 
 @router.get("/", response_model=ItemListResponse)
 async def list_items(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
-    repo: ItemRepository = Depends(get_item_repository),
+    db: aiosqlite.Connection = Depends(get_db_connection),
+    repo: ItemRepository = Depends(get_item_repo),
 ) -> ItemListResponse:
     """List items with pagination."""
-    items = await repo.list(offset=offset, limit=limit)
-    total = await repo.count()
+    items = await repo.list(db, offset=offset, limit=limit)
+    total = await repo.count(db)
     return ItemListResponse(items=items, total=total, offset=offset, limit=limit)
 
 @router.delete("/{id}", status_code=204,
                responses={404: {"description": "Item not found"}})
 async def delete_item(
     id: str,
-    repo: ItemRepository = Depends(get_item_repository),
+    db: aiosqlite.Connection = Depends(get_db_connection),
+    repo: ItemRepository = Depends(get_item_repo),
 ) -> Response:
     """Delete an item."""
-    deleted = await repo.delete(id)
+    deleted = await repo.delete(db, id)
     if not deleted:
         raise ItemNotFoundError(item_id=id)
+    await db.commit()
     return Response(status_code=204)
 ```
 
@@ -371,6 +387,7 @@ async def create_item(
 | `get_chunk_repo()`        | Chunk CRUD - stateless singleton                    |
 | `get_ai_provider()`       | AI operations (embedding, chat, extraction)         |
 | `get_embedding_service()` | Embedding generation with model consistency         |
+| `get_processing_queue()`  | Background processing queue from `app.state`        |
 
 ### Service Dependencies
 
@@ -514,16 +531,18 @@ async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
 
 ### Database Initialization
 
-Database initialization happens during FastAPI startup via the lifespan manager:
+Database initialization happens during FastAPI startup via the lifespan manager (see the Main Application example above for the full lifespan including `ProcessingQueue`):
 
 ```python
-# src/main.py
+# src/main.py (startup portion)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_database()  # Create tables, load extension, apply schema
+    await init_database()
+    queue = ProcessingQueue()
+    app.state.processing_queue = queue
+    await queue.start()  # Recovers pending items from DB
     yield
-
-app = FastAPI(title="Cortex Backend", lifespan=lifespan)
+    await queue.stop()
 ```
 
 The `init_database()` function:
@@ -740,46 +759,77 @@ def _row_to_item(self, row: aiosqlite.Row) -> Item:
 
 ### Task Queue
 
-For long-running tasks, use a simple in-process queue:
+For long-running tasks, use the in-process `ProcessingQueue` with a fixed worker pool. See `src/services/processing.py` for the full implementation.
 
 ```python
 # src/services/processing.py
 import asyncio
-from collections import deque
+from src.config import settings
+
+QUEUE_MAXSIZE = 1000
 
 class ProcessingQueue:
-    def __init__(self):
-        self.queue: deque[str] = deque()
+    def __init__(self) -> None:
+        self.queue: asyncio.Queue[str] = asyncio.Queue(maxsize=QUEUE_MAXSIZE)
+        self._worker_tasks: list[asyncio.Task[None]] = []
+        self._stopping = False
+
+        # In-memory tracking (de-duplication + status)
+        self._in_queue: set[str] = set()
         self.processing: set[str] = set()
-        self._worker_task: asyncio.Task | None = None
+        self.failed_items: set[str] = set()
+        self.completed_count: int = 0
+        self.total_processed: int = 0
 
-    async def start(self):
-        self._worker_task = asyncio.create_task(self._worker())
+    async def enqueue(self, item_id: str) -> bool:
+        """Enqueue with backpressure/dedupe; returns True only if newly queued."""
+        if item_id in self._in_queue or item_id in self.processing:
+            return False
+        self._in_queue.add(item_id)  # Reserve early for concurrent dedup
+        await self.queue.put(item_id)  # Blocks when full (backpressure)
+        return True
 
-    async def stop(self):
-        if self._worker_task:
-            self._worker_task.cancel()
+    async def start(self) -> None:
+        """Start workers and recover pending/failed items from DB."""
+        if self._worker_tasks:
+            return  # Idempotent
+        # Recover pending/processing items from DB, rebuild failed set
+        worker_count = max(1, settings.max_concurrent_processing)
+        self._worker_tasks = [
+            asyncio.create_task(self._worker()) for _ in range(worker_count)
+        ]
 
-    async def enqueue(self, item_id: str):
-        self.queue.append(item_id)
+    async def stop(self) -> None:
+        """Gracefully drain queue, then cancel workers."""
+        self._stopping = True
+        try:
+            await asyncio.wait_for(self.queue.join(), timeout=5.0)
+        except TimeoutError:
+            pass
+        for task in self._worker_tasks:
+            task.cancel()
+        await asyncio.gather(*self._worker_tasks, return_exceptions=True)
+        self._worker_tasks = []
 
-    async def _worker(self):
-        while True:
-            if self.queue:
-                item_id = self.queue.popleft()
-                self.processing.add(item_id)
-                try:
-                    await self._process_item(item_id)
-                finally:
-                    self.processing.discard(item_id)
-            else:
-                await asyncio.sleep(0.1)
+    def get_queue_status(self) -> QueueStatus:
+        """Return current queue status for API reporting."""
+        ...
 
-    async def _process_item(self, item_id: str):
-        # Run the processing workflow
-        workflow = ProcessingWorkflow()
-        await workflow.run(item_id)
+    async def retry_failed(self, item_id: str | None = None) -> int:
+        """Re-enqueue failed items. Returns count re-enqueued."""
+        ...
 ```
+
+**Key design decisions:**
+
+- **Fixed worker pool**: `max_concurrent_processing` workers loop on `queue.get()`, capping concurrency with stable task count
+- **Bounded queue + backpressure**: `asyncio.Queue(maxsize=1000)` blocks producers via `await queue.put()` when saturated
+- **De-duplication**: Items tracked in `_in_queue` and `processing` sets to prevent double-processing
+- **Status ownership**: The LangGraph workflow owns DB status updates; the queue only tracks in-memory state for reporting
+- **Startup recovery**: On startup, re-enqueue `pending`/`processing` items and rebuild `failed_items` set from DB
+- **Idempotent lifecycle**: `start()` and `stop()` guard against duplicate calls
+- **Singleton**: Managed via `app.state.processing_queue` in FastAPI lifespan
+- **Auto-enqueue on item creation**: `create_item` endpoint enqueues after commit (see Route Example above)
 
 ## Configuration
 

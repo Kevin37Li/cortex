@@ -131,3 +131,16 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: datetime
     checks: dict[str, ComponentCheck]
+
+
+# Processing queue models
+
+
+class QueueStatus(BaseModel):
+    """Current state of the processing queue."""
+
+    pending_count: int
+    processing_items: list[str]  # Item IDs currently being processed
+    failed_count: int
+    completed_count: int
+    total_processed: int  # Lifetime total since startup

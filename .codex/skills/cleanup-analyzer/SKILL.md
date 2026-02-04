@@ -6,10 +6,13 @@ description: Run static analysis tools and produce structured cleanup recommenda
 # Cleanup Analyzer
 
 ## Overview
+
 Run static analysis tools and investigate findings. Return categorized cleanup recommendations. Do not modify code unless explicitly asked.
 
 ## Workflow
+
 1. Run analysis tools.
+
 ```bash
 bun run knip
 bun run jscpd
@@ -21,6 +24,7 @@ bun run check:all
 3. Categorize findings.
 
 ### Knip
+
 - Keep (intentional):
   - All files in `src/components/ui/` (shadcn).
   - Radix dependencies used by any shadcn component.
@@ -31,6 +35,7 @@ bun run check:all
 - Needs review: ambiguous usage, planned features, type-only exports.
 
 ### Duplicate Code (jscpd)
+
 - High priority: >15 lines of business logic with complex conditionals.
 - Medium priority: 10-15 lines of utilities or transformations.
 - Low priority: <10 lines or boilerplate.
@@ -39,34 +44,42 @@ bun run check:all
 4. Report any `check:all` errors or warnings with context.
 
 ## Output Format
+
 ```markdown
 ## Cleanup Analysis Report
 
 ### Knip Findings
 
 #### Safe to Remove (high confidence)
+
 - `file/package` - reason - `location`
 
 #### Needs Review
+
 - `file/package` - context - recommendation
 
 #### Keeping (intentional)
+
 - `file/package` - reason
 
 ### Duplicate Code Findings
 
 #### High Priority
+
 - **Description** - X lines
   - Locations: `file:lines`, `file:lines`
   - Recommendation: ...
 
 #### Keep As-Is (intentional)
+
 - **Description** - reason
 
 ### Check:all Issues
+
 - ...
 
 ### Summary
+
 - X items safe to remove
 - Y items need review
 - Z duplicates worth addressing
