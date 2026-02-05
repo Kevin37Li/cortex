@@ -1,6 +1,6 @@
 ---
 name: check
-description: Run a thorough senior-level code review for Cortex changes: architecture compliance plus bugs, code smells, risk assessment, and practical improvement suggestions.
+description: "Run a thorough senior-level code review for Cortex changes: architecture compliance plus bugs, code smells, risk assessment, and practical improvement suggestions."
 ---
 
 # Check (Senior Code Review)

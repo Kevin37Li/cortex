@@ -151,4 +151,4 @@ Task-focused agents that leverage separate context for focused work:
 
 ### Codex Skills
 
-Codex skills mirroring the Claude workflows live in `.codex/skills/`.
+Codex skills mirroring the Claude workflows live in `.agents/skills/` (project-scoped). Keep `.codex/skills/` as a compatibility alias during transition.
