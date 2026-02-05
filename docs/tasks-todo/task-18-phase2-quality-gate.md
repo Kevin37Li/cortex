@@ -10,7 +10,7 @@ Final quality gate for Phase 2: verify all translation keys are complete (Englis
 - [ ] All new UI strings have translation keys in `locales/en.json`
 - [ ] All new UI strings have Chinese translations in `locales/zh-CN.json`
 - [ ] CSS uses logical properties (no `text-left`/`text-right`, use `text-start`/`text-end`)
-- [ ] All Python tests pass: `cd python-backend && uv run pytest -v`
+- [ ] All Python tests pass: `bun run python:test`
 - [ ] Python coverage > 80% for new modules
 - [ ] Frontend tests pass: `bun run test`
 - [ ] No Zustand destructuring anti-patterns in new code
@@ -44,13 +44,13 @@ bun run check:all     # All checks combined
 ### Backend Checks
 
 ```bash
-cd python-backend
-uv run ruff check src/      # Linting
-uv run ruff format --check src/  # Formatting
-uv run mypy src/             # Type checking
-uv run pytest -v             # All tests pass
-uv run pytest --cov=src --cov-fail-under=80  # Coverage threshold
+bun run python:lint                     # Ruff linting
+bun run python:fmt:check                # Ruff formatting
+bun run python:test                     # All tests pass
+bun run python:test -- --cov=src --cov-fail-under=80  # Coverage threshold
 ```
+
+Type checking with mypy is tracked separately in Task 19.
 
 ### Translation Audit
 

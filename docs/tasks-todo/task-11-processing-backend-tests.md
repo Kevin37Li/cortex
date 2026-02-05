@@ -11,7 +11,7 @@ Create comprehensive test coverage for the Phase 2 backend: content parsing, sem
 - [ ] `tests/test_services_embeddings.py` — Tests for `EmbeddingService` (batch embedding, model consistency check, provider error wrapping)
 - [ ] `tests/test_services_extraction.py` — Tests for `MetadataExtractor` (valid extraction, JSON parse failure fallback, provider error handling)
 - [ ] `tests/test_workflows_processing.py` — Tests for the LangGraph processing workflow (happy path, retry on validation failure, max retries exceeded)
-- [ ] `tests/test_api_processing.py` — Tests for processing API endpoints (queue status, retry)
+- [ ] `tests/test_api_processing.py` — Tests for processing API endpoints (queue status, retry-all, retry-specific, retry-not-found)
 - [ ] All tests use mocked AI providers (no real Ollama/OpenAI calls)
 - [ ] Coverage > 80% for new modules
 - [ ] All existing tests continue to pass
@@ -102,6 +102,7 @@ class TestProcessingEndpoints:
     async def test_get_queue_status(self): ...
     async def test_retry_all_failed(self): ...
     async def test_retry_specific_item(self): ...
+    async def test_retry_specific_item_not_found_returns_404(self): ...
 ```
 
 ## Files to Create
@@ -117,8 +118,7 @@ class TestProcessingEndpoints:
 ## Verification
 
 ```bash
-cd python-backend
-uv run pytest -v
-uv run pytest --cov=src --cov-report=term-missing
-uv run pytest --cov=src --cov-fail-under=80
+bun run python:test
+bun run python:test -- --cov=src --cov-report=term-missing
+bun run python:test -- --cov=src --cov-fail-under=80
 ```
