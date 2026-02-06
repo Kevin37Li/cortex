@@ -67,6 +67,7 @@ python-backend/
 │   │   ├── deps.py            # Dependency injection helpers
 │   │   ├── health.py          # Health check endpoint
 │   │   ├── items.py           # CRUD for items
+│   │   ├── processing.py     # Processing queue endpoints
 │   │   ├── search.py          # Search endpoints
 │   │   ├── chat.py            # Chat endpoints
 │   │   └── settings.py        # Configuration endpoints
@@ -223,6 +224,7 @@ from fastapi.responses import JSONResponse
 
 from .api.health import router as health_router
 from .api.items import router as items_router
+from .api.processing import router as processing_router
 from .db import init_database
 from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError, ProcessingError
 from .services.processing import ProcessingQueue
@@ -278,6 +280,7 @@ app.add_middleware(
 # Register routers
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
+app.include_router(processing_router, prefix="/api")
 ```
 
 ### Route Example
@@ -811,12 +814,15 @@ class ProcessingQueue:
         await asyncio.gather(*self._worker_tasks, return_exceptions=True)
         self._worker_tasks = []
 
-    def get_queue_status(self) -> QueueStatus:
-        """Return current queue status for API reporting."""
+    async def get_queue_status(self) -> QueueStatus:
+        """Return current queue status for API reporting.
+
+        Async for forward compatibility (e.g. future database queries).
+        """
         ...
 
-    async def retry_failed(self, item_id: str | None = None) -> int:
-        """Re-enqueue failed items. Returns count re-enqueued."""
+    async def retry_failed(self, item_id: str | None = None) -> RetryFailedResult:
+        """Re-enqueue failed items. Returns rich result for deterministic HTTP mapping."""
         ...
 ```
 
@@ -830,6 +836,28 @@ class ProcessingQueue:
 - **Idempotent lifecycle**: `start()` and `stop()` guard against duplicate calls
 - **Singleton**: Managed via `app.state.processing_queue` in FastAPI lifespan
 - **Auto-enqueue on item creation**: `create_item` endpoint enqueues after commit (see Route Example above)
+- **Rich result model**: `retry_failed()` returns `RetryFailedResult` (with `outcome` and `retried_count`) instead of a plain `int`, enabling the API layer to map outcomes to HTTP status codes without inspecting queue internals
+
+### Rich Service Result Pattern
+
+When a service method's outcome affects the HTTP response status, return a structured result model instead of a primitive. This keeps HTTP semantics in the API layer while giving it enough context to make the right decision.
+
+```python
+# ❌ BAD: API layer must guess meaning from an int
+async def retry_failed(self, item_id: str | None = None) -> int:
+    ...  # Returns count, but what does 0 mean? Not found? Already queued?
+
+# ✅ GOOD: Rich result with explicit outcome
+class RetryFailedResult(BaseModel):
+    requested_item_id: str | None = None
+    retried_count: int = 0
+    outcome: Literal["retried", "already_queued", "not_in_queue"] = "retried"
+
+async def retry_failed(self, item_id: str | None = None) -> RetryFailedResult:
+    ...  # API layer checks outcome to decide 200 vs 404
+```
+
+The API layer can then do a **two-layer existence check** when the service reports `"not_in_queue"`: the queue only knows in-memory state, so the endpoint does a secondary DB lookup to distinguish "item doesn't exist" (404) from "item exists but isn't queued" (200). See `src/api/processing.py` for the full implementation.
 
 ## Configuration
 

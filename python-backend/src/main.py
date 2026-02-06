@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from .api.health import router as health_router
 from .api.items import router as items_router
+from .api.processing import router as processing_router
 from .config import settings
 from .db import init_database, verify_database
 from .exceptions import (
@@ -96,6 +97,7 @@ app.add_middleware(
 # Register routers
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
+app.include_router(processing_router, prefix="/api")
 
 
 @app.get("/api/db/status")

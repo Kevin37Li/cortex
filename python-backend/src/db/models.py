@@ -1,6 +1,7 @@
 """Pydantic models for database entities."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -140,7 +141,29 @@ class QueueStatus(BaseModel):
     """Current state of the processing queue."""
 
     pending_count: int
+    processing_count: int
     processing_items: list[str]  # Item IDs currently being processed
     failed_count: int
     completed_count: int
     total_processed: int  # Lifetime total since startup
+
+
+class RetryFailedResult(BaseModel):
+    """Rich result from ProcessingQueue.retry_failed() for deterministic HTTP mapping."""
+
+    requested_item_id: str | None = None
+    retried_count: int = 0
+    outcome: Literal["retried", "already_queued", "not_in_queue"] = "retried"
+
+
+class RetryRequest(BaseModel):
+    """Request body for POST /api/processing/retry."""
+
+    item_id: str | None = None  # None = retry all failed
+
+
+class RetryResponse(BaseModel):
+    """Response body for POST /api/processing/retry."""
+
+    retried_count: int
+    outcome: Literal["retried", "already_queued", "not_in_queue"]

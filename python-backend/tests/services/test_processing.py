@@ -84,13 +84,92 @@ class TestProcessingQueue:
 
         assert "item-1" in queue.failed_items
 
+    async def test_retry_failed_does_not_add_non_failed_item_to_failed_on_error(
+        self,
+    ) -> None:
+        """If item was in _in_queue (not failed), enqueue error should not add it to failed_items."""
+        queue = ProcessingQueue()
+        queue._in_queue.add("item-1")
+
+        with patch.object(
+            queue,
+            "enqueue",
+            new=AsyncMock(side_effect=RuntimeError("queue unavailable")),
+        ):
+            with pytest.raises(RuntimeError):
+                await queue.retry_failed("item-1")
+
+        assert "item-1" not in queue.failed_items
+
     async def test_retry_failed_returns_zero_when_item_already_in_queue(self) -> None:
-        """Specific retry returns 0 when item was not newly enqueued."""
+        """Specific retry returns retried_count=0 when item was not newly enqueued."""
         queue = ProcessingQueue()
         queue.failed_items.add("item-1")
 
         with patch.object(queue, "enqueue", new=AsyncMock(return_value=False)):
-            assert await queue.retry_failed("item-1") == 0
+            result = await queue.retry_failed("item-1")
+            assert result.retried_count == 0
+            assert result.requested_item_id == "item-1"
+
+    async def test_retry_failed_not_in_queue_for_unknown_item(self) -> None:
+        """Retry of an unknown in-memory item returns outcome='not_in_queue'."""
+        queue = ProcessingQueue()
+
+        result = await queue.retry_failed("unknown-id")
+
+        assert result.outcome == "not_in_queue"
+        assert result.requested_item_id == "unknown-id"
+        assert result.retried_count == 0
+
+    async def test_retry_failed_already_queued_when_in_queue(self) -> None:
+        """Retry of a pending item returns outcome='already_queued'."""
+        queue = ProcessingQueue()
+        queue._in_queue.add("queued-item")
+
+        result = await queue.retry_failed("queued-item")
+
+        assert result.outcome == "already_queued"
+        assert result.requested_item_id == "queued-item"
+
+    async def test_retry_failed_already_queued_when_processing(self) -> None:
+        """Retry of a currently processing item returns outcome='already_queued'."""
+        queue = ProcessingQueue()
+        queue.processing.add("processing-item")
+
+        result = await queue.retry_failed("processing-item")
+
+        assert result.outcome == "already_queued"
+        assert result.requested_item_id == "processing-item"
+
+    async def test_retry_failed_all_retries_multiple_items(self) -> None:
+        """Retry-all re-enqueues all failed items and returns count."""
+        queue = ProcessingQueue()
+        queue.failed_items = {"fail-1", "fail-2", "fail-3"}
+
+        result = await queue.retry_failed(None)
+
+        assert result.outcome == "retried"
+        assert result.retried_count == 3
+        assert len(queue.failed_items) == 0
+
+    async def test_retry_failed_all_restores_on_enqueue_failure(self) -> None:
+        """Retry-all restores items to failed_items when enqueue raises."""
+        queue = ProcessingQueue()
+        queue.failed_items = {"ok-item", "bad-item"}
+
+        original_enqueue = queue.enqueue
+
+        async def selective_enqueue(item_id: str) -> bool:
+            if item_id == "bad-item":
+                raise RuntimeError("queue full")
+            return await original_enqueue(item_id)
+
+        with patch.object(queue, "enqueue", side_effect=selective_enqueue):
+            result = await queue.retry_failed(None)
+
+        assert result.retried_count == 1
+        assert "bad-item" in queue.failed_items
+        assert "ok-item" not in queue.failed_items
 
     async def test_start_and_stop_are_idempotent(self) -> None:
         """Repeated start/stop calls should not create duplicate workers or crash."""
