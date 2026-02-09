@@ -11,12 +11,21 @@ Uses LangGraph StateGraph for:
 
 import functools
 import logging
+from collections.abc import Callable
 from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
 
 from src.db.database import db_connection
-from src.db.models import ChunkCreate, ChunkResult, ExtractedMetadata, ItemUpdate
+from src.db.models import (
+    ChunkCreate,
+    ChunkResult,
+    ExtractedMetadata,
+    ItemUpdate,
+    ProcessingStatus,
+    ProcessingStep,
+    ProcessingUpdate,
+)
 from src.db.repositories import chunk_repo, item_repo
 from src.providers import AIProvider, OllamaProvider
 from src.services import (
@@ -31,6 +40,29 @@ logger = logging.getLogger(__name__)
 
 # Maximum retry attempts for validation failures
 MAX_RETRIES = 3
+ProcessingUpdateEmitter = Callable[[ProcessingUpdate], None]
+
+STEP_PROGRESS: dict[ProcessingStep, float] = {
+    ProcessingStep.CLASSIFY: 0.05,
+    ProcessingStep.PARSING: 0.20,
+    ProcessingStep.CHUNKING: 0.40,
+    ProcessingStep.EXTRACTING: 0.65,
+    ProcessingStep.VALIDATING: 0.85,
+    ProcessingStep.STORING: 0.95,
+    ProcessingStep.COMPLETED: 1.0,
+    ProcessingStep.FAILED: 1.0,
+}
+
+STEP_MESSAGES: dict[ProcessingStep, str] = {
+    ProcessingStep.CLASSIFY: "Classifying content",
+    ProcessingStep.PARSING: "Parsing content",
+    ProcessingStep.CHUNKING: "Chunking content",
+    ProcessingStep.EXTRACTING: "Extracting summary and concepts",
+    ProcessingStep.VALIDATING: "Validating extracted content",
+    ProcessingStep.STORING: "Persisting chunks and metadata",
+    ProcessingStep.COMPLETED: "Processing completed",
+    ProcessingStep.FAILED: "Processing failed",
+}
 
 
 class ProcessingState(TypedDict, total=False):
@@ -66,7 +98,67 @@ class ProcessingState(TypedDict, total=False):
     validation_passed: bool
     retry_count: int
     error: str | None
-    error_step: str | None
+    error_step: ProcessingStep | None
+    last_progress: float
+    emit_update: ProcessingUpdateEmitter | None
+
+
+def _status_for_step(step: ProcessingStep) -> ProcessingStatus:
+    if step == ProcessingStep.COMPLETED:
+        return ProcessingStatus.COMPLETED
+    if step == ProcessingStep.FAILED:
+        return ProcessingStatus.FAILED
+    return ProcessingStatus.PROCESSING
+
+
+def _progress_for_step(step: ProcessingStep, last_progress: float) -> float:
+    if step == ProcessingStep.FAILED:
+        return last_progress if last_progress > 0.0 else 1.0
+    return STEP_PROGRESS[step]
+
+
+def emit_processing_update(
+    state: ProcessingState,
+    step: ProcessingStep,
+    message: str | None = None,
+) -> float | None:
+    """Emit a typed processing update for websocket subscribers.
+
+    Returns:
+        The new progress value to include in the node's return dict,
+        or None if no update was emitted.
+    """
+    item_id = state.get("item_id")
+    emitter = state.get("emit_update")
+    if not item_id or emitter is None:
+        return None
+
+    last_progress = state.get("last_progress", 0.0)
+    progress = _progress_for_step(step, last_progress)
+
+    try:
+        update = ProcessingUpdate(
+            item_id=item_id,
+            status=_status_for_step(step),
+            step=step,
+            progress=progress,
+            message=message or STEP_MESSAGES[step],
+        )
+    except Exception:
+        logger.exception(
+            "Failed to build processing update", extra={"item_id": item_id}
+        )
+        return None
+
+    try:
+        emitter(update)
+    except Exception:
+        logger.exception(
+            "Processing update emitter failed",
+            extra={"item_id": item_id, "step": step},
+        )
+
+    return progress
 
 
 def log_node_execution(node_name: str):
@@ -102,64 +194,84 @@ async def classify_node(state: ProcessingState) -> dict:
 
     Creates the AI provider and stores it in state for downstream nodes.
     """
+    current_step = ProcessingStep.CLASSIFY
     try:
+        progress = emit_processing_update(state, step=current_step)
         item_id = state["item_id"]
 
         async with db_connection() as db:
             # Fetch item from database
             item = await item_repo.get(db, item_id)
             if item is None:
-                return {"error": f"Item not found: {item_id}", "error_step": "classify"}
+                return {
+                    "error": f"Item not found: {item_id}",
+                    "error_step": current_step,
+                }
 
             # Update processing status to 'processing'
-            await item_repo.update_status(db, item_id, "processing")
+            await item_repo.update_status(db, item_id, ProcessingStatus.PROCESSING)
             await db.commit()
 
         # Create AI provider for downstream nodes
         provider = OllamaProvider()
 
-        return {
+        result = {
             "raw_content": item.content,
             "content_type": item.content_type,
             "title": item.title,
             "source_url": item.source_url,
             "ai_provider": provider,
         }
+        if progress is not None:
+            result["last_progress"] = progress
+        return result
     except Exception as e:
-        return {"error": str(e), "error_step": "classify"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("parse")
 async def parse_node(state: ProcessingState) -> dict:
     """Parse raw content using ContentParser based on content type."""
+    current_step = ProcessingStep.PARSING
     try:
+        progress = emit_processing_update(state, step=current_step)
         parser = ContentParser()
         result = parser.parse(state["raw_content"], state["content_type"])
 
         # Use extracted title if better than existing
         new_title = result.title if result.title else state.get("title", "")
 
-        return {"parsed_text": result.text, "title": new_title}
+        node_result: dict = {"parsed_text": result.text, "title": new_title}
+        if progress is not None:
+            node_result["last_progress"] = progress
+        return node_result
     except Exception as e:
-        return {"error": str(e), "error_step": "parse"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("chunk")
 async def chunk_node(state: ProcessingState) -> dict:
     """Split parsed text into semantic chunks."""
+    current_step = ProcessingStep.CHUNKING
     try:
+        progress = emit_processing_update(state, step=current_step)
         chunker = ChunkingService()
         chunk_results = chunker.chunk_text(state["parsed_text"])
 
-        return {"chunk_results": chunk_results}
+        result: dict = {"chunk_results": chunk_results}
+        if progress is not None:
+            result["last_progress"] = progress
+        return result
     except Exception as e:
-        return {"error": str(e), "error_step": "chunk"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("extract_metadata")
 async def extract_metadata_node(state: ProcessingState) -> dict:
     """Extract summary, concepts, and entities using LLM."""
+    current_step = ProcessingStep.EXTRACTING
     try:
+        progress = emit_processing_update(state, step=current_step)
         provider = state["ai_provider"]
         extractor = MetadataExtractor(provider)
 
@@ -168,15 +280,20 @@ async def extract_metadata_node(state: ProcessingState) -> dict:
             title=state.get("title"),
         )
 
-        return {"metadata": metadata}
+        result: dict = {"metadata": metadata}
+        if progress is not None:
+            result["last_progress"] = progress
+        return result
     except Exception as e:
-        return {"error": str(e), "error_step": "extract_metadata"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("validate")
 async def validate_node(state: ProcessingState) -> dict:
     """Validate that chunks and metadata were successfully created."""
+    current_step = ProcessingStep.VALIDATING
     try:
+        progress = emit_processing_update(state, step=current_step)
         chunk_results = state.get("chunk_results", [])
         metadata = state.get("metadata")
 
@@ -192,7 +309,7 @@ async def validate_node(state: ProcessingState) -> dict:
                     "validation_passed": False,
                     "retry_count": retry_count,
                     "error": f"Validation failed after {MAX_RETRIES} retries: no chunks created",
-                    "error_step": "validate",
+                    "error_step": current_step,
                 }
             return {"validation_passed": False, "retry_count": retry_count}
 
@@ -208,7 +325,7 @@ async def validate_node(state: ProcessingState) -> dict:
                     "validation_passed": False,
                     "retry_count": retry_count,
                     "error": f"Validation failed after {MAX_RETRIES} retries: missing or incomplete metadata",
-                    "error_step": "validate",
+                    "error_step": current_step,
                 }
             return {"validation_passed": False, "retry_count": retry_count}
 
@@ -216,9 +333,12 @@ async def validate_node(state: ProcessingState) -> dict:
             f"Validation passed: {len(chunk_results)} chunks, "
             f"{len(metadata.concepts)} concepts"
         )
-        return {"validation_passed": True}
+        result: dict = {"validation_passed": True}
+        if progress is not None:
+            result["last_progress"] = progress
+        return result
     except Exception as e:
-        return {"error": str(e), "error_step": "validate"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("persist")
@@ -228,7 +348,9 @@ async def persist_node(state: ProcessingState) -> dict:
     Only called after validation passes to avoid orphaned data on retries.
     Uses a single atomic commit at the end to prevent orphan data.
     """
+    current_step = ProcessingStep.STORING
     try:
+        progress = emit_processing_update(state, step=current_step)
         item_id = state["item_id"]
         chunk_results = state["chunk_results"]
         metadata = state["metadata"]
@@ -274,25 +396,33 @@ async def persist_node(state: ProcessingState) -> dict:
             # Single atomic commit - all-or-nothing
             await db.commit()
 
-        return {"chunks": created_chunks, "embeddings_stored": True}
+        result: dict = {"chunks": created_chunks, "embeddings_stored": True}
+        if progress is not None:
+            result["last_progress"] = progress
+        return result
     except Exception as e:
-        return {"error": str(e), "error_step": "persist"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("complete")
 async def complete_node(state: ProcessingState) -> dict:
     """Mark item processing as completed."""
+    current_step = ProcessingStep.COMPLETED
     try:
         item_id = state["item_id"]
 
         async with db_connection() as db:
-            await item_repo.update_status(db, item_id, "completed")
+            await item_repo.update_status(db, item_id, ProcessingStatus.COMPLETED)
             await db.commit()
 
+        progress = emit_processing_update(state, step=current_step)
         logger.info(f"Processing completed for item {item_id}")
-        return {}
+        result: dict = {}
+        if progress is not None:
+            result["last_progress"] = progress
+        return result
     except Exception as e:
-        return {"error": str(e), "error_step": "complete"}
+        return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("handle_error")
@@ -300,7 +430,8 @@ async def handle_error_node(state: ProcessingState) -> dict:
     """Handle processing errors by updating item status and metadata."""
     item_id = state.get("item_id")
     error = state.get("error", "Unknown error")
-    error_step = state.get("error_step", "unknown")
+    error_step = state.get("error_step") or ProcessingStep.FAILED
+    failure_message = f"Processing failed during {error_step}: {error}"
 
     logger.error(
         f"Processing failed for item {item_id}: {error} (step: {error_step})",
@@ -309,12 +440,17 @@ async def handle_error_node(state: ProcessingState) -> dict:
 
     if not item_id:
         logger.error("Cannot update status: item_id not set")
+        emit_processing_update(
+            state,
+            step=ProcessingStep.FAILED,
+            message=failure_message,
+        )
         return {}
 
     try:
         async with db_connection() as db:
             # Update processing status to 'failed'
-            await item_repo.update_status(db, item_id, "failed")
+            await item_repo.update_status(db, item_id, ProcessingStatus.FAILED)
 
             # Merge error info into item metadata (preserve existing)
             item = await item_repo.get(db, item_id)
@@ -327,6 +463,12 @@ async def handle_error_node(state: ProcessingState) -> dict:
 
     except Exception as e:
         logger.exception(f"Failed to update error status: {e}")
+    finally:
+        emit_processing_update(
+            state,
+            step=ProcessingStep.FAILED,
+            message=failure_message,
+        )
 
     return {}
 
@@ -425,7 +567,10 @@ def build_processing_graph() -> StateGraph:
 graph = build_processing_graph()
 
 
-async def process_item(item_id: str) -> ProcessingState:
+async def process_item(
+    item_id: str,
+    emit_update: ProcessingUpdateEmitter | None = None,
+) -> ProcessingState:
     """Process an item through the full content processing pipeline.
 
     This is the main entry point for processing a saved item.
@@ -436,6 +581,11 @@ async def process_item(item_id: str) -> ProcessingState:
     Returns:
         The final ProcessingState containing results or error information.
     """
-    initial_state: ProcessingState = {"item_id": item_id}
+    initial_state: ProcessingState = {
+        "item_id": item_id,
+        "last_progress": 0.0,
+    }
+    if emit_update is not None:
+        initial_state["emit_update"] = emit_update
     result = await graph.ainvoke(initial_state)
     return result

@@ -1,6 +1,7 @@
 """Pydantic models for database entities."""
 
 from datetime import datetime
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -135,6 +136,39 @@ class HealthResponse(BaseModel):
 
 
 # Processing queue models
+
+
+class ProcessingStatus(StrEnum):
+    """Status values for the item processing lifecycle."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ProcessingStep(StrEnum):
+    """Step values emitted as processing updates."""
+
+    CLASSIFY = "classify"
+    PARSING = "parsing"
+    CHUNKING = "chunking"
+    EXTRACTING = "extracting"
+    VALIDATING = "validating"
+    STORING = "storing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ProcessingUpdate(BaseModel):
+    """Step-level update emitted while an item is processed."""
+
+    type: Literal["processing_update"] = "processing_update"
+    item_id: str
+    status: ProcessingStatus
+    step: ProcessingStep
+    progress: float = Field(ge=0.0, le=1.0)
+    message: str
 
 
 class QueueStatus(BaseModel):

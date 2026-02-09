@@ -396,11 +396,11 @@ When Ollama is not running:
 
 ## Dependency Injection
 
-Use `get_ollama_provider()` from `python-backend/src/api/deps.py`:
+Use `get_ollama_provider()` from `python-backend/src/api/dependencies.py`:
 
 ```python
 from fastapi import Depends
-from src.api.deps import get_ollama_provider
+from src.api.dependencies import get_ollama_provider
 from src.providers import OllamaProvider
 
 @router.post("/embed")

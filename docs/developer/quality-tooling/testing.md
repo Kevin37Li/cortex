@@ -239,18 +239,26 @@ Place tests in the `tests/` directory with `test_` prefix:
 python-backend/
 ├── src/
 │   ├── api/
-│   │   └── items.py
+│   │   ├── dependencies.py         # Dependency injection helpers
+│   │   ├── routes/
+│   │   │   ├── health.py           # Health check endpoint
+│   │   │   ├── items.py            # CRUD for items
+│   │   │   ├── processing.py       # Processing queue endpoints
+│   │   │   └── ws.py               # WebSocket endpoints
+│   │   └── websocket/
+│   │       └── manager.py          # ProcessingConnectionManager
 │   ├── services/
 │   │   └── processing.py
 │   └── workflows/
 │       └── processing.py
 └── tests/
     ├── services/
-    │   └── test_processing.py  # Service-level tests
-    ├── test_api_items.py       # API endpoint tests
-    ├── test_repositories.py    # Repository tests
-    ├── test_workflows.py       # Workflow tests
-    └── conftest.py             # Shared fixtures
+    │   └── test_processing.py       # Service-level tests
+    ├── test_api_items.py            # API endpoint tests
+    ├── test_api_ws_processing.py    # WebSocket endpoint tests
+    ├── test_repositories.py         # Repository tests
+    ├── test_workflows.py            # Workflow tests
+    └── conftest.py                  # Shared fixtures
 ```
 
 ### Test Setup

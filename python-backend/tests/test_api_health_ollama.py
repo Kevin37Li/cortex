@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from src.api.deps import get_db_connection, get_ollama_provider
+from src.api.dependencies import get_db_connection, get_ollama_provider
 from src.db.database import init_database
 from src.main import app
 from src.providers import OllamaProvider

@@ -7,9 +7,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api.health import router as health_router
-from .api.items import router as items_router
-from .api.processing import router as processing_router
+from .api.routes.health import router as health_router
+from .api.routes.items import router as items_router
+from .api.routes.processing import router as processing_router
+from .api.routes.ws import router as ws_router
+from .api.websocket.manager import ProcessingConnectionManager
 from .config import settings
 from .db import init_database, verify_database
 from .exceptions import (
@@ -30,13 +32,22 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Cortex backend...")
     await init_database()
+    ws_manager = ProcessingConnectionManager()
     queue = ProcessingQueue()
+    unsubscribe_processing_updates = queue.subscribe_processing_updates(
+        ws_manager.broadcast,
+    )
+
     app.state.processing_queue = queue
+    app.state.processing_ws_manager = ws_manager
+    app.state.processing_ws_unsubscribe = unsubscribe_processing_updates
     await queue.start()
     yield
-    # Shutdown
+    # Shutdown: drain workers first so terminal events reach subscribers
     logger.info("Shutting down Cortex backend...")
     await queue.stop()
+    unsubscribe_processing_updates()
+    await ws_manager.shutdown()
 
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)
@@ -98,6 +109,7 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
 app.include_router(processing_router, prefix="/api")
+app.include_router(ws_router, prefix="/api")
 
 
 @app.get("/api/db/status")

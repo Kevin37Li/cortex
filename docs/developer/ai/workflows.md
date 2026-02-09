@@ -86,17 +86,24 @@ New Item → Classify → Parse → Chunk → Embed → Extract Metadata → Val
 ### State Schema
 
 ```python
-class ProcessingState(TypedDict):
+class ProcessingState(TypedDict, total=False):
     item_id: str
     raw_content: str
-    content_type: str  # html, pdf, audio, text
+    content_type: str  # webpage, note, file
+    title: str
+    source_url: str | None
+    ai_provider: AIProvider
     parsed_text: str
-    chunks: list[str]
-    embeddings: list[list[float]]
-    metadata: ItemMetadata
+    chunk_results: list[ChunkResult]
+    metadata: ExtractedMetadata
+    chunks: list  # After persistence, with IDs
+    embeddings_stored: bool
     validation_passed: bool
     retry_count: int
     error: str | None
+    error_step: ProcessingStep | None
+    last_progress: float
+    emit_update: ProcessingUpdateEmitter | None
 ```
 
 ### Key Design Decisions

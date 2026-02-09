@@ -91,7 +91,7 @@ The `EmbeddingService` class (`src/services/embeddings.py`) handles embedding ge
 
 ```python
 from src.services import EmbeddingService
-from src.api.deps import get_ai_provider
+from src.api.dependencies import get_ai_provider
 
 # Inject via FastAPI dependency
 service = EmbeddingService(provider=ai_provider)

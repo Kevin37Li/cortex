@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from src.config import settings
+from src.db.models import ProcessingStatus, ProcessingStep, ProcessingUpdate
 from src.services.processing import ProcessingQueue
 
 
@@ -68,6 +69,63 @@ class TestProcessingQueue:
         assert queue.total_processed == 3
         assert "failed-item" in queue.failed_items
         assert "exception-item" in queue.failed_items
+
+    async def test_process_one_passes_emit_callback_to_workflow(self) -> None:
+        """Queue should pass its relay callback into workflow execution."""
+        queue = ProcessingQueue()
+        process_item_mock = AsyncMock(return_value={})
+
+        with patch("src.services.processing.process_item", new=process_item_mock):
+            await queue._process_one("item-1")
+
+        assert process_item_mock.await_count == 1
+        assert process_item_mock.await_args.args == ("item-1",)
+        emit_update = process_item_mock.await_args.kwargs["emit_update"]
+        assert emit_update.__self__ is queue
+        assert emit_update.__func__ is queue.emit_processing_update.__func__
+
+    async def test_emit_processing_update_relays_and_unsubscribes(self) -> None:
+        """Relay should fan out to listeners and honor unsubscribe cleanup."""
+        queue = ProcessingQueue()
+        received: list[ProcessingUpdate] = []
+        unsubscribe = queue.subscribe_processing_updates(received.append)
+        update = ProcessingUpdate(
+            item_id="item-1",
+            status=ProcessingStatus.PROCESSING,
+            step=ProcessingStep.CHUNKING,
+            progress=0.4,
+            message="Chunking content",
+        )
+
+        queue.emit_processing_update(update)
+        unsubscribe()
+        queue.emit_processing_update(update)
+
+        assert received == [update]
+
+    async def test_emit_processing_update_removes_failing_listener(self) -> None:
+        """A failing listener should be removed so future relays continue cleanly."""
+        queue = ProcessingQueue()
+        calls = 0
+
+        def bad_listener(_update: ProcessingUpdate) -> None:
+            nonlocal calls
+            calls += 1
+            raise RuntimeError("listener failure")
+
+        queue.subscribe_processing_updates(bad_listener)
+        update = ProcessingUpdate(
+            item_id="item-1",
+            status=ProcessingStatus.PROCESSING,
+            step=ProcessingStep.VALIDATING,
+            progress=0.85,
+            message="Validating extracted content",
+        )
+
+        queue.emit_processing_update(update)
+        queue.emit_processing_update(update)
+
+        assert calls == 1
 
     async def test_retry_failed_readds_item_when_enqueue_fails(self) -> None:
         """retry_failed(item_id=...) should restore failed state on enqueue failure."""

@@ -38,7 +38,7 @@ async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
     """Context manager for database connections.
 
     Use directly for LangGraph nodes, scripts, background tasks.
-    For FastAPI routes, use get_db_connection() from api.deps.
+    For FastAPI routes, use get_db_connection() from api.dependencies.
     """
     async with aiosqlite.connect(settings.db_path) as db:
         await _configure_connection(db)

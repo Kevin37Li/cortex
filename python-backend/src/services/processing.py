@@ -6,16 +6,18 @@ through the LangGraph workflow with a fixed worker pool, and track status.
 
 import asyncio
 import logging
+from collections.abc import Callable
 
 from src.config import settings
 from src.db.database import db_connection
-from src.db.models import QueueStatus, RetryFailedResult
+from src.db.models import ProcessingUpdate, QueueStatus, RetryFailedResult
 from src.db.repositories import item_repo
 from src.workflows.processing import process_item
 
 logger = logging.getLogger(__name__)
 
 QUEUE_MAXSIZE = 1000
+ProcessingUpdateListener = Callable[[ProcessingUpdate], None]
 
 
 class ProcessingQueue:
@@ -39,6 +41,31 @@ class ProcessingQueue:
         self.failed_items: set[str] = set()
         self.completed_count: int = 0
         self.total_processed: int = 0
+        self._processing_update_listeners: set[ProcessingUpdateListener] = set()
+
+    def subscribe_processing_updates(
+        self,
+        listener: ProcessingUpdateListener,
+    ) -> Callable[[], None]:
+        """Register a listener for workflow processing updates.
+
+        Returns an unsubscribe callback for deterministic cleanup.
+        """
+        self._processing_update_listeners.add(listener)
+
+        def unsubscribe() -> None:
+            self._processing_update_listeners.discard(listener)
+
+        return unsubscribe
+
+    def emit_processing_update(self, update: ProcessingUpdate) -> None:
+        """Relay one processing update to all listeners without blocking workers."""
+        for listener in list(self._processing_update_listeners):
+            try:
+                listener(update)
+            except Exception:
+                logger.exception("Processing update listener failed; removing listener")
+                self._processing_update_listeners.discard(listener)
 
     async def enqueue(self, item_id: str) -> bool:
         """Enqueue item with backpressure/dedupe; returns True only if newly queued."""
@@ -71,7 +98,9 @@ class ProcessingQueue:
         self.processing.add(item_id)
 
         try:
-            result = await process_item(item_id)
+            result = await process_item(
+                item_id, emit_update=self.emit_processing_update
+            )
             processed = True
 
             if result.get("error"):

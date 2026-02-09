@@ -5,11 +5,11 @@ import logging
 import aiosqlite
 from fastapi import APIRouter, Depends, Query, Response
 
-from ..db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
-from ..db.repositories import ItemRepository
-from ..exceptions import ItemNotFoundError
-from ..services.processing import ProcessingQueue
-from .deps import get_db_connection, get_item_repo, get_processing_queue
+from ...db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
+from ...db.repositories import ItemRepository
+from ...exceptions import ItemNotFoundError
+from ...services.processing import ProcessingQueue
+from ..dependencies import get_db_connection, get_item_repo, get_processing_queue
 
 router = APIRouter(prefix="/items", tags=["items"])
 logger = logging.getLogger(__name__)

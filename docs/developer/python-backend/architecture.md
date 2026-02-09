@@ -62,15 +62,21 @@ It runs as a sidecar process, communicating with the Tauri frontend via localhos
 ```
 python-backend/
 ├── src/
-│   ├── api/                    # FastAPI routes
+│   ├── api/                    # FastAPI API layer
 │   │   ├── __init__.py
-│   │   ├── deps.py            # Dependency injection helpers
-│   │   ├── health.py          # Health check endpoint
-│   │   ├── items.py           # CRUD for items
-│   │   ├── processing.py     # Processing queue endpoints
-│   │   ├── search.py          # Search endpoints
-│   │   ├── chat.py            # Chat endpoints
-│   │   └── settings.py        # Configuration endpoints
+│   │   ├── dependencies.py    # Dependency injection helpers
+│   │   ├── routes/            # HTTP & WebSocket route modules
+│   │   │   ├── __init__.py
+│   │   │   ├── health.py      # Health check endpoint
+│   │   │   ├── items.py       # CRUD for items
+│   │   │   ├── processing.py  # Processing queue endpoints
+│   │   │   ├── ws.py          # WebSocket endpoints
+│   │   │   ├── search.py      # Search endpoints (planned)
+│   │   │   ├── chat.py        # Chat endpoints (planned)
+│   │   │   └── settings.py    # Configuration endpoints (planned)
+│   │   └── websocket/         # WebSocket infrastructure
+│   │       ├── __init__.py
+│   │       └── manager.py     # ProcessingConnectionManager
 │   │
 │   ├── workflows/             # LangGraph workflows
 │   │   ├── __init__.py
@@ -165,8 +171,29 @@ GET    /api/db/status          # Database verification (versions, tables, counts
 WS /api/ws/chat/{conversation_id}
 
 # Processing progress
-WS /api/ws/processing/{item_id}
+WS /api/ws/processing
 ```
+
+Processing websocket event contract:
+
+```json
+{
+  "type": "processing_update",
+  "item_id": "abc-123",
+  "status": "processing",
+  "step": "extracting",
+  "progress": 0.65,
+  "message": "Extracting summary and concepts"
+}
+```
+
+Optional subscription filter:
+
+```json
+{ "subscribe": "abc-123" }
+```
+
+If no subscription message is sent, the connection receives updates for all items.
 
 ### Request/Response Examples
 
@@ -222,9 +249,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api.health import router as health_router
-from .api.items import router as items_router
-from .api.processing import router as processing_router
+from .api.routes.health import router as health_router
+from .api.routes.items import router as items_router
+from .api.routes.processing import router as processing_router
+from .api.routes.ws import router as ws_router
+from .api.websocket.manager import ProcessingConnectionManager
 from .db import init_database
 from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError, ProcessingError
 from .services.processing import ProcessingQueue
@@ -236,12 +265,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting Cortex backend...")
     await init_database()
+    ws_manager = ProcessingConnectionManager()
     queue = ProcessingQueue()
+    unsubscribe = queue.subscribe_processing_updates(ws_manager.broadcast)
+
     app.state.processing_queue = queue
+    app.state.processing_ws_manager = ws_manager
     await queue.start()
     yield
+    # Shutdown: drain workers first so terminal events reach subscribers
     logger.info("Shutting down Cortex backend...")
     await queue.stop()
+    unsubscribe()
+    await ws_manager.shutdown()
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 
@@ -281,19 +317,20 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
 app.include_router(processing_router, prefix="/api")
+app.include_router(ws_router, prefix="/api")
 ```
 
 ### Route Example
 
 ```python
-# src/api/items.py
+# src/api/routes/items.py
 from fastapi import APIRouter, Depends, Query, Response
 
-from ..db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
-from ..db.repositories import ItemRepository
-from ..exceptions import ItemNotFoundError
-from ..services.processing import ProcessingQueue
-from .deps import get_db_connection, get_item_repo, get_processing_queue
+from ...db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
+from ...db.repositories import ItemRepository
+from ...exceptions import ItemNotFoundError
+from ...services.processing import ProcessingQueue
+from ..dependencies import get_db_connection, get_item_repo, get_processing_queue
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -340,10 +377,10 @@ async def delete_item(
 
 ### Dependency Injection
 
-Use `deps.py` to provide database connections and repositories to routes:
+Use `dependencies.py` to provide database connections and repositories to routes:
 
 ```python
-# src/api/deps.py
+# src/api/dependencies.py
 from collections.abc import AsyncIterator
 
 import aiosqlite
@@ -383,21 +420,22 @@ async def create_item(
 
 **When to use each:**
 
-| Dependency                | Use For                                             |
-| ------------------------- | --------------------------------------------------- |
-| `get_db_connection()`     | All database operations - routes manage connections |
-| `get_item_repo()`         | Item CRUD - stateless singleton                     |
-| `get_chunk_repo()`        | Chunk CRUD - stateless singleton                    |
-| `get_ai_provider()`       | AI operations (embedding, chat, extraction)         |
-| `get_embedding_service()` | Embedding generation with model consistency         |
-| `get_processing_queue()`  | Background processing queue from `app.state`        |
+| Dependency                    | Use For                                             |
+| ----------------------------- | --------------------------------------------------- |
+| `get_db_connection()`         | All database operations - routes manage connections |
+| `get_item_repo()`             | Item CRUD - stateless singleton                     |
+| `get_chunk_repo()`            | Chunk CRUD - stateless singleton                    |
+| `get_ai_provider()`           | AI operations (embedding, chat, extraction)         |
+| `get_embedding_service()`     | Embedding generation with model consistency         |
+| `get_processing_queue()`      | Background processing queue from `app.state`        |
+| `get_processing_ws_manager()` | WebSocket connection manager from `app.state`       |
 
 ### Service Dependencies
 
 Services receive the database connection via method parameters, not constructor. This enables transaction batching across multiple operations.
 
 ```python
-# src/api/deps.py
+# src/api/dependencies.py
 async def get_ai_provider() -> AsyncIterator[AIProvider]:
     """Get the configured AI provider."""
     yield OllamaProvider()  # MVP: Ollama; later: switch based on settings
@@ -450,39 +488,30 @@ async def health_check(db = Depends(get_db_connection)) -> JSONResponse:
     )
 ```
 
-See `src/api/health.py` for the full implementation.
+See `src/api/routes/health.py` for the full implementation.
 
 ### WebSocket Streaming
 
 ```python
-# src/api/chat.py
+# src/api/routes/ws.py
 from fastapi import WebSocket, WebSocketDisconnect
 
-@router.websocket("/ws/chat/{conversation_id}")
-async def chat_websocket(
+@router.websocket("/processing")
+async def processing_updates(
     websocket: WebSocket,
-    conversation_id: str
+    manager: ProcessingConnectionManager = Depends(get_processing_ws_manager),
 ):
-    await websocket.accept()
+    connection = await manager.connect(websocket)
 
     try:
         while True:
-            # Receive message from client
-            data = await websocket.receive_json()
-            message = data.get("message")
-
-            # Stream response
-            async for chunk in chat_workflow.stream(conversation_id, message):
-                await websocket.send_json({
-                    "type": "chunk",
-                    "content": chunk
-                })
-
-            # Send completion signal
-            await websocket.send_json({"type": "done"})
+            payload = await websocket.receive_json()
+            subscribe = payload.get("subscribe")
+            if isinstance(subscribe, str):
+                manager.set_subscription(connection.connection_id, subscribe or None)
 
     except WebSocketDisconnect:
-        pass
+        await manager.disconnect(connection.connection_id)
 ```
 
 ## Database Layer
@@ -519,7 +548,7 @@ async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
     """Context manager for database connections.
 
     Use directly for LangGraph nodes, scripts, background tasks.
-    For FastAPI routes, use get_db_connection() from api.deps.
+    For FastAPI routes, use get_db_connection() from api.dependencies.
     """
     async with aiosqlite.connect(settings.db_path) as db:
         await _configure_connection(db)
@@ -857,7 +886,7 @@ async def retry_failed(self, item_id: str | None = None) -> RetryFailedResult:
     ...  # API layer checks outcome to decide 200 vs 404
 ```
 
-The API layer can then do a **two-layer existence check** when the service reports `"not_in_queue"`: the queue only knows in-memory state, so the endpoint does a secondary DB lookup to distinguish "item doesn't exist" (404) from "item exists but isn't queued" (200). See `src/api/processing.py` for the full implementation.
+The API layer can then do a **two-layer existence check** when the service reports `"not_in_queue"`: the queue only knows in-memory state, so the endpoint does a secondary DB lookup to distinguish "item doesn't exist" (404) from "item exists but isn't queued" (200). See `src/api/routes/processing.py` for the full implementation.
 
 ## Configuration
 

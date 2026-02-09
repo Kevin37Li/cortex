@@ -3,7 +3,8 @@
 from collections.abc import AsyncIterator
 
 import aiosqlite
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, WebSocket
+from starlette.exceptions import WebSocketException
 from starlette.requests import Request
 
 from ..db.database import db_connection
@@ -16,6 +17,7 @@ from ..db.repositories import (
 from ..providers import AIProvider, OllamaProvider
 from ..services.embeddings import EmbeddingService
 from ..services.processing import ProcessingQueue
+from .websocket.manager import ProcessingConnectionManager
 
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
@@ -86,3 +88,14 @@ def get_processing_queue(request: Request) -> ProcessingQueue:
             detail="Processing queue is not available",
         )
     return queue
+
+
+def get_processing_ws_manager(websocket: WebSocket) -> ProcessingConnectionManager:
+    """Get the processing websocket manager singleton from app state."""
+    manager = getattr(websocket.app.state, "processing_ws_manager", None)
+    if manager is None:
+        raise WebSocketException(
+            code=1011,
+            reason="Processing websocket manager is not available",
+        )
+    return manager
