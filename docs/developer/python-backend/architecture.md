@@ -116,10 +116,14 @@ python-backend/
 │   └── main.py                # FastAPI app entry point
 │
 ├── tests/
-│   ├── api/
-│   ├── services/
-│   ├── workflows/
-│   └── conftest.py
+│   ├── api/                  # API endpoint tests
+│   ├── core/                 # Exception hierarchy tests
+│   ├── db/                   # Database and repository tests
+│   ├── fakes/                # Shared test doubles (e.g., MockAIProvider)
+│   ├── providers/            # AI provider tests
+│   ├── services/             # Service-level tests
+│   ├── workflows/            # Workflow integration tests
+│   └── conftest.py           # Shared fixtures
 │
 ├── pyproject.toml             # Dependencies (Poetry/uv)
 └── Dockerfile                 # For development

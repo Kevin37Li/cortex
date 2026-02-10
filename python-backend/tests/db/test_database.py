@@ -1,7 +1,6 @@
 """Tests for database initialization and schema."""
 
 from pathlib import Path
-from unittest.mock import patch
 
 import aiosqlite
 import pytest
@@ -14,14 +13,6 @@ from src.db.database import (
     init_database,
     verify_database,
 )
-
-
-@pytest.fixture
-def mock_settings(temp_db_path: Path):
-    """Mock settings with temporary database path."""
-    with patch("src.db.database.settings") as mock:
-        mock.db_path = temp_db_path
-        yield mock
 
 
 class TestSqliteVecLoading:

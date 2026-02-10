@@ -30,6 +30,9 @@ packages = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+markers = [
+    "integration: marks tests that initialize a real database and run full workflows",
+]
 
 [tool.coverage.run]
 source = ["src"]

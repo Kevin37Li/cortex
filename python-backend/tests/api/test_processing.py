@@ -65,6 +65,94 @@ class TestRetryEndpoint:
         assert response.json() == {"retried_count": 3, "outcome": "retried"}
         app.state.processing_queue.retry_failed.assert_awaited_once_with(None)
 
+    async def test_retry_all_failed_works_with_omitted_body(
+        self, client: AsyncClient
+    ) -> None:
+        """Retry-all should treat omitted body as retry all."""
+        app.state.processing_queue.retry_failed.return_value = RetryFailedResult(
+            retried_count=2,
+            outcome="retried",
+        )
+
+        response = await client.post("/api/processing/retry")
+
+        assert response.status_code == 200
+        assert response.json() == {"retried_count": 2, "outcome": "retried"}
+        app.state.processing_queue.retry_failed.assert_awaited_once_with(None)
+
+    async def test_retry_all_failed_works_with_null_body(
+        self, client: AsyncClient
+    ) -> None:
+        """Retry-all should treat explicit null body as retry all."""
+        app.state.processing_queue.retry_failed.return_value = RetryFailedResult(
+            retried_count=4,
+            outcome="retried",
+        )
+
+        response = await client.post("/api/processing/retry", json=None)
+
+        assert response.status_code == 200
+        assert response.json() == {"retried_count": 4, "outcome": "retried"}
+        app.state.processing_queue.retry_failed.assert_awaited_once_with(None)
+
+    async def test_retry_specific_item_returns_already_queued_outcome(
+        self, client: AsyncClient
+    ) -> None:
+        """Specific retry should pass through already_queued outcome from queue."""
+        create_response = await client.post(
+            "/api/items/",
+            json={
+                "title": "Already Queued",
+                "content": "content",
+                "content_type": "note",
+            },
+        )
+        item_id = create_response.json()["id"]
+
+        app.state.processing_queue.retry_failed.return_value = RetryFailedResult(
+            requested_item_id=item_id,
+            retried_count=0,
+            outcome="already_queued",
+        )
+
+        response = await client.post(
+            "/api/processing/retry",
+            json={"item_id": item_id},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"retried_count": 0, "outcome": "already_queued"}
+        app.state.processing_queue.retry_failed.assert_awaited_once_with(item_id)
+
+    async def test_retry_specific_item_returns_retried_outcome(
+        self, client: AsyncClient
+    ) -> None:
+        """Specific retry should return retried and count when queue enqueues item."""
+        create_response = await client.post(
+            "/api/items/",
+            json={
+                "title": "Retry Item",
+                "content": "content",
+                "content_type": "note",
+            },
+        )
+        item_id = create_response.json()["id"]
+
+        app.state.processing_queue.retry_failed.return_value = RetryFailedResult(
+            requested_item_id=item_id,
+            retried_count=1,
+            outcome="retried",
+        )
+
+        response = await client.post(
+            "/api/processing/retry",
+            json={"item_id": item_id},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"retried_count": 1, "outcome": "retried"}
+        app.state.processing_queue.retry_failed.assert_awaited_once_with(item_id)
+
     async def test_retry_specific_item_returns_not_in_queue_for_existing_item(
         self, client: AsyncClient
     ) -> None:

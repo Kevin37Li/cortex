@@ -1,145 +1,45 @@
 """Tests for EmbeddingService."""
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch
 
 import aiosqlite
 import pytest
-import sqlite_vec
-from src.db.database import EMBEDDING_DIMENSION, _apply_schema
+from src.db.database import EMBEDDING_DIMENSION
 from src.db.models import Chunk
 from src.exceptions import (
     AIProviderError,
     EmbeddingError,
     EmbeddingModelMismatchError,
 )
-from src.providers import AIProvider
 from src.services.embeddings import (
     DEFAULT_BATCH_SIZE,
     EMBEDDING_MODEL_KEY,
     EmbeddingService,
 )
 
-
-class MockAIProvider(AIProvider):
-    """Mock AI provider for testing."""
-
-    def __init__(
-        self, embedding_dim: int = EMBEDDING_DIMENSION, should_fail: bool = False
-    ) -> None:
-        self.embedding_dim = embedding_dim
-        self.should_fail = should_fail
-        self.embed_calls: list[str] = []
-        self.embed_batch_calls: list[list[str]] = []
-
-    async def embed(self, text: str) -> list[float]:
-        self.embed_calls.append(text)
-        if self.should_fail:
-            raise AIProviderError("Mock provider error")
-        return [0.1] * self.embedding_dim
-
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        self.embed_batch_calls.append(texts)
-        if self.should_fail:
-            raise AIProviderError("Mock provider error")
-        return [[0.1] * self.embedding_dim for _ in texts]
-
-    async def chat(
-        self, messages: list[dict[str, str]], system: str | None = None
-    ) -> str:
-        return "Mock response"
-
-    async def stream_chat(
-        self, messages: list[dict[str, str]], system: str | None = None
-    ):  # type: ignore[override]
-        yield "Mock"
-        yield " response"
-
-
-@pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
-async def db_with_vec(temp_db_path: Path):
-    """Create a database connection with sqlite-vec and schema applied."""
-    async with aiosqlite.connect(temp_db_path) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        db.row_factory = aiosqlite.Row
-
-        # Load sqlite-vec extension
-        await db.enable_load_extension(True)
-        await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
-        await db.enable_load_extension(False)
-
-        # Apply schema
-        await _apply_schema(db)
-
-        # Create vec_chunks table
-        await db.execute(
-            f"""
-            CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
-                chunk_id TEXT PRIMARY KEY,
-                embedding FLOAT[{EMBEDDING_DIMENSION}]
-            )
-            """
-        )
-
-        await db.commit()
-        yield db
-
-
-@pytest.fixture
-def mock_provider() -> MockAIProvider:
-    """Create a mock AI provider."""
-    return MockAIProvider()
-
-
-@pytest.fixture
-def service(mock_provider: MockAIProvider) -> EmbeddingService:
-    """Create an EmbeddingService with mock provider."""
-    return EmbeddingService(provider=mock_provider, model_name="test-model")
-
-
-@pytest.fixture
-def sample_chunks() -> list[Chunk]:
-    """Create sample chunks for testing."""
-    now = datetime.now()
-    return [
-        Chunk(
-            id=f"chunk-{i}",
-            item_id="item-1",
-            chunk_index=i,
-            content=f"This is chunk number {i} with some content.",
-            token_count=10,
-            created_at=now,
-        )
-        for i in range(5)
-    ]
+from tests.fakes.providers import MockAIProvider
 
 
 class TestEmbedChunks:
     """Tests for embed_chunks method."""
 
     async def test_embeds_empty_list_does_nothing(
-        self, service: EmbeddingService, db_with_vec: aiosqlite.Connection
+        self, embedding_service: EmbeddingService, db_with_vec: aiosqlite.Connection
     ) -> None:
         """Empty chunk list should return immediately without errors."""
-        await service.embed_chunks(db_with_vec, [])
+        await embedding_service.embed_chunks(db_with_vec, [])
         # Should not raise and should not call provider
 
     async def test_embeds_chunks_and_stores_in_vec_chunks(
         self,
-        service: EmbeddingService,
+        embedding_service: EmbeddingService,
         db_with_vec: aiosqlite.Connection,
         sample_chunks: list[Chunk],
         mock_provider: MockAIProvider,
     ) -> None:
         """Chunks should be embedded and stored in vec_chunks table."""
-        await service.embed_chunks(db_with_vec, sample_chunks)
+        await embedding_service.embed_chunks(db_with_vec, sample_chunks)
         await db_with_vec.commit()  # Caller commits
 
         # Verify embeddings were stored
@@ -192,12 +92,12 @@ class TestEmbedChunks:
 
     async def test_records_model_on_first_use(
         self,
-        service: EmbeddingService,
+        embedding_service: EmbeddingService,
         db_with_vec: aiosqlite.Connection,
         sample_chunks: list[Chunk],
     ) -> None:
         """First embedding should record the model name."""
-        await service.embed_chunks(db_with_vec, sample_chunks)
+        await embedding_service.embed_chunks(db_with_vec, sample_chunks)
         await db_with_vec.commit()
 
         cursor = await db_with_vec.execute(
@@ -283,21 +183,23 @@ class TestEmbedQuery:
     """Tests for embed_query method."""
 
     async def test_embeds_query_text(
-        self, service: EmbeddingService, mock_provider: MockAIProvider
+        self, embedding_service: EmbeddingService, mock_provider: MockAIProvider
     ) -> None:
         """Should generate embedding for query text."""
-        embedding = await service.embed_query("test query")
+        embedding = await embedding_service.embed_query("test query")
 
         assert len(embedding) == EMBEDDING_DIMENSION
         assert mock_provider.embed_calls == ["test query"]
 
-    async def test_raises_on_empty_query(self, service: EmbeddingService) -> None:
+    async def test_raises_on_empty_query(
+        self, embedding_service: EmbeddingService
+    ) -> None:
         """Should raise for empty or whitespace queries."""
         with pytest.raises(EmbeddingError):
-            await service.embed_query("")
+            await embedding_service.embed_query("")
 
         with pytest.raises(EmbeddingError):
-            await service.embed_query("   ")
+            await embedding_service.embed_query("   ")
 
     async def test_wraps_provider_errors(self) -> None:
         """AIProviderError should be wrapped in EmbeddingError."""

@@ -233,7 +233,7 @@ Uses **pytest** with **pytest-asyncio** for async tests. Configuration in `pypro
 
 ### Test File Location
 
-Place tests in the `tests/` directory with `test_` prefix:
+Place tests in the `tests/` directory organized by domain with `test_` prefix:
 
 ```
 python-backend/
@@ -252,72 +252,62 @@ python-backend/
 │   └── workflows/
 │       └── processing.py
 └── tests/
-    ├── services/
-    │   └── test_processing.py       # Service-level tests
-    ├── test_api_items.py            # API endpoint tests
-    ├── test_api_ws_processing.py    # WebSocket endpoint tests
-    ├── test_repositories.py         # Repository tests
-    ├── test_workflows.py            # Workflow tests
+    ├── api/                         # API endpoint tests
+    │   ├── test_health.py
+    │   ├── test_health_ollama.py
+    │   ├── test_items.py
+    │   ├── test_processing.py
+    │   └── test_ws_processing.py
+    ├── core/                        # Exception hierarchy tests
+    │   └── test_exceptions.py
+    ├── db/                          # Database and repository tests
+    │   ├── test_database.py
+    │   └── test_repositories.py
+    ├── providers/                   # AI provider tests
+    │   └── test_ollama.py
+    ├── services/                    # Service-level tests
+    │   ├── test_embeddings.py
+    │   └── test_parsing.py
+    ├── workflows/                   # Workflow integration tests
+    │   └── test_processing.py
     └── conftest.py                  # Shared fixtures
 ```
 
 ### Test Setup
 
-Shared fixtures are defined in `tests/conftest.py`. There are two main fixtures for different test levels:
+Shared fixtures are defined in `tests/conftest.py`, grouped by domain:
 
 ```python
-# tests/conftest.py
-from pathlib import Path
-from unittest.mock import AsyncMock, patch
+# tests/conftest.py — key fixtures (simplified)
 
-import aiosqlite
-import pytest
-from httpx import ASGITransport, AsyncClient
-from src.db.database import _apply_schema, init_database
-from src.main import app
-from src.services.processing import ProcessingQueue
+# Database fixtures
+temp_db_path       # Temporary database path via tmp_path
+db_connection      # Direct DB connection with schema applied
+db_with_vec        # DB connection with sqlite-vec extension loaded
+mock_settings      # Patched settings with temporary db_path
 
+# HTTP/client fixtures
+client             # AsyncClient with temporary DB and mock processing queue
 
-@pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
+# Provider fixtures
+ollama_provider    # Real OllamaProvider instance (for provider unit tests)
+mock_ollama_provider  # MagicMock(spec=OllamaProvider) for health endpoint tests
+mock_provider      # MockAIProvider with deterministic embeddings
 
+# Service fixtures
+embedding_service  # EmbeddingService with mock provider
 
-@pytest.fixture
-async def db_connection(temp_db_path: Path):
-    """Database connection with schema applied.
-
-    Use for repository and database-level tests that need direct DB access.
-    """
-    async with aiosqlite.connect(temp_db_path) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        db.row_factory = aiosqlite.Row
-        await _apply_schema(db)
-        await db.commit()
-        yield db
-
-
-@pytest.fixture
-async def client(temp_db_path: Path):
-    """Async test client with temporary database.
-
-    Use for API endpoint tests that make HTTP requests.
-    """
-    with patch("src.config.settings.db_path", temp_db_path):
-        await init_database()
-        # Mock processing queue (lifespan is not invoked in tests)
-        mock_queue = AsyncMock(spec=ProcessingQueue)
-        app.state.processing_queue = mock_queue
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            yield ac
+# Test data fixtures
+sample_chunks      # List of sample Chunk objects for tests
 ```
+
+`MockAIProvider(AIProvider)` is defined in `tests/fakes/providers.py` as a deterministic provider that records calls and supports configurable failure via `should_fail=True`.
 
 **Fixture hierarchy:**
 
 - `temp_db_path` - Base fixture creating a temporary database path
 - `db_connection` - Direct database connection for repository tests (uses `_apply_schema`)
+- `db_with_vec` - Database connection with sqlite-vec for embedding tests
 - `client` - HTTP client for API tests (uses `init_database` which calls `_apply_schema`)
 
 **Mock processing queue:** Since the `client` fixture bypasses FastAPI's lifespan (no real startup/shutdown), it sets a mock `ProcessingQueue` on `app.state`. This satisfies `get_processing_queue()` in routes like `create_item` without actually running workers. Use `AsyncMock(spec=ProcessingQueue)` to get type-checked mock methods.
@@ -334,7 +324,7 @@ This pattern:
 ### Example Tests
 
 ```python
-# tests/test_api_items.py
+# tests/api/test_items.py
 
 class TestCreateItem:
     """Test POST /api/items/ endpoint."""
@@ -387,7 +377,7 @@ cd python-backend && pytest
 pytest --cov=src --cov-report=html
 
 # Run specific test file
-pytest tests/test_api_items.py
+pytest tests/api/test_items.py
 
 # Run with verbose output
 pytest -v
