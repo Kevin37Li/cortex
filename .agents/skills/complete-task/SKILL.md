@@ -22,14 +22,11 @@ git diff --name-only --cached
 ```
 
 4. Read changed files relevant to the task.
-5. Append an `Implementation Details` section to the task file and update acceptance criteria checkboxes.
+5. Append an `Implementation Details` section to the task file and mark completion in the task's existing `Acceptance Criteria` section.
 6. Analyze the implementation and generate a `Learning Report` section.
 7. Invoke `$docs-reviewer` with the task document path as input.
 8. Confirm a structured `$docs-reviewer` result was produced; if missing or non-structured, re-run `$docs-reviewer`.
-9. Reflect `$docs-reviewer` findings in `Learning Report > Documentation Impact`:
-   - Which docs need updates and why.
-   - Which docs were validated as still accurate.
-   - Priority recommendations from the docs review.
+9. Present the `$docs-reviewer` report directly to the user.
 10. Summarize results and suggest `bun task:complete <task>` to move the task to done.
 
 ## Implementation Details Template
@@ -51,11 +48,6 @@ _Tracked: YYYY-MM-DD_
 ### Dependencies Added
 
 - `package@version` - purpose
-
-### Acceptance Criteria Status
-
-- [x] Criteria 1 - Implemented in `file:line`
-- [ ] Criteria 2 - Not implemented (reason)
 ```
 
 ## Learning Report Template
@@ -78,10 +70,6 @@ _Generated: YYYY-MM-DD_
 ...
 
 ### Lessons Learned
-
-...
-
-### Documentation Impact
 
 ...
 ```

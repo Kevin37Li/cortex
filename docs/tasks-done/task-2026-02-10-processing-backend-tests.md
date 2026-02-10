@@ -130,25 +130,25 @@ _Tracked: 2026-02-10_
 
 ### Files Changed
 
-| File | Change | Description |
-| --- | --- | --- |
-| `python-backend/tests/services/test_parsing.py` | Created | Added complete `ContentParser` coverage for HTML/text parsing, dispatch, malformed input, and unrecoverable parser error wrapping. |
-| `python-backend/tests/workflows/test_processing.py` | Created | Added workflow orchestration tests for `process_item()`, validation retries, error routing, emit contract, and routing helper functions. |
-| `python-backend/tests/api/test_processing.py` | Created | Moved processing API tests into `tests/api/` and extended retry endpoint coverage for `already_queued`, `retried`, and omitted/null request body cases. |
-| `python-backend/tests/conftest.py` | Modified | Centralized shared fixtures (database, client, provider, service, and test data fixtures) with explicit `function` scope. |
-| `python-backend/tests/fakes/providers.py` | Created | Added reusable `MockAIProvider` test double shared by service/workflow tests. |
-| `python-backend/tests/services/test_embeddings.py` | Modified | Removed duplicate module fixtures and switched to shared fixtures/fakes from `conftest.py` and `tests/fakes/providers.py`. |
-| `python-backend/tests/test_api_health.py` | Deleted (moved) | Moved to `python-backend/tests/api/test_health.py` as part of domain-based test organization. |
-| `python-backend/tests/test_api_health_ollama.py` | Deleted (moved) | Moved to `python-backend/tests/api/test_health_ollama.py`. |
-| `python-backend/tests/test_api_items.py` | Deleted (moved) | Moved to `python-backend/tests/api/test_items.py`. |
-| `python-backend/tests/test_api_ws_processing.py` | Deleted (moved) | Moved to `python-backend/tests/api/test_ws_processing.py`. |
-| `python-backend/tests/test_database.py` | Deleted (moved) | Moved to `python-backend/tests/db/test_database.py`. |
-| `python-backend/tests/test_repositories.py` | Deleted (moved) | Moved to `python-backend/tests/db/test_repositories.py`. |
-| `python-backend/tests/test_providers_ollama.py` | Deleted (moved) | Moved to `python-backend/tests/providers/test_ollama.py`. |
-| `python-backend/tests/test_exceptions.py` | Deleted (moved) | Moved to `python-backend/tests/core/test_exceptions.py`. |
-| `python-backend/pyproject.toml` | Modified | Added `integration` pytest marker for workflow integration tests. |
-| `docs/developer/python-backend/architecture.md` | Modified | Updated test tree documentation to show domain-organized backend tests. |
-| `docs/developer/quality-tooling/testing.md` | Modified | Updated Python testing docs for domain-based test layout and centralized fixture strategy. |
+| File                                                | Change          | Description                                                                                                                                             |
+| --------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `python-backend/tests/services/test_parsing.py`     | Created         | Added complete `ContentParser` coverage for HTML/text parsing, dispatch, malformed input, and unrecoverable parser error wrapping.                      |
+| `python-backend/tests/workflows/test_processing.py` | Created         | Added workflow orchestration tests for `process_item()`, validation retries, error routing, emit contract, and routing helper functions.                |
+| `python-backend/tests/api/test_processing.py`       | Created         | Moved processing API tests into `tests/api/` and extended retry endpoint coverage for `already_queued`, `retried`, and omitted/null request body cases. |
+| `python-backend/tests/conftest.py`                  | Modified        | Centralized shared fixtures (database, client, provider, service, and test data fixtures) with explicit `function` scope.                               |
+| `python-backend/tests/fakes/providers.py`           | Created         | Added reusable `MockAIProvider` test double shared by service/workflow tests.                                                                           |
+| `python-backend/tests/services/test_embeddings.py`  | Modified        | Removed duplicate module fixtures and switched to shared fixtures/fakes from `conftest.py` and `tests/fakes/providers.py`.                              |
+| `python-backend/tests/test_api_health.py`           | Deleted (moved) | Moved to `python-backend/tests/api/test_health.py` as part of domain-based test organization.                                                           |
+| `python-backend/tests/test_api_health_ollama.py`    | Deleted (moved) | Moved to `python-backend/tests/api/test_health_ollama.py`.                                                                                              |
+| `python-backend/tests/test_api_items.py`            | Deleted (moved) | Moved to `python-backend/tests/api/test_items.py`.                                                                                                      |
+| `python-backend/tests/test_api_ws_processing.py`    | Deleted (moved) | Moved to `python-backend/tests/api/test_ws_processing.py`.                                                                                              |
+| `python-backend/tests/test_database.py`             | Deleted (moved) | Moved to `python-backend/tests/db/test_database.py`.                                                                                                    |
+| `python-backend/tests/test_repositories.py`         | Deleted (moved) | Moved to `python-backend/tests/db/test_repositories.py`.                                                                                                |
+| `python-backend/tests/test_providers_ollama.py`     | Deleted (moved) | Moved to `python-backend/tests/providers/test_ollama.py`.                                                                                               |
+| `python-backend/tests/test_exceptions.py`           | Deleted (moved) | Moved to `python-backend/tests/core/test_exceptions.py`.                                                                                                |
+| `python-backend/pyproject.toml`                     | Modified        | Added `integration` pytest marker for workflow integration tests.                                                                                       |
+| `docs/developer/python-backend/architecture.md`     | Modified        | Updated test tree documentation to show domain-organized backend tests.                                                                                 |
+| `docs/developer/quality-tooling/testing.md`         | Modified        | Updated Python testing docs for domain-based test layout and centralized fixture strategy.                                                              |
 
 ### Dependencies Added
 
@@ -273,13 +273,13 @@ Backend processing test coverage gaps were closed by adding new parsing/workflow
 
 ### Summary by Criterion
 
-| Criterion | Total Issues |
+| Criterion            | Total Issues |
 | -------------------- | ------------ |
-| Correctness | 1 |
-| Codebase Consistency | 1 |
-| Evergreenness | 1 |
-| Completeness | 1 |
-| Quality | 0 |
+| Correctness          | 1            |
+| Codebase Consistency | 1            |
+| Evergreenness        | 1            |
+| Completeness         | 1            |
+| Quality              | 0            |
 
 ### Priority Recommendations
 
