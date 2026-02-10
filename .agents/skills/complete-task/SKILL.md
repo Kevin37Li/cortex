@@ -7,7 +7,7 @@ description: Generate a learning report for a completed task and update the task
 
 ## Overview
 
-Record implementation details for a completed task and append a learning report. Trigger a docs review based on the work.
+Record implementation details for a completed task and append a learning report. A thorough developer docs review via `$docs-reviewer` is mandatory before finalizing.
 
 ## Workflow
 
@@ -24,8 +24,13 @@ git diff --name-only --cached
 4. Read changed files relevant to the task.
 5. Append an `Implementation Details` section to the task file and update acceptance criteria checkboxes.
 6. Analyze the implementation and generate a `Learning Report` section.
-7. Invoke `$docs-reviewer` with the task document to target the doc review.
-8. Summarize results and suggest `bun task:complete <task>` to move the task to done.
+7. Invoke `$docs-reviewer` with the task document path as input.
+8. Confirm a structured `$docs-reviewer` result was produced; if missing or non-structured, re-run `$docs-reviewer`.
+9. Reflect `$docs-reviewer` findings in `Learning Report > Documentation Impact`:
+   - Which docs need updates and why.
+   - Which docs were validated as still accurate.
+   - Priority recommendations from the docs review.
+10. Summarize results and suggest `bun task:complete <task>` to move the task to done.
 
 ## Implementation Details Template
 
