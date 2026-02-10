@@ -75,14 +75,9 @@ _Tracked: YYYY-MM-DD_
 
 - `package-name@version` - Purpose
 
-### Acceptance Criteria Status
-
-- [x] Criteria 1 - Implemented in `file.ts:45`
-- [x] Criteria 2 - Implemented in `other.py:20`
-- [ ] Criteria 3 - Not implemented (reason)
 ```
 
-Use the Edit tool to append this section. Update the original acceptance criteria checkboxes if they exist.
+Use the Edit tool to append this section. Then find the existing Acceptance Criteria in the task file and update them in-place — check off completed items with `[x]` and annotate each with the file/line where it was implemented (e.g., `- [x] Criteria 1 - Implemented in \`file.ts:45\``).
 
 ### Phase 3: Implementation Analysis
 
