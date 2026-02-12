@@ -74,7 +74,6 @@ _Tracked: YYYY-MM-DD_
 ### Dependencies Added
 
 - `package-name@version` - Purpose
-
 ```
 
 Use the Edit tool to append this section. Then find the existing Acceptance Criteria in the task file and update them in-place — check off completed items with `[x]` and annotate each with the file/line where it was implemented (e.g., `- [x] Criteria 1 - Implemented in \`file.ts:45\``).

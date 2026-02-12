@@ -5,7 +5,7 @@ import logging
 from bs4 import BeautifulSoup
 from readability import Document
 
-from src.db.models import ParsedContent
+from src.db.models import ContentType, ParsedContent
 from src.exceptions import ContentParsingError
 
 logger = logging.getLogger(__name__)
@@ -18,17 +18,17 @@ class ContentParser:
     Pure function service — no database access, no AI calls.
     """
 
-    def parse(self, content: str, content_type: str) -> ParsedContent:
+    def parse(self, content: str, content_type: ContentType) -> ParsedContent:
         """Route content to appropriate parser based on content_type.
 
         Args:
             content: Raw content string (HTML, plain text, or Markdown)
-            content_type: Type of content: 'webpage', 'note', 'file'
+            content_type: ContentType enum value (webpage, note, file)
 
         Returns:
             ParsedContent with extracted text and metadata
         """
-        if content_type == "webpage":
+        if content_type == ContentType.WEBPAGE:
             return self.parse_html(content)
         return self.parse_text(content)
 

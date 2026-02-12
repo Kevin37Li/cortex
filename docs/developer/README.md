@@ -32,10 +32,10 @@ Technical documentation for building and extending Cortex. These docs describe e
 
 ## Python Backend
 
-| Document                                                 | Description                                  |
-| -------------------------------------------------------- | -------------------------------------------- |
-| [Backend Architecture](./python-backend/architecture.md) | FastAPI structure, endpoints, database layer |
-| [Bundling](./python-backend/bundling.md)                 | PyInstaller, cross-platform distribution     |
+| Document                                                 | Description                                                           |
+| -------------------------------------------------------- | --------------------------------------------------------------------- |
+| [Backend Architecture](./python-backend/architecture.md) | FastAPI structure, endpoints, database layer, OpenAPI type generation |
+| [Bundling](./python-backend/bundling.md)                 | PyInstaller, cross-platform distribution                              |
 
 ## Core Systems
 

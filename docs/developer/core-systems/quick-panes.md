@@ -193,10 +193,11 @@ listen('quick-pane-submit', ({ payload }) => {
   createTaskMutation.mutate({ title: payload.text })
 })
 
-// API call
+// API call (via apiFetch from src/lib/api-config.ts)
 listen('quick-pane-submit', async ({ payload }) => {
-  await fetch('/api/tasks', {
+  await apiFetch('/api/tasks/', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title: payload.text }),
   })
 })

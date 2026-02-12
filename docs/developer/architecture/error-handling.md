@@ -305,15 +305,6 @@ class OllamaAPIResponseError(AIProviderError):
         self.response_data = response_data
         super().__init__(f"Ollama {operation} returned malformed response for model '{model}': {response_data}")
 
-class ProcessingError(CortexError):
-    """Error during content processing pipeline."""
-    error_code: str = "processing_error"
-
-    def __init__(self, message: str, *, item_id: str | None = None, step: str | None = None) -> None:
-        self.item_id = item_id
-        self.step = step
-        super().__init__(message)
-
 class ContentParsingError(ProcessingError):
     """HTML/text content cannot be parsed."""
     error_code: str = "content_parsing_error"
@@ -451,6 +442,49 @@ async def process_item(item_id: str) -> Item:
         logger.error(f"AI extraction failed for {item_id}: {e}", exc_info=True)
         raise ProcessingError("Failed to process content")
 ```
+
+## HTTP API Error Handling (Frontend)
+
+Frontend service hooks use `apiFetch()` from `src/lib/api-config.ts` to call the Python backend. This helper provides structured error parsing for all HTTP responses.
+
+### Error Parsing Flow
+
+```
+Python exception → FastAPI handler → JSON response → apiFetch() → Error thrown → TanStack Query
+```
+
+`apiFetch()` handles three error response formats:
+
+1. **Structured errors** (`{ error, message }`): Extracts `message` string directly
+2. **FastAPI validation errors** (`{ detail: [{ msg, loc, type }] }`): Joins all `msg` values with `; `
+3. **Non-JSON errors**: Falls back to `"API request failed ({status})"`
+
+```typescript
+// src/lib/api-config.ts — error parsing logic
+if (typeof errorBody?.message === 'string') {
+  return errorBody.message // "Item not found: abc-123"
+}
+if (Array.isArray(errorBody?.detail)) {
+  return errorBody.detail.map(d => d.msg).join('; ') // FastAPI 422
+}
+return `API request failed (${status})` // Fallback
+```
+
+### Error Propagation in Service Hooks
+
+Service hooks log errors via `@/lib/logger` and let them propagate to TanStack Query. No toast notifications in service hooks — UI components handle user-facing error display.
+
+```typescript
+// src/services/items.ts
+onError: error => {
+  logger.error('Failed to create item', { error })
+  // Error propagates to TanStack Query's error state
+}
+```
+
+### Network Errors
+
+When `fetch()` itself rejects (server unreachable), `apiFetch()` throws `"Network request failed"` with logging. This is distinct from HTTP error responses.
 
 ## Quick Reference
 

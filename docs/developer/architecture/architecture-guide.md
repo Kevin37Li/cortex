@@ -192,14 +192,19 @@ Message → Retrieve → Grade Docs → Generate → Ground Check → Response
 
 ### Frontend → Python Backend
 
-**HTTP** for CRUD operations:
+**HTTP** for CRUD operations via `apiFetch()` from `src/lib/api-config.ts`:
 
 ```typescript
-const response = await fetch('http://localhost:8742/api/items', {
+import { apiFetch } from '@/lib/api-config'
+
+const item = await apiFetch<Item>('/api/items/', {
   method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ title, content, url }),
 })
 ```
+
+See `src/services/items.ts` for the canonical TanStack Query service hook pattern.
 
 **WebSocket** for streaming (chat, processing progress):
 
@@ -257,11 +262,13 @@ src/                          # React frontend
 │   └── ui/                  # shadcn/ui components
 ├── hooks/                   # Custom React hooks
 ├── lib/
+│   ├── api-config.ts        # Shared apiFetch() for Python backend HTTP
 │   ├── commands/            # Command system
 │   ├── router.ts            # TanStack Router configuration
 │   └── tauri-bindings/      # Generated type-safe commands
 ├── routes/                  # File-based route components
 ├── services/                # TanStack Query + API calls
+├── types/                   # Generated types (api.gen.ts from OpenAPI)
 └── store/                   # Zustand stores
 
 src-tauri/src/               # Rust backend

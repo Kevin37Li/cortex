@@ -62,7 +62,7 @@ Tauri gives us native performance with a smaller footprint. The Python sidecar a
 │  │  Responsibilities:                                   │    │
 │  │  • UI rendering                                      │    │
 │  │  • User interactions                                 │    │
-│  │  • State management (Zustand)                       │    │
+│  │  • State management (Zustand, TanStack Query)        │    │
 │  │  • API calls to Python backend                      │    │
 │  │                                                      │    │
 │  └─────────────────────────────────────────────────────┘    │
@@ -91,13 +91,17 @@ Tauri gives us native performance with a smaller footprint. The Python sidecar a
 Direct HTTP calls for most operations:
 
 ```typescript
-// In React component
-const response = await fetch('http://localhost:8742/api/items', {
+// In service hooks (src/services/items.ts)
+import { apiFetch } from '@/lib/api-config'
+
+const item = await apiFetch<Item>('/api/items/', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ title, content, url }),
 })
 ```
+
+Frontend code uses `apiFetch()` from `src/lib/api-config.ts` rather than raw `fetch()`. This provides structured error parsing, environment-overridable base URL, and 204/no-body handling.
 
 ### Streaming (Chat, Processing Progress)
 

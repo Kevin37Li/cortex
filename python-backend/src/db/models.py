@@ -38,6 +38,39 @@ class ExtractedMetadata(BaseModel):
     )  # Named entities: people, orgs, places (0-10 items)
 
 
+# Enums
+
+
+class ContentType(StrEnum):
+    """Content type values for items."""
+
+    WEBPAGE = "webpage"
+    NOTE = "note"
+    FILE = "file"
+
+
+class ProcessingStatus(StrEnum):
+    """Status values for the item processing lifecycle."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ProcessingStep(StrEnum):
+    """Step values emitted as processing updates."""
+
+    CLASSIFY = "classify"
+    PARSING = "parsing"
+    CHUNKING = "chunking"
+    EXTRACTING = "extracting"
+    VALIDATING = "validating"
+    STORING = "storing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 # Item models
 
 
@@ -46,7 +79,7 @@ class ItemCreate(BaseModel):
 
     title: str
     content: str
-    content_type: str = Field(description="Type of content: 'webpage', 'note', 'file'")
+    content_type: ContentType
     source_url: str | None = None
     metadata: dict | None = None
 
@@ -66,13 +99,11 @@ class Item(BaseModel):
     id: str
     title: str
     content: str
-    content_type: str
+    content_type: ContentType
     source_url: str | None
     created_at: datetime
     updated_at: datetime
-    processing_status: str = Field(
-        description="Status: 'pending', 'processing', 'completed', 'failed'"
-    )
+    processing_status: ProcessingStatus
     metadata: dict | None
 
     model_config = {"from_attributes": True}
@@ -136,28 +167,6 @@ class HealthResponse(BaseModel):
 
 
 # Processing queue models
-
-
-class ProcessingStatus(StrEnum):
-    """Status values for the item processing lifecycle."""
-
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-class ProcessingStep(StrEnum):
-    """Step values emitted as processing updates."""
-
-    CLASSIFY = "classify"
-    PARSING = "parsing"
-    CHUNKING = "chunking"
-    EXTRACTING = "extracting"
-    VALIDATING = "validating"
-    STORING = "storing"
-    COMPLETED = "completed"
-    FAILED = "failed"
 
 
 class ProcessingUpdate(BaseModel):

@@ -17,6 +17,10 @@ jscpd-report
 # TanStack Router generated files
 src/routeTree.gen.ts
 
+# OpenAPI generated files
+openapi.json
+src/types/api.gen.ts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

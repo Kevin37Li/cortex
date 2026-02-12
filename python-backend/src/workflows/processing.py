@@ -20,6 +20,7 @@ from src.db.database import db_connection
 from src.db.models import (
     ChunkCreate,
     ChunkResult,
+    ContentType,
     ExtractedMetadata,
     ItemUpdate,
     ProcessingStatus,
@@ -76,7 +77,7 @@ class ProcessingState(TypedDict, total=False):
 
     # Set by classify
     raw_content: str
-    content_type: str  # 'webpage', 'note', 'file' (match schema values!)
+    content_type: ContentType
     title: str
     source_url: str | None
     ai_provider: AIProvider

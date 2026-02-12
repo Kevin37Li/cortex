@@ -43,6 +43,8 @@ const { data, isLoading, error } = useQuery({
 })
 ```
 
+For HTTP-backed data from the Python sidecar, see `src/services/items.ts` which uses `apiFetch()` from `src/lib/api-config.ts` instead of Tauri commands.
+
 See [error-handling.md](./error-handling.md) for retry configuration and error display patterns.
 
 ### Layer 2: Zustand (Global UI State)

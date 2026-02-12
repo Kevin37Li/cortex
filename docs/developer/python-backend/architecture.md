@@ -604,29 +604,46 @@ Repositories provide type-safe database access using Pydantic models. **Reposito
 
 ```python
 # src/db/models.py
-from pydantic import BaseModel, Field
+from enum import StrEnum
+from pydantic import BaseModel
+
+class ContentType(StrEnum):
+    WEBPAGE = "webpage"
+    NOTE = "note"
+    FILE = "file"
+
+class ProcessingStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 class ItemCreate(BaseModel):
     """Input model for creating an item."""
     title: str
     content: str
-    content_type: str = Field(description="Type: 'webpage', 'note', 'file'")
+    content_type: ContentType
     source_url: str | None = None
+    metadata: dict | None = None
 
 class ItemUpdate(BaseModel):
     """Input model for updating. All fields optional."""
     title: str | None = None
     content: str | None = None
+    source_url: str | None = None
+    metadata: dict | None = None
 
 class Item(BaseModel):
     """Output model representing a stored item."""
     id: str
     title: str
     content: str
-    content_type: str
-    processing_status: str
+    content_type: ContentType
+    source_url: str | None
     created_at: datetime
     updated_at: datetime
+    processing_status: ProcessingStatus
+    metadata: dict | None
 
     model_config = {"from_attributes": True}
 ```
@@ -933,6 +950,50 @@ class Settings(BaseSettings):
 
 settings = Settings()
 ```
+
+## OpenAPI Type Generation
+
+The frontend uses TypeScript types generated from the backend's OpenAPI schema, keeping the contract in sync automatically.
+
+### Pipeline
+
+```
+Pydantic models (models.py) → FastAPI OpenAPI spec → openapi-typescript → api.gen.ts
+```
+
+### Scripts
+
+| Command                    | Description                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| `bun run openapi:export`   | Runs `export_openapi.py` to write `openapi.json` from the FastAPI app            |
+| `bun run openapi:generate` | Runs `openapi-typescript` to generate `src/types/api.gen.ts` from `openapi.json` |
+| `bun run openapi:sync`     | Runs both steps in sequence                                                      |
+
+### When to Regenerate
+
+Run `bun run openapi:sync` after changing:
+
+- Pydantic models in `src/db/models.py` (Item, ItemCreate, ItemUpdate, etc.)
+- Route response models or status codes
+- Any FastAPI schema that affects the OpenAPI spec
+
+### Generated Artifacts
+
+Both files are gitignored (generated, not committed):
+
+- `openapi.json` — Intermediate OpenAPI spec
+- `src/types/api.gen.ts` — TypeScript interfaces consumed by frontend services
+
+### Frontend Usage
+
+```typescript
+import type { components } from '@/types/api.gen'
+
+export type Item = components['schemas']['Item']
+export type ItemCreate = components['schemas']['ItemCreate']
+```
+
+Frontend service hooks in `src/services/` import types from the generated file rather than defining interfaces manually.
 
 ## Error Handling
 
