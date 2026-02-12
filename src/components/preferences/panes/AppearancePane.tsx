@@ -27,7 +27,8 @@ export function AppearancePane() {
   const { data: preferences } = usePreferences()
   const savePreferences = useSavePreferences()
 
-  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+  const handleThemeChange = (value: 'light' | 'dark' | 'system' | null) => {
+    if (!value) return
     // Update the theme provider immediately for instant UI feedback
     setTheme(value)
 
@@ -37,8 +38,9 @@ export function AppearancePane() {
     }
   }
 
-  const handleLanguageChange = async (value: string) => {
-    const language = value === 'system' ? null : value
+  const handleLanguageChange = async (value: string | null) => {
+    const normalizedValue = value ?? 'system'
+    const language = normalizedValue === 'system' ? null : normalizedValue
 
     try {
       // Change the language immediately for instant UI feedback

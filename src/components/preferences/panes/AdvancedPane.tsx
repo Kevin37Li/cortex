@@ -45,7 +45,10 @@ export function AdvancedPane() {
           label={t('preferences.advanced.dropdown')}
           description={t('preferences.advanced.dropdownDescription')}
         >
-          <Select value={exampleDropdown} onValueChange={setExampleDropdown}>
+          <Select
+            value={exampleDropdown}
+            onValueChange={value => setExampleDropdown(value ?? 'option1')}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

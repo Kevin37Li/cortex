@@ -250,11 +250,25 @@ src/components/
 ### Adding Components
 
 ```bash
-npx shadcn@latest add button
-npx shadcn@latest add dialog
+bunx shadcn@latest add button
+bunx shadcn@latest add dialog
 ```
 
 Components are copied to `src/components/ui/` and can be customized.
+
+### Migrating Existing Components
+
+For existing projects, use the official shadcn migration to keep vendored components aligned with current standards:
+
+```bash
+bunx shadcn@latest migrate rtl -y
+```
+
+For Base UI projects, set `"style": "base-nova"` in `components.json` and regenerate vendored components with:
+
+```bash
+bunx shadcn@latest add [component] --overwrite -y
+```
 
 ### Post-Vendor Checklist
 
@@ -283,7 +297,7 @@ const buttonVariants = cva('...', {
 
 ### Available Components
 
-This app includes commonly needed components. Run `npx shadcn@latest add [component]` to add more from [ui.shadcn.com](https://ui.shadcn.com/docs/components).
+This app includes commonly needed components. Run `bunx shadcn@latest add [component]` to add more from [ui.shadcn.com](https://ui.shadcn.com/docs/components).
 
 ## The `cn()` Utility
 

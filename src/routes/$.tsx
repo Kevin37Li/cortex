@@ -17,9 +17,7 @@ function NotFoundPage() {
         {t('notFound.title')}
       </h1>
       <p className="text-muted-foreground">{t('notFound.description')}</p>
-      <Button asChild>
-        <Link to="/items">{t('notFound.backToItems')}</Link>
-      </Button>
+      <Button render={<Link to="/items" />}>{t('notFound.backToItems')}</Button>
     </div>
   )
 }
