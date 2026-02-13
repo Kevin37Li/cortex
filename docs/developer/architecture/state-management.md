@@ -45,6 +45,22 @@ const { data, isLoading, error } = useQuery({
 
 For HTTP-backed data from the Python sidecar, see `src/services/items.ts` which uses `apiFetch()` from `src/lib/api-config.ts` instead of Tauri commands.
 
+#### Paginated Queries with `keepPreviousData`
+
+For paginated list views, use `placeholderData: keepPreviousData` to keep the previous page visible during fetch, preventing flash-of-empty:
+
+```typescript
+import { keepPreviousData } from '@tanstack/react-query'
+
+const itemsQuery = useItems(
+  { offset, limit },
+  { placeholderData: keepPreviousData }
+)
+const isPageTransition = itemsQuery.isFetching && itemsQuery.isPlaceholderData
+```
+
+Service hooks that support pagination can accept an `options` parameter to forward TanStack Query options like `placeholderData` (see `UseItemsOptions` in `src/services/items.ts`). Use `isPlaceholderData` to show a visual indicator (e.g., reduced opacity) during page transitions.
+
 See [error-handling.md](./error-handling.md) for retry configuration and error display patterns.
 
 ### Layer 2: Zustand (Global UI State)

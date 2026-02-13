@@ -79,73 +79,52 @@ test('loads preferences', async () => {
 })
 ```
 
-### Test Wrapper for Providers
+### Custom Render with All Providers
 
-Components using TanStack Query need a provider wrapper:
-
-```typescript
-// src/test/utils.ts
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactNode } from 'react'
-
-export function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-}
-
-export function TestProviders({ children }: { children: ReactNode }) {
-  const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-```
-
-Usage:
+`src/test/test-utils.tsx` exports a custom `render` function that wraps components in all required providers (`QueryClientProvider`, `I18nextProvider`, `MockThemeProvider`, and `RouterProvider`). Use this instead of the raw `@testing-library/react` render:
 
 ```typescript
-import { render } from '@testing-library/react'
-import { TestProviders } from '@/test/utils'
+import { render, screen, waitFor } from '@/test/test-utils'
 
-test('component with query', () => {
-  render(
-    <TestProviders>
-      <MyComponent />
-    </TestProviders>
-  )
-})
-```
-
-### Testing with Router
-
-Components using `useRouterState` or navigation need a router wrapper. The test utils create a memory-based router:
-
-```typescript
-// src/test/test-utils.tsx provides customRender with router support
-import { render } from '@/test/test-utils'
-
-test('component with routing', () => {
+test('component with query, routing, and i18n', () => {
   render(<MyComponent />, { initialPath: '/items' })
 })
 ```
 
-**Key pattern**: Test utils create a separate router instance with `createMemoryHistory` to control routing state without affecting the app router:
+This means components using `useTranslation()`, `useTheme()`, TanStack Query hooks, or TanStack Router navigation all work without extra setup.
+
+### Testing with Router
+
+The test utils create a memory-based router with `createMemoryHistory` to control routing state without hash-based URLs. The test router defines an explicit set of routes (currently `/`, `/items`, `/items/$id`, `/conversations`, and a catch-all `$`). When a new route is needed for test assertions (e.g., verifying `<Link>` navigation via `toHaveAttribute('href', ...)`), add the route to the `routeTree` in `src/test/test-utils.tsx`.
 
 ```typescript
-const memoryHistory = createMemoryHistory({ initialEntries: [initialPath] })
-const testRouter = createRouter({
-  routeTree,
-  history: memoryHistory,
+render(<MyComponent />, { initialPath: '/items' })
+
+// Assert typed navigation
+const link = screen.getByRole('link', { name: /Item Title/i })
+expect(link).toHaveAttribute('href', '/items/item-1')
+```
+
+### Mocking Service Hooks
+
+To mock TanStack Query service hooks while preserving type exports, use `vi.importActual`:
+
+```typescript
+vi.mock('@/services/items', async () => {
+  const actual = await vi.importActual('@/services/items')
+  return { ...actual, useItems: vi.fn() }
+})
+
+const { useItems } = await import('@/services/items')
+const useItemsMock = vi.mocked(useItems)
+
+test('renders items', () => {
+  useItemsMock.mockReturnValue(/* query result */)
+  render(<ItemList />)
 })
 ```
 
-This allows setting initial route state and testing navigation without hash-based URLs.
+This preserves type exports (`Item`, `ContentType`, etc.) while mocking the hook.
 
 ### Testing Zustand Stores
 

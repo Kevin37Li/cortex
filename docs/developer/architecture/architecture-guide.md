@@ -258,6 +258,7 @@ MainWindow (Top-level orchestrator)
 src/                          # React frontend
 ├── components/
 │   ├── layout/              # MainWindowShell, sidebars
+│   ├── items/               # Item list and card components
 │   ├── command-palette/     # Command palette system
 │   └── ui/                  # shadcn/ui components
 ├── hooks/                   # Custom React hooks

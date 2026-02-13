@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryOptions,
+} from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api-config'
 import { logger } from '@/lib/logger'
 import type { components } from '@/types/api.gen'
@@ -8,6 +13,8 @@ export type Item = components['schemas']['Item']
 export type ItemCreate = components['schemas']['ItemCreate']
 export type ItemUpdate = components['schemas']['ItemUpdate']
 export type ItemListResponse = components['schemas']['ItemListResponse']
+export type ContentType = components['schemas']['ContentType']
+export type ProcessingStatus = components['schemas']['ProcessingStatus']
 
 // Frontend-only types (not in the API schema)
 export interface ItemListParams {
@@ -47,8 +54,14 @@ function buildItemsPath(params?: ItemListParams): string {
   return query ? `/api/items/?${query}` : '/api/items/'
 }
 
-export function useItems(params?: ItemListParams) {
+type UseItemsOptions = Pick<
+  UseQueryOptions<ItemListResponse>,
+  'placeholderData'
+>
+
+export function useItems(params?: ItemListParams, options?: UseItemsOptions) {
   return useQuery({
+    ...options,
     queryKey: itemQueryKeys.list(params ?? {}),
     queryFn: () => apiFetch<ItemListResponse>(buildItemsPath(params)),
   })

@@ -292,6 +292,20 @@ t('nonexistent.key') // TypeScript error
 t('preferences.title') // ✅ Works
 ```
 
+## Reusable UI Primitives
+
+Components in `src/components/ui/` should accept text and aria-label props with English defaults rather than calling `useTranslation()` directly. The consuming feature component is responsible for passing translated strings:
+
+```typescript
+// ui/pagination.tsx — accepts text props with English defaults
+function PaginationPrevious({ text = 'Previous', ariaLabel = 'Go to previous page', ...props }) { ... }
+
+// Feature component passes translations
+<PaginationPrevious text={t('items.list.previousPage')} ariaLabel={t('items.list.goToPreviousPage')} />
+```
+
+This keeps `ui/` primitives reusable across contexts without coupling to specific translation keys. See `src/components/ui/pagination.tsx` for a full example.
+
 ## Using Translations Outside Hooks
 
 For contexts where `useTranslation()` is unavailable, import `i18n` directly. This applies to:

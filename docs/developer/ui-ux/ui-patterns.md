@@ -232,6 +232,7 @@ src/components/
 │   ├── button.tsx
 │   ├── dialog.tsx
 │   └── ...
+├── items/            # Item list and card components
 ├── command-palette/  # Command palette feature
 ├── preferences/      # Preferences dialog
 ├── ThemeProvider.tsx
@@ -275,8 +276,9 @@ bunx shadcn@latest add [component] --overwrite -y
 After adding a new shadcn/ui component, apply these project conventions:
 
 1. **Convert physical CSS to logical properties** -- Replace `pl-`/`pr-` with `ps-`/`pe-`, `ml-`/`mr-` with `ms-`/`me-`, `text-left`/`text-right` with `text-start`/`text-end`, `left-`/`right-` with `start-`/`end-` where the property is layout-directional (not animation or absolute centering). See [i18n-patterns.md](./i18n-patterns.md) for the full mapping table.
-2. **Verify no `invoke()` calls** -- Should use typed commands from `@/lib/tauri-bindings`
-3. **Keep upstream `useMemo`/`useCallback`** -- The React Compiler handles memoization for app code, but vendored components retain their upstream memoization to minimize merge friction on updates
+2. **Add i18n-ready text/aria props** -- If the component has hardcoded English strings (labels, aria-labels), add props with English defaults so consuming components can pass translated strings. See `pagination.tsx` for the pattern and [i18n-patterns.md](./i18n-patterns.md#reusable-ui-primitives) for details.
+3. **Verify no `invoke()` calls** -- Should use typed commands from `@/lib/tauri-bindings`
+4. **Keep upstream `useMemo`/`useCallback`** -- The React Compiler handles memoization for app code, but vendored components retain their upstream memoization to minimize merge friction on updates
 
 ### Customizing Components
 

@@ -78,6 +78,11 @@ function createAllTheProviders(options: AllTheProvidersOptions = {}) {
       }),
       createRoute({
         getParentRoute: () => rootRoute,
+        path: '/items/$id',
+        component: () => null,
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
         path: '/conversations',
         component: () => null,
       }),
