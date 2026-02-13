@@ -249,6 +249,7 @@ MainWindow (Top-level orchestrator)
 └── Global Overlays
     ├── PreferencesDialog (Cmd+,)
     ├── CommandPalette (Cmd+K)
+    ├── QuickNoteDialog (Cmd+N)
     └── Toaster (Notifications)
 ```
 

@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
  * Main window event listeners - handles global keyboard shortcuts and cross-window events.
  *
  * This hook composes specialized hooks for different event types:
- * - useKeyboardShortcuts: Global keyboard shortcuts (Cmd+, Cmd+1, Cmd+2)
+ * - useKeyboardShortcuts: Global keyboard shortcuts (Cmd+, Cmd+N, Cmd+1, Cmd+2)
  * - Quick pane submit listener: Cross-window communication from quick pane
  */
 export function useMainWindowEventListeners() {

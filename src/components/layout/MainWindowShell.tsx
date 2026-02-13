@@ -8,6 +8,7 @@ import { LeftSideBar } from './LeftSideBar'
 import { RightSideBar } from './RightSideBar'
 import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { PreferencesDialog } from '@/components/preferences/PreferencesDialog'
+import { QuickNoteDialog } from '@/components/items/QuickNoteDialog'
 import { Toaster } from 'sonner'
 import { useTheme } from '@/hooks/use-theme'
 import { useUIStore } from '@/store/ui-store'
@@ -81,6 +82,7 @@ export function MainWindowShell({ children }: MainWindowShellProps) {
       {/* Global UI Components (hidden until triggered) */}
       <CommandPalette />
       <PreferencesDialog />
+      <QuickNoteDialog />
       <Toaster
         position="bottom-right"
         theme={

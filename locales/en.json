@@ -28,6 +28,21 @@
   "items.detail.title": "Item Details",
   "items.detail.viewing": "Viewing item {{id}}",
 
+  "notes.create.title": "New Note",
+  "notes.create.openButton": "New Note",
+  "notes.create.titleLabel": "Title",
+  "notes.create.titlePlaceholder": "Note title",
+  "notes.create.contentLabel": "Content",
+  "notes.create.description": "Quickly capture a new note with a title and content.",
+  "notes.create.contentPlaceholder": "Write your note... (Markdown supported)",
+  "notes.create.submit": "Save Note",
+  "notes.create.cancel": "Cancel",
+  "notes.create.saving": "Saving...",
+  "notes.create.success": "Note saved",
+  "notes.create.error": "Failed to save note",
+  "notes.create.titleRequired": "Title is required",
+  "notes.create.contentRequired": "Content is required",
+
   "conversations.emptyState": "No conversations yet. Start a new conversation.",
   "conversations.detail.title": "Conversation",
   "conversations.detail.viewing": "Viewing conversation {{id}}",
@@ -92,6 +107,7 @@
   "commands.group.window": "Window",
   "commands.group.notification": "Notifications",
   "commands.group.debug": "Debug",
+  "commands.group.notes": "Notes",
   "commands.group.other": "Other",
 
   "commands.showLeftSidebar.label": "Show Left Sidebar",
@@ -104,6 +120,8 @@
   "commands.hideRightSidebar.description": "Hide the right sidebar",
   "commands.openPreferences.label": "Open Preferences",
   "commands.openPreferences.description": "Open the application preferences",
+  "commands.createNote.label": "Create New Note",
+  "commands.createNote.description": "Open the quick note creation dialog",
 
   "commands.windowClose.label": "Close Window",
   "commands.windowClose.description": "Close the current window",

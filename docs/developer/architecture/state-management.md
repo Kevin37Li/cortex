@@ -92,7 +92,7 @@ export const useUIStore = create<UIState>()(
 )
 ```
 
-### Layer 3: useState (Component State)
+### Layer 3: useState / TanStack Form (Component State)
 
 Use for state that:
 
@@ -104,6 +104,8 @@ Use for state that:
 const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 const [windowWidth, setWindowWidth] = useState(window.innerWidth)
 ```
+
+For complex forms with validation needs, use TanStack Form (`@tanstack/react-form`) instead of raw `useState`. It provides field-level validation, submission state tracking, and `form.reset()`. See `QuickNoteDialog.tsx` for an example. Simple toggles and inputs still use `useState`.
 
 ## Performance Patterns (Critical)
 
@@ -181,7 +183,7 @@ This app uses React Compiler which automatically handles memoization. You do **n
 
 - Panel visibility
 - Layout state
-- Command palette state
+- Dialog/modal open states (command palette, preferences, quick note)
 - UI modes and navigation
 
 **Feature-specific stores** - Use for:

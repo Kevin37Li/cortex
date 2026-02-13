@@ -1,7 +1,14 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { FileText, MessageSquare, type LucideIcon } from 'lucide-react'
+import {
+  FileText,
+  MessageSquare,
+  NotebookPen,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { openQuickNoteDialog } from '@/lib/quick-note/open-quick-note'
 
 interface NavItem {
   path: '/items' | '/conversations'
@@ -32,6 +39,16 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
     <div
       className={cn('flex h-full flex-col border-e bg-background', className)}
     >
+      <div className="p-2">
+        <Button
+          className="w-full justify-start gap-2"
+          onClick={openQuickNoteDialog}
+        >
+          <NotebookPen className="h-4 w-4 shrink-0" />
+          <span>{t('notes.create.openButton')}</span>
+        </Button>
+      </div>
+
       <nav className="flex flex-col gap-1 p-2">
         {navItems.map(item => {
           const Icon = item.icon

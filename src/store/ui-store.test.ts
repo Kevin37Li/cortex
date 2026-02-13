@@ -9,6 +9,8 @@ describe('UIStore', () => {
       rightSidebarVisible: true,
       commandPaletteOpen: false,
       preferencesOpen: false,
+      quickNoteDialogOpen: false,
+      lastQuickPaneEntry: null,
     })
   })
 
@@ -18,6 +20,8 @@ describe('UIStore', () => {
     expect(state.rightSidebarVisible).toBe(true)
     expect(state.commandPaletteOpen).toBe(false)
     expect(state.preferencesOpen).toBe(false)
+    expect(state.quickNoteDialogOpen).toBe(false)
+    expect(state.lastQuickPaneEntry).toBeNull()
   })
 
   it('toggles left sidebar visibility', () => {
@@ -58,5 +62,25 @@ describe('UIStore', () => {
 
     toggleCommandPalette()
     expect(useUIStore.getState().commandPaletteOpen).toBe(false)
+  })
+
+  it('toggles quick note dialog', () => {
+    const { toggleQuickNoteDialog } = useUIStore.getState()
+
+    toggleQuickNoteDialog()
+    expect(useUIStore.getState().quickNoteDialogOpen).toBe(true)
+
+    toggleQuickNoteDialog()
+    expect(useUIStore.getState().quickNoteDialogOpen).toBe(false)
+  })
+
+  it('sets quick note dialog open state directly', () => {
+    const { setQuickNoteDialogOpen } = useUIStore.getState()
+
+    setQuickNoteDialogOpen(true)
+    expect(useUIStore.getState().quickNoteDialogOpen).toBe(true)
+
+    setQuickNoteDialogOpen(false)
+    expect(useUIStore.getState().quickNoteDialogOpen).toBe(false)
   })
 })

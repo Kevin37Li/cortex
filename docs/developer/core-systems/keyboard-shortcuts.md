@@ -4,28 +4,32 @@ Centralized keyboard shortcut management using native DOM event listeners.
 
 ## Current Shortcuts
 
-| Shortcut             | Mac   | Windows/Linux | Action                |
-| -------------------- | ----- | ------------- | --------------------- |
-| Open Preferences     | Cmd+, | Ctrl+,        | Opens settings dialog |
-| Command Palette      | Cmd+K | Ctrl+K        | Opens command search  |
-| Toggle Left Sidebar  | Cmd+1 | Ctrl+1        | Show/hide left panel  |
-| Toggle Right Sidebar | Cmd+2 | Ctrl+2        | Show/hide right panel |
+| Shortcut             | Mac   | Windows/Linux | Action                  |
+| -------------------- | ----- | ------------- | ----------------------- |
+| Open Preferences     | Cmd+, | Ctrl+,        | Opens settings dialog   |
+| New Note             | Cmd+N | Ctrl+N        | Opens quick note dialog |
+| Command Palette      | Cmd+K | Ctrl+K        | Opens command search    |
+| Toggle Left Sidebar  | Cmd+1 | Ctrl+1        | Show/hide left panel    |
+| Toggle Right Sidebar | Cmd+2 | Ctrl+2        | Show/hide right panel   |
 
 ## Architecture
 
-All shortcuts are handled in `src/hooks/useMainWindowEventListeners.ts`:
+Shortcuts are implemented in `src/hooks/use-keyboard-shortcuts.ts` and wired through `useMainWindowEventListeners`:
 
 ```typescript
-export function useMainWindowEventListeners() {
-  const commandContext = useCommandContext()
-
+export function useKeyboardShortcuts(commandContext: CommandContext) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
-        switch (e.key) {
+        switch (e.key.toLowerCase()) {
           case ',': {
             e.preventDefault()
             commandContext.openPreferences()
+            break
+          }
+          case 'n': {
+            e.preventDefault()
+            openQuickNoteDialog()
             break
           }
           case '1': {
@@ -52,7 +56,7 @@ export function useMainWindowEventListeners() {
 ### 1. Add to event handler
 
 ```typescript
-// src/hooks/useMainWindowEventListeners.ts
+// src/hooks/use-keyboard-shortcuts.ts
 case '3': {
   e.preventDefault()
   commandContext.myNewAction()

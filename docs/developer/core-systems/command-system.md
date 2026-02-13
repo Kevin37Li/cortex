@@ -199,17 +199,16 @@ export function initializeCommandSystem(): void {
 ### Step 4: Extend Context (if needed)
 
 ```typescript
-// src/hooks/use-command-context.ts
+// src/hooks/use-command-context.ts — module-level singleton pattern
+const commandContext: CommandContext = {
+  // ... existing actions
+  myNewAction: () => {
+    /* implementation using getState() */
+  },
+}
+
 export function useCommandContext(): CommandContext {
-  return useMemo(
-    () => ({
-      // ... existing actions
-      myNewAction: () => {
-        /* implementation */
-      },
-    }),
-    []
-  )
+  return commandContext
 }
 
 // Update CommandContext type in types.ts
@@ -221,8 +220,8 @@ Organize commands into logical groups (used in command palette headings):
 
 - **navigation**: Route navigation, sidebar toggles, view switching
 - **settings**: Preferences, configuration
-- **notifications**: Notification actions
-- **window**: Window management (minimize, close, etc.)
+- **notes**: Note creation and management
+- **debug**: Test/diagnostic commands (e.g., notification tests)
 
 Group labels are translated via `commands.group.{groupName}` keys.
 

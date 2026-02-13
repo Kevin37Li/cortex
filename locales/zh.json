@@ -28,6 +28,21 @@
   "items.detail.title": "项目详情",
   "items.detail.viewing": "正在查看项目 {{id}}",
 
+  "notes.create.title": "新建笔记",
+  "notes.create.openButton": "新建笔记",
+  "notes.create.titleLabel": "标题",
+  "notes.create.titlePlaceholder": "笔记标题",
+  "notes.create.contentLabel": "内容",
+  "notes.create.description": "快速创建包含标题和内容的新笔记。",
+  "notes.create.contentPlaceholder": "写下你的笔记...（支持 Markdown）",
+  "notes.create.submit": "保存笔记",
+  "notes.create.cancel": "取消",
+  "notes.create.saving": "保存中...",
+  "notes.create.success": "笔记已保存",
+  "notes.create.error": "保存笔记失败",
+  "notes.create.titleRequired": "标题不能为空",
+  "notes.create.contentRequired": "内容不能为空",
+
   "conversations.emptyState": "暂无对话。开始新的对话。",
   "conversations.detail.title": "对话",
   "conversations.detail.viewing": "正在查看对话 {{id}}",
@@ -92,6 +107,7 @@
   "commands.group.window": "窗口",
   "commands.group.notification": "通知",
   "commands.group.debug": "调试",
+  "commands.group.notes": "笔记",
   "commands.group.other": "其他",
 
   "commands.showLeftSidebar.label": "显示左侧边栏",
@@ -104,6 +120,8 @@
   "commands.hideRightSidebar.description": "隐藏右侧边栏",
   "commands.openPreferences.label": "打开偏好设置",
   "commands.openPreferences.description": "打开应用程序偏好设置",
+  "commands.createNote.label": "新建笔记",
+  "commands.createNote.description": "打开快速笔记创建对话框",
 
   "commands.windowClose.label": "关闭窗口",
   "commands.windowClose.description": "关闭当前窗口",
