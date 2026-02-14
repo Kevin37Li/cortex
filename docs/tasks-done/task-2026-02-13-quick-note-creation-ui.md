@@ -293,26 +293,26 @@ _Tracked: 2026-02-13_
 
 ### Files Changed
 
-| File | Change | Description |
-| --- | --- | --- |
-| `src/components/items/QuickNoteDialog.tsx` | Created | Dialog component with TanStack Form, validation, success/error handling |
-| `src/components/items/QuickNoteDialog.test.tsx` | Created | 5 tests: submit, validation, error, loading/spinner, form reset |
-| `src/lib/quick-note/open-quick-note.ts` | Created | Shared `openQuickNoteDialog()` helper using `getState()` pattern |
-| `src/lib/commands/note-commands.ts` | Created | `create-note` command with icon, shortcut, keywords |
-| `src/lib/commands/note-commands.test.ts` | Created | Tests for command metadata and execute behavior |
-| `src/hooks/use-keyboard-shortcuts.test.ts` | Created | Tests for Cmd+N, Ctrl+N, and guard conditions (palette/prefs open) |
-| `src/store/ui-store.ts` | Modified | Added `quickNoteDialogOpen` state, toggle, and setter |
-| `src/store/ui-store.test.ts` | Modified | Added toggle and set tests for quick note dialog state |
-| `src/hooks/use-keyboard-shortcuts.ts` | Modified | Added `Cmd/Ctrl+N` handler with modal guard |
-| `src/hooks/useMainWindowEventListeners.ts` | Modified | Updated JSDoc comment to list Cmd+N |
-| `src/lib/commands/index.ts` | Modified | Imported and registered `noteCommands` |
-| `src/components/layout/LeftSideBar.tsx` | Modified | Added "New Note" button wired to `openQuickNoteDialog()` |
-| `src/components/layout/MainWindowShell.tsx` | Modified | Mounted `<QuickNoteDialog />` as global overlay |
-| `src/components/items/index.ts` | Modified | Added `QuickNoteDialog` barrel export |
-| `locales/en.json` | Modified | Added 16 translation keys (notes.create.*, commands.createNote.*, commands.group.notes) |
-| `locales/zh.json` | Modified | Added corresponding Chinese translations |
-| `package.json` | Modified | Added `@tanstack/react-form@^1.28.1` dependency |
-| `docs/developer/core-systems/keyboard-shortcuts.md` | Modified | Added Cmd+N to shortcut table and architecture code example |
+| File                                                | Change   | Description                                                                             |
+| --------------------------------------------------- | -------- | --------------------------------------------------------------------------------------- |
+| `src/components/items/QuickNoteDialog.tsx`          | Created  | Dialog component with TanStack Form, validation, success/error handling                 |
+| `src/components/items/QuickNoteDialog.test.tsx`     | Created  | 5 tests: submit, validation, error, loading/spinner, form reset                         |
+| `src/lib/quick-note/open-quick-note.ts`             | Created  | Shared `openQuickNoteDialog()` helper using `getState()` pattern                        |
+| `src/lib/commands/note-commands.ts`                 | Created  | `create-note` command with icon, shortcut, keywords                                     |
+| `src/lib/commands/note-commands.test.ts`            | Created  | Tests for command metadata and execute behavior                                         |
+| `src/hooks/use-keyboard-shortcuts.test.ts`          | Created  | Tests for Cmd+N, Ctrl+N, and guard conditions (palette/prefs open)                      |
+| `src/store/ui-store.ts`                             | Modified | Added `quickNoteDialogOpen` state, toggle, and setter                                   |
+| `src/store/ui-store.test.ts`                        | Modified | Added toggle and set tests for quick note dialog state                                  |
+| `src/hooks/use-keyboard-shortcuts.ts`               | Modified | Added `Cmd/Ctrl+N` handler with modal guard                                             |
+| `src/hooks/useMainWindowEventListeners.ts`          | Modified | Updated JSDoc comment to list Cmd+N                                                     |
+| `src/lib/commands/index.ts`                         | Modified | Imported and registered `noteCommands`                                                  |
+| `src/components/layout/LeftSideBar.tsx`             | Modified | Added "New Note" button wired to `openQuickNoteDialog()`                                |
+| `src/components/layout/MainWindowShell.tsx`         | Modified | Mounted `<QuickNoteDialog />` as global overlay                                         |
+| `src/components/items/index.ts`                     | Modified | Added `QuickNoteDialog` barrel export                                                   |
+| `locales/en.json`                                   | Modified | Added 16 translation keys (notes.create._, commands.createNote._, commands.group.notes) |
+| `locales/zh.json`                                   | Modified | Added corresponding Chinese translations                                                |
+| `package.json`                                      | Modified | Added `@tanstack/react-form@^1.28.1` dependency                                         |
+| `docs/developer/core-systems/keyboard-shortcuts.md` | Modified | Added Cmd+N to shortcut table and architecture code example                             |
 
 ### Dependencies Added
 

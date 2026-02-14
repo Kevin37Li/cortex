@@ -6,6 +6,7 @@ import { windowCommands } from './window-commands'
 import { notificationCommands } from './notification-commands'
 import { routeCommands } from './route-commands'
 import { noteCommands } from './note-commands'
+import { importCommands } from './import-commands'
 import { registerCommands } from './registry'
 
 /**
@@ -18,6 +19,7 @@ export function initializeCommandSystem(): void {
   registerCommands(notificationCommands)
   registerCommands(routeCommands)
   registerCommands(noteCommands)
+  registerCommands(importCommands)
   // Future command groups will be registered here
 
   if (import.meta.env.DEV) {
@@ -31,4 +33,5 @@ export {
   notificationCommands,
   routeCommands,
   noteCommands,
+  importCommands,
 }

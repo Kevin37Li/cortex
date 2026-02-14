@@ -17,6 +17,7 @@ vi.mock('@/lib/logger', () => ({
 const { API_BASE } = await import('@/lib/api-config')
 const { logger } = await import('@/lib/logger')
 const {
+  createItem,
   itemQueryKeys,
   useCreateItem,
   useDeleteItem,
@@ -171,6 +172,29 @@ describe('item services', () => {
     expect(url).toBe(
       `${API_BASE}/api/items/${encodeURIComponent(specialItemId)}`
     )
+  })
+
+  it('creates an item via non-hook createItem service', async () => {
+    fetchMock.mockResolvedValue(
+      createMockResponse({ status: 201, body: sampleItem })
+    )
+
+    const createPayload: ItemCreate = {
+      title: 'Imported file',
+      content: '# Hello',
+      content_type: 'file',
+      source_url: null,
+      metadata: null,
+    }
+
+    const created = await createItem(createPayload)
+
+    expect(created).toEqual(sampleItem)
+    const [url, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${API_BASE}/api/items/`)
+    expect(requestInit.method).toBe('POST')
+    expect(requestInit.headers).toEqual({ 'Content-Type': 'application/json' })
+    expect(requestInit.body).toBe(JSON.stringify(createPayload))
   })
 
   it('invalidates list queries after create mutation', async () => {

@@ -58,6 +58,34 @@ vi.mock('@tauri-apps/plugin-process', () => ({
   exit: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: vi.fn().mockResolvedValue(null),
+}))
+
+vi.mock('@tauri-apps/plugin-fs', () => ({
+  readTextFile: vi.fn().mockResolvedValue(''),
+  stat: vi.fn().mockResolvedValue({
+    isFile: true,
+    isDirectory: false,
+    isSymlink: false,
+    size: 0,
+    mtime: null,
+    atime: null,
+    birthtime: null,
+    readonly: false,
+    fileAttributes: null,
+    dev: null,
+    ino: null,
+    mode: null,
+    nlink: null,
+    uid: null,
+    gid: null,
+    rdev: null,
+    blksize: null,
+    blocks: null,
+  }),
+}))
+
 // Mock Tauri window API
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: vi.fn().mockReturnValue({

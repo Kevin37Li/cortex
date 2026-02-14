@@ -17,7 +17,7 @@ Technical documentation for building and extending Cortex. These docs describe e
 | [Architecture Guide](./architecture/architecture-guide.md) | High-level overview, mental models, system architecture |
 | [Python Sidecar](./architecture/python-sidecar.md)         | Why Tauri + Python hybrid, IPC patterns                 |
 | [Rust Architecture](./architecture/rust-architecture.md)   | Rust module organization and patterns                   |
-| [State Management](./architecture/state-management.md)     | Four-layer state architecture, Zustand, TanStack Query   |
+| [State Management](./architecture/state-management.md)     | Four-layer state architecture, Zustand, TanStack Query  |
 | [Error Handling](./architecture/error-handling.md)         | Error propagation, user feedback, retry patterns        |
 
 ## AI & Machine Learning

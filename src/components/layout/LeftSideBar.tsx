@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { openQuickNoteDialog } from '@/lib/quick-note/open-quick-note'
+import { FileImportButton } from '@/components/items/FileImportButton'
 
 interface NavItem {
   path: '/items' | '/conversations'
@@ -39,7 +40,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
     <div
       className={cn('flex h-full flex-col border-e bg-background', className)}
     >
-      <div className="p-2">
+      <div className="space-y-2 p-2">
         <Button
           className="w-full justify-start gap-2"
           onClick={openQuickNoteDialog}
@@ -47,6 +48,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           <NotebookPen className="h-4 w-4 shrink-0" />
           <span>{t('notes.create.openButton')}</span>
         </Button>
+        <FileImportButton />
       </div>
 
       <nav className="flex flex-col gap-1 p-2">

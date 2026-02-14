@@ -75,16 +75,19 @@ export function useItem(id: string) {
   })
 }
 
+export function createItem(data: ItemCreate) {
+  return apiFetch<Item>('/api/items/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
 export function useCreateItem() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: ItemCreate) =>
-      apiFetch<Item>('/api/items/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }),
+    mutationFn: createItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: itemQueryKeys.lists() })
     },
