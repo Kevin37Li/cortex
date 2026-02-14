@@ -106,24 +106,24 @@ _Tracked: 2026-02-14_
 
 ### Files Changed
 
-| File                                        | Change   | Description                                                                                 |
-| ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `src/lib/file-import/import-file.ts`        | Created  | Added shared import workflow (dialog, size validation, text read, create item, notifications). |
-| `src/lib/file-import/import-file.test.ts`   | Created  | Added unit tests for cancellation, size validation, read failures, create failures, and title parsing. |
-| `src/lib/file-import/index.ts`              | Created  | Added public exports for file-import workflow helpers and types.                            |
-| `src/components/items/FileImportButton.tsx` | Created  | Added sidebar import button with combined loading state (`useState` + `useCreateItem().isPending`). |
+| File                                             | Change   | Description                                                                                               |
+| ------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------- |
+| `src/lib/file-import/import-file.ts`             | Created  | Added shared import workflow (dialog, size validation, text read, create item, notifications).            |
+| `src/lib/file-import/import-file.test.ts`        | Created  | Added unit tests for cancellation, size validation, read failures, create failures, and title parsing.    |
+| `src/lib/file-import/index.ts`                   | Created  | Added public exports for file-import workflow helpers and types.                                          |
+| `src/components/items/FileImportButton.tsx`      | Created  | Added sidebar import button with combined loading state (`useState` + `useCreateItem().isPending`).       |
 | `src/components/items/FileImportButton.test.tsx` | Created  | Added component tests for dialog options, cancellation behavior, success/error paths, and i18n rendering. |
-| `src/lib/commands/import-commands.ts`       | Created  | Added `import-file` command using shared import workflow and non-hook `createItem` service. |
-| `src/lib/commands/import-commands.test.ts`  | Created  | Added command metadata and execute-path tests for imported/cancelled/failed flows.         |
-| `src/services/items.ts`                     | Modified | Added reusable non-hook `createItem` API and wired `useCreateItem()` to reuse it.          |
-| `src/services/items.test.ts`                | Modified | Added coverage for new `createItem` service function request behavior.                      |
-| `src/components/layout/LeftSideBar.tsx`     | Modified | Added `FileImportButton` under quick note action.                                           |
-| `src/components/items/index.ts`             | Modified | Exported `FileImportButton`.                                                                |
-| `src/lib/commands/index.ts`                 | Modified | Registered and exported `importCommands`.                                                   |
-| `src/test/setup.ts`                         | Modified | Added test mocks for `@tauri-apps/plugin-dialog` and `@tauri-apps/plugin-fs`.              |
-| `locales/en.json`                           | Modified | Added file import and command palette translation keys (English).                           |
-| `locales/zh.json`                           | Modified | Added file import and command palette translation keys (Chinese).                           |
-| `docs/tasks-todo/task-15-file-import-dialog.md` | Modified | Updated task requirements during implementation and recorded completion details.             |
+| `src/lib/commands/import-commands.ts`            | Created  | Added `import-file` command using shared import workflow and non-hook `createItem` service.               |
+| `src/lib/commands/import-commands.test.ts`       | Created  | Added command metadata and execute-path tests for imported/cancelled/failed flows.                        |
+| `src/services/items.ts`                          | Modified | Added reusable non-hook `createItem` API and wired `useCreateItem()` to reuse it.                         |
+| `src/services/items.test.ts`                     | Modified | Added coverage for new `createItem` service function request behavior.                                    |
+| `src/components/layout/LeftSideBar.tsx`          | Modified | Added `FileImportButton` under quick note action.                                                         |
+| `src/components/items/index.ts`                  | Modified | Exported `FileImportButton`.                                                                              |
+| `src/lib/commands/index.ts`                      | Modified | Registered and exported `importCommands`.                                                                 |
+| `src/test/setup.ts`                              | Modified | Added test mocks for `@tauri-apps/plugin-dialog` and `@tauri-apps/plugin-fs`.                             |
+| `locales/en.json`                                | Modified | Added file import and command palette translation keys (English).                                         |
+| `locales/zh.json`                                | Modified | Added file import and command palette translation keys (Chinese).                                         |
+| `docs/tasks-todo/task-15-file-import-dialog.md`  | Modified | Updated task requirements during implementation and recorded completion details.                          |
 
 ### Dependencies Added
 
