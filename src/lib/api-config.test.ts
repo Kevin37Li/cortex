@@ -89,6 +89,26 @@ describe('apiFetch', () => {
     )
   })
 
+  it('throws ApiRequestError with status and code metadata for backend errors', async () => {
+    fetchMock.mockResolvedValue(
+      createMockResponse({
+        status: 404,
+        body: {
+          error: 'item_not_found',
+          message: 'Item not found: item-1',
+        },
+      })
+    )
+
+    await expect(apiFetch('/api/items/item-1')).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      message: 'Item not found: item-1',
+      status: 404,
+      code: 'item_not_found',
+      path: '/api/items/item-1',
+    })
+  })
+
   it('throws invalid response when success body json parsing fails', async () => {
     fetchMock.mockResolvedValue(
       createMockResponse({

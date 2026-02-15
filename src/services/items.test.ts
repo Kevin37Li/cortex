@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Item, ItemCreate, ItemUpdate } from './items'
+import type { Item, ItemCreate, ItemUpdate, RetryResponse } from './items'
 
 vi.mock('@/lib/logger', () => ({
   logger: {
@@ -23,6 +23,7 @@ const {
   useDeleteItem,
   useItem,
   useItems,
+  useRetryProcessing,
   useUpdateItem,
 } = await import('./items')
 
@@ -260,6 +261,81 @@ describe('item services', () => {
     })
     expect(invalidateSpy).toHaveBeenNthCalledWith(2, {
       queryKey: itemQueryKeys.detail(specialItemId),
+    })
+  })
+
+  it.each<RetryResponse['outcome']>([
+    'retried',
+    'already_queued',
+    'not_in_queue',
+  ])(
+    'returns %s outcome and invalidates list/detail queries for retry mutation',
+    async outcome => {
+      fetchMock.mockResolvedValue(
+        createMockResponse({
+          body: {
+            retried_count: outcome === 'retried' ? 1 : 0,
+            outcome,
+          } satisfies RetryResponse,
+        })
+      )
+
+      const queryClient = createTestQueryClient()
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+      const wrapper = createWrapper(queryClient)
+      const { result } = renderHook(() => useRetryProcessing(), { wrapper })
+
+      let response: RetryResponse | undefined
+      await act(async () => {
+        response = await result.current.mutateAsync(specialItemId)
+      })
+
+      const [url, requestInit] = fetchMock.mock.calls[0] as [
+        string,
+        RequestInit,
+      ]
+      expect(url).toBe(`${API_BASE}/api/processing/retry`)
+      expect(requestInit.method).toBe('POST')
+      expect(requestInit.headers).toEqual({
+        'Content-Type': 'application/json',
+      })
+      expect(requestInit.body).toBe(JSON.stringify({ item_id: specialItemId }))
+
+      expect(response?.outcome).toBe(outcome)
+      expect(invalidateSpy).toHaveBeenNthCalledWith(1, {
+        queryKey: itemQueryKeys.lists(),
+      })
+      expect(invalidateSpy).toHaveBeenNthCalledWith(2, {
+        queryKey: itemQueryKeys.detail(specialItemId),
+      })
+    }
+  )
+
+  it('logs retry mutation errors and rethrows', async () => {
+    fetchMock.mockResolvedValue(
+      createMockResponse({
+        status: 500,
+        body: { message: 'Retry failed' },
+      })
+    )
+
+    const queryClient = createTestQueryClient()
+    const wrapper = createWrapper(queryClient)
+    const { result } = renderHook(() => useRetryProcessing(), { wrapper })
+
+    await act(async () => {
+      await expect(result.current.mutateAsync(sampleItem.id)).rejects.toThrow(
+        'Retry failed'
+      )
+    })
+
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to retry item processing',
+        expect.objectContaining({
+          error: expect.any(Error),
+        })
+      )
     })
   })
 

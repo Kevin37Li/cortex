@@ -58,6 +58,10 @@ vi.mock('@/lib/tauri-bindings', () => ({
       .fn()
       .mockResolvedValue({ status: 'ok', data: 0 }),
   },
+  unwrapResult: vi.fn((result: { status: string; data?: unknown }) => {
+    if (result.status === 'ok') return result.data
+    throw result
+  }),
 }))
 ```
 

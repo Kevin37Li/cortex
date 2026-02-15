@@ -15,6 +15,8 @@ export type ItemUpdate = components['schemas']['ItemUpdate']
 export type ItemListResponse = components['schemas']['ItemListResponse']
 export type ContentType = components['schemas']['ContentType']
 export type ProcessingStatus = components['schemas']['ProcessingStatus']
+export type RetryRequest = components['schemas']['RetryRequest']
+export type RetryResponse = components['schemas']['RetryResponse']
 
 // Frontend-only types (not in the API schema)
 export interface ItemListParams {
@@ -136,6 +138,29 @@ export function useDeleteItem() {
     },
     onError: error => {
       logger.error('Failed to delete item', { error })
+    },
+  })
+}
+
+export function useRetryProcessing() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      const payload: RetryRequest = { item_id: itemId }
+
+      return apiFetch<RetryResponse>('/api/processing/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    },
+    onSuccess: (_response, itemId) => {
+      queryClient.invalidateQueries({ queryKey: itemQueryKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: itemQueryKeys.detail(itemId) })
+    },
+    onError: error => {
+      logger.error('Failed to retry item processing', { error })
     },
   })
 }

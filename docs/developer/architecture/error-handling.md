@@ -142,13 +142,20 @@ if (result.status === 'error') {
 Configure TanStack Query retry behavior based on error type:
 
 ```typescript
-// ✅ GOOD: Smart retry logic
+import { ApiRequestError } from '@/lib/api-config'
+
+// ✅ GOOD: Smart retry logic using structured error
 const { data } = useQuery({
   queryKey: ['data'],
   queryFn: loadData,
   retry: (failureCount, error) => {
     // Don't retry client errors (4xx)
-    if (error.message.includes('API error: 4')) return false
+    if (
+      error instanceof ApiRequestError &&
+      error.status >= 400 &&
+      error.status < 500
+    )
+      return false
     // Retry network/server errors up to 3 times
     return failureCount < 3
   },
@@ -450,29 +457,48 @@ Frontend service hooks use `apiFetch()` from `src/lib/api-config.ts` to call the
 ### Error Parsing Flow
 
 ```
-Python exception → FastAPI handler → JSON response → apiFetch() → Error thrown → TanStack Query
+Python exception → FastAPI handler → JSON response → apiFetch() → ApiRequestError thrown → TanStack Query
 ```
 
-`apiFetch()` handles three error response formats:
+### ApiRequestError
 
-1. **Structured errors** (`{ error, message }`): Extracts `message` string directly
+`apiFetch()` throws `ApiRequestError` (defined in `src/lib/api-config.ts`) for all non-ok HTTP responses. This structured error extends `Error` with metadata from the response:
+
+| Field     | Type             | Description                                              |
+| --------- | ---------------- | -------------------------------------------------------- |
+| `message` | `string`         | Human-readable error (extracted from response body)      |
+| `status`  | `number`         | HTTP status code (e.g., 404, 422, 500)                   |
+| `path`    | `string`         | Request path (e.g., `/api/items/abc-123`)                |
+| `code`    | `string \| null` | Backend error code (e.g., `"item_not_found"`) if present |
+
+The error message is extracted from three response formats:
+
+1. **Structured errors** (`{ error, message }`): Uses `message` string, sets `code` from `error`
 2. **FastAPI validation errors** (`{ detail: [{ msg, loc, type }] }`): Joins all `msg` values with `; `
 3. **Non-JSON errors**: Falls back to `"API request failed ({status})"`
 
+### Using ApiRequestError in Components
+
+Components can use `ApiRequestError` for fine-grained error handling (e.g., distinguishing 404 from generic errors):
+
 ```typescript
-// src/lib/api-config.ts — error parsing logic
-if (typeof errorBody?.message === 'string') {
-  return errorBody.message // "Item not found: abc-123"
+import { ApiRequestError } from '@/lib/api-config'
+
+// ✅ GOOD: Check error type and status for specific UI
+if (
+  error instanceof ApiRequestError &&
+  error.status === 404 &&
+  error.code === 'item_not_found'
+) {
+  // Show "not found" UI instead of generic error
 }
-if (Array.isArray(errorBody?.detail)) {
-  return errorBody.detail.map(d => d.msg).join('; ') // FastAPI 422
-}
-return `API request failed (${status})` // Fallback
 ```
+
+See `src/components/items/ItemDetail.tsx` for a working example.
 
 ### Error Propagation in Service Hooks
 
-Service hooks log errors via `@/lib/logger` and let them propagate to TanStack Query. No toast notifications in service hooks — UI components handle user-facing error display.
+Service hooks log errors via `@/lib/logger` and let them propagate to TanStack Query. No toast notifications in service hooks -- UI components handle user-facing error display.
 
 ```typescript
 // src/services/items.ts
@@ -484,7 +510,7 @@ onError: error => {
 
 ### Network Errors
 
-When `fetch()` itself rejects (server unreachable), `apiFetch()` throws `"Network request failed"` with logging. This is distinct from HTTP error responses.
+When `fetch()` itself rejects (server unreachable), `apiFetch()` throws a plain `Error` with message `"Network request failed"` (not `ApiRequestError`). This is distinct from HTTP error responses.
 
 ## Quick Reference
 

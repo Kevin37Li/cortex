@@ -16,6 +16,27 @@ interface ApiFetchNoBodyOptions extends RequestInit {
   expect: 'none'
 }
 
+interface ApiRequestErrorInit {
+  message: string
+  status: number
+  path: string
+  code?: string | null
+}
+
+export class ApiRequestError extends Error {
+  readonly status: number
+  readonly path: string
+  readonly code: string | null
+
+  constructor({ message, status, path, code }: ApiRequestErrorInit) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
+    this.path = path
+    this.code = code ?? null
+  }
+}
+
 async function parseErrorBody(
   response: Response
 ): Promise<ApiResponseBody | null> {
@@ -66,6 +87,8 @@ export async function apiFetch<T>(
   if (!response.ok) {
     const errorBody = await parseErrorBody(response)
     const message = extractErrorMessage(errorBody, response.status)
+    const errorCode =
+      typeof errorBody?.error === 'string' ? errorBody.error : null
 
     logger.error('API request failed', {
       path,
@@ -73,7 +96,12 @@ export async function apiFetch<T>(
       error: errorBody?.error,
       message,
     })
-    throw new Error(message)
+    throw new ApiRequestError({
+      message,
+      status: response.status,
+      path,
+      code: errorCode,
+    })
   }
 
   if (expect === 'none' || response.status === 204) {

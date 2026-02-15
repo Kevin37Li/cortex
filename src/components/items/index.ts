@@ -1,5 +1,7 @@
 export { FileImportButton } from './FileImportButton'
 export { ItemCard } from './ItemCard'
+export { ItemDetail } from './ItemDetail'
 export { ItemList } from './ItemList'
+export { ItemMetadataSection } from './ItemMetadataSection'
 export { ProcessingStatusBadge } from './ProcessingStatusBadge'
 export { QuickNoteDialog } from './QuickNoteDialog'
