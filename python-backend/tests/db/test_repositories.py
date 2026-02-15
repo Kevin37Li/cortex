@@ -48,13 +48,20 @@ class TestItemRepository:
                 content="Test content",
                 content_type="webpage",
                 source_url="https://example.com",
-                metadata={"author": "Test Author", "tags": ["python", "testing"]},
+                metadata={
+                    "summary": "Test summary",
+                    "concepts": ["python", "testing"],
+                    "entities": ["Cortex"],
+                },
             ),
         )
         await db_connection.commit()
 
         assert item.source_url == "https://example.com"
-        assert item.metadata == {"author": "Test Author", "tags": ["python", "testing"]}
+        assert item.metadata is not None
+        assert item.metadata.summary == "Test summary"
+        assert item.metadata.concepts == ["python", "testing"]
+        assert item.metadata.entities == ["Cortex"]
 
     async def test_get_item(self, db_connection: aiosqlite.Connection):
         """Test getting an item by ID."""

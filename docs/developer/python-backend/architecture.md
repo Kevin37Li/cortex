@@ -604,8 +604,9 @@ Repositories provide type-safe database access using Pydantic models. **Reposito
 
 ```python
 # src/db/models.py
+from datetime import datetime
 from enum import StrEnum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ContentType(StrEnum):
     WEBPAGE = "webpage"
@@ -618,20 +619,35 @@ class ProcessingStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+class ProcessingStep(StrEnum):
+    PARSING = "parsing"
+    VALIDATING = "validating"
+    STORING = "storing"
+    FAILED = "failed"
+
+class ItemMetadata(BaseModel):
+    summary: str | None = None
+    concepts: list[str] = Field(default_factory=list)
+    entities: list[str] = Field(default_factory=list)
+    processing_error: str | None = None
+    error_step: ProcessingStep | None = None
+
+    model_config = {"extra": "forbid"}
+
 class ItemCreate(BaseModel):
     """Input model for creating an item."""
     title: str
     content: str
     content_type: ContentType
     source_url: str | None = None
-    metadata: dict | None = None
+    metadata: ItemMetadata | None = None
 
 class ItemUpdate(BaseModel):
     """Input model for updating. All fields optional."""
     title: str | None = None
     content: str | None = None
     source_url: str | None = None
-    metadata: dict | None = None
+    metadata: ItemMetadata | None = None
 
 class Item(BaseModel):
     """Output model representing a stored item."""
@@ -643,7 +659,7 @@ class Item(BaseModel):
     created_at: datetime
     updated_at: datetime
     processing_status: ProcessingStatus
-    metadata: dict | None
+    metadata: ItemMetadata | None
 
     model_config = {"from_attributes": True}
 ```
@@ -779,7 +795,12 @@ The caller controls when to commit, enabling atomic multi-operation transactions
 async with db_connection() as db:
     chunks = await chunk_repo.create_many(db, chunk_creates)
     await embedding_service.embed_chunks(db, chunks)
-    await item_repo.update(db, item_id, ItemUpdate(metadata=metadata))
+    metadata = {"summary": summary, "concepts": concepts, "entities": entities}
+    await item_repo.update(
+        db,
+        item_id,
+        ItemUpdate(metadata=normalize_item_metadata(metadata)),
+    )
     await db.commit()  # All-or-nothing
 
 # ❌ BAD: Auto-commit in repository leaves orphaned data on failure
@@ -798,7 +819,11 @@ def _row_to_item(self, row: aiosqlite.Row) -> Item:
     # Handle JSON fields
     metadata = row["metadata"]
     if metadata is not None and isinstance(metadata, str):
-        metadata = json.loads(metadata)
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            metadata = None
+    metadata = normalize_item_metadata(metadata)
 
     # Handle datetime conversion
     return Item(
@@ -976,6 +1001,18 @@ Run `bun run openapi:sync` after changing:
 - Pydantic models in `src/db/models.py` (Item, ItemCreate, ItemUpdate, etc.)
 - Route response models or status codes
 - Any FastAPI schema that affects the OpenAPI spec
+
+### Contract-first Metadata
+
+Avoid untyped `dict` payloads for API-facing fields when frontend rendering depends on
+specific keys. Define nested Pydantic models (for example, `ItemMetadata`) so:
+
+- OpenAPI includes explicit field names and enums
+- `api.gen.ts` gets compile-time-safe frontend types
+- backend key refactors surface as TypeScript compile errors instead of silent runtime breaks
+
+For early-stage strictness, prefer `model_config = {"extra": "forbid"}` on
+API-facing metadata models so unexpected keys fail validation instead of being silently accepted.
 
 ### Generated Artifacts
 

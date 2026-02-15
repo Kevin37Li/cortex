@@ -9,7 +9,13 @@ from uuid import uuid4
 import aiosqlite
 
 from ...exceptions import DatabaseError, ItemNotFoundError
-from ..models import Item, ItemCreate, ItemUpdate
+from ..models import (
+    Item,
+    ItemCreate,
+    ItemMetadata,
+    ItemUpdate,
+    normalize_item_metadata,
+)
 from .base import BaseRepository
 
 
@@ -28,11 +34,23 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
     def table_name(self) -> str:
         return "items"
 
+    @staticmethod
+    def _serialize_metadata(metadata: ItemMetadata | None) -> str | None:
+        if metadata is None:
+            return None
+
+        return json.dumps(metadata.model_dump(exclude_none=True))
+
     def _row_to_item(self, row: aiosqlite.Row) -> Item:
         """Convert a database row to an Item model."""
         metadata = row["metadata"]
         if metadata is not None and isinstance(metadata, str):
-            metadata = json.loads(metadata)
+            try:
+                metadata = json.loads(metadata)
+            except json.JSONDecodeError:
+                metadata = None
+
+        metadata = normalize_item_metadata(metadata)
 
         return Item(
             id=row["id"],
@@ -61,7 +79,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         """
         item_id = str(uuid4())
         now = datetime.now(UTC).isoformat()
-        metadata_json = json.dumps(data.metadata) if data.metadata else None
+        metadata_json = self._serialize_metadata(data.metadata)
 
         await db.execute(
             """
@@ -170,7 +188,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
 
         if data.metadata is not None:
             updates.append("metadata = ?")
-            values.append(json.dumps(data.metadata))
+            values.append(self._serialize_metadata(data.metadata))
 
         # Always update updated_at
         now = datetime.now(UTC).isoformat()

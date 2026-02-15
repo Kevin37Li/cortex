@@ -1,15 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Item } from '@/services/items'
-import {
-  getMetadataRecord,
-  getMetadataString,
-  getMetadataStringList,
-} from './ItemMetadataSection.utils'
+import type { ParsedItemMetadata } from './ItemMetadataSection.utils'
 
 interface ItemMetadataSectionProps {
-  metadata: Item['metadata']
+  metadata: ParsedItemMetadata | null
   className?: string
 }
 
@@ -18,14 +13,11 @@ export function ItemMetadataSection({
   className,
 }: ItemMetadataSectionProps) {
   const { t } = useTranslation()
-  const parsedMetadata = getMetadataRecord(metadata)
-  if (!parsedMetadata) {
+  if (!metadata) {
     return null
   }
 
-  const summary = getMetadataString(parsedMetadata, 'summary')
-  const concepts = getMetadataStringList(parsedMetadata, 'concepts')
-  const entities = getMetadataStringList(parsedMetadata, 'entities')
+  const { summary, concepts, entities } = metadata
   const hasContent =
     summary !== null || concepts.length > 0 || entities.length > 0
 

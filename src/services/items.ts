@@ -17,6 +17,7 @@ export type ContentType = components['schemas']['ContentType']
 export type ProcessingStatus = components['schemas']['ProcessingStatus']
 export type RetryRequest = components['schemas']['RetryRequest']
 export type RetryResponse = components['schemas']['RetryResponse']
+export type ItemMetadata = components['schemas']['ItemMetadata']
 
 // Frontend-only types (not in the API schema)
 export interface ItemListParams {

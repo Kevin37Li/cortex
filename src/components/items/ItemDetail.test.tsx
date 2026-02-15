@@ -187,7 +187,7 @@ describe('ItemDetail', () => {
       processing_status: 'failed',
       metadata: {
         processing_error: 'Embedding failed due to timeout',
-        error_step: 'embedding',
+        error_step: 'validating',
       },
     }
 
@@ -203,7 +203,7 @@ describe('ItemDetail', () => {
     })
 
     expect(screen.getByText('Processing failed')).toBeInTheDocument()
-    expect(screen.getByText(/Failed step.*embedding/i)).toBeInTheDocument()
+    expect(screen.getByText(/Failed step.*validating/i)).toBeInTheDocument()
     expect(
       screen.getByText('Embedding failed due to timeout')
     ).toBeInTheDocument()

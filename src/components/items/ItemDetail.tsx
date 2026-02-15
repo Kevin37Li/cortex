@@ -18,10 +18,7 @@ import { ApiRequestError } from '@/lib/api-config'
 import { logger } from '@/lib/logger'
 import { cn } from '@/lib/utils'
 import { useItem, useRetryProcessing, type ContentType } from '@/services/items'
-import {
-  getMetadataRecord,
-  getMetadataString,
-} from './ItemMetadataSection.utils'
+import { parseItemMetadata } from './ItemMetadataSection.utils'
 import { ItemMetadataSection } from './ItemMetadataSection'
 import { ProcessingStatusBadge } from './ProcessingStatusBadge'
 
@@ -138,11 +135,9 @@ export function ItemDetail({ itemId, className }: ItemDetailProps) {
   const contentTypeLabelKey =
     contentTypeLabelKeys[item.content_type] ?? contentTypeLabelKeys.file
   const createdAt = formatAbsoluteCreatedAt(item.created_at, i18n.language)
-  const metadata = getMetadataRecord(item.metadata)
-  const processingError = metadata
-    ? getMetadataString(metadata, 'processing_error')
-    : null
-  const errorStep = metadata ? getMetadataString(metadata, 'error_step') : null
+  const metadata = parseItemMetadata(item.metadata)
+  const processingError = metadata?.processingError ?? null
+  const errorStep = metadata?.errorStep ?? null
 
   const handleRetryProcessing = async () => {
     try {
@@ -259,7 +254,7 @@ export function ItemDetail({ itemId, className }: ItemDetailProps) {
           </section>
 
           {item.processing_status === 'completed' ? (
-            <ItemMetadataSection metadata={item.metadata} />
+            <ItemMetadataSection metadata={metadata} />
           ) : null}
         </article>
       </div>

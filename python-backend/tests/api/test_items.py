@@ -38,14 +38,20 @@ class TestCreateItem:
                 "content": "Test content",
                 "content_type": "webpage",
                 "source_url": "https://example.com",
-                "metadata": {"key": "value"},
+                "metadata": {
+                    "summary": "Test summary",
+                    "concepts": ["python", "testing"],
+                    "entities": ["Cortex"],
+                },
             },
         )
 
         assert response.status_code == 201
         data = response.json()
         assert data["source_url"] == "https://example.com"
-        assert data["metadata"] == {"key": "value"}
+        assert data["metadata"]["summary"] == "Test summary"
+        assert data["metadata"]["concepts"] == ["python", "testing"]
+        assert data["metadata"]["entities"] == ["Cortex"]
         app.state.processing_queue.enqueue.assert_awaited_once_with(data["id"])
 
     async def test_create_item_validation_error(self, client: AsyncClient):
@@ -55,6 +61,23 @@ class TestCreateItem:
             json={
                 "title": "Test Item",
                 # missing content and content_type
+            },
+        )
+
+        assert response.status_code == 422
+        app.state.processing_queue.enqueue.assert_not_awaited()
+
+    async def test_create_item_rejects_unknown_metadata_fields(
+        self, client: AsyncClient
+    ):
+        """Test strict metadata schema rejects unknown fields."""
+        response = await client.post(
+            "/api/items/",
+            json={
+                "title": "Test Item",
+                "content": "Test content",
+                "content_type": "note",
+                "metadata": {"unexpected_key": "value"},
             },
         )
 

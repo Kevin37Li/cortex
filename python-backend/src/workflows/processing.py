@@ -26,6 +26,7 @@ from src.db.models import (
     ProcessingStatus,
     ProcessingStep,
     ProcessingUpdate,
+    normalize_item_metadata,
 )
 from src.db.repositories import chunk_repo, item_repo
 from src.providers import AIProvider, OllamaProvider
@@ -380,7 +381,11 @@ async def persist_node(state: ProcessingState) -> dict:
 
             # Merge extracted metadata into item's existing metadata
             item = await item_repo.get(db, item_id)
-            existing_metadata = item.metadata or {} if item else {}
+            existing_metadata = (
+                item.metadata.model_dump(exclude_none=True)
+                if item and item.metadata
+                else {}
+            )
 
             # Add extracted metadata fields
             existing_metadata["summary"] = metadata.summary
@@ -390,7 +395,7 @@ async def persist_node(state: ProcessingState) -> dict:
             # Update title if we extracted a better one
             update_data = ItemUpdate(
                 title=state.get("title"),
-                metadata=existing_metadata,
+                metadata=normalize_item_metadata(existing_metadata),
             )
             await item_repo.update(db, item_id, update_data)
 
@@ -455,11 +460,19 @@ async def handle_error_node(state: ProcessingState) -> dict:
 
             # Merge error info into item metadata (preserve existing)
             item = await item_repo.get(db, item_id)
-            existing_metadata = item.metadata or {} if item else {}
+            existing_metadata = (
+                item.metadata.model_dump(exclude_none=True)
+                if item and item.metadata
+                else {}
+            )
             existing_metadata["processing_error"] = error
             existing_metadata["error_step"] = error_step
 
-            await item_repo.update(db, item_id, ItemUpdate(metadata=existing_metadata))
+            await item_repo.update(
+                db,
+                item_id,
+                ItemUpdate(metadata=normalize_item_metadata(existing_metadata)),
+            )
             await db.commit()
 
     except Exception as e:

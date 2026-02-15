@@ -71,6 +71,34 @@ class ProcessingStep(StrEnum):
     FAILED = "failed"
 
 
+class ItemMetadata(BaseModel):
+    """Structured item metadata shared between backend and frontend contracts."""
+
+    summary: str | None = None
+    concepts: list[str] = Field(default_factory=list)
+    entities: list[str] = Field(default_factory=list)
+    processing_error: str | None = None
+    error_step: ProcessingStep | None = None
+
+    # Enforce a strict metadata contract for early-stage development.
+    model_config = {"extra": "forbid"}
+
+
+def normalize_item_metadata(metadata: object) -> ItemMetadata | None:
+    """Normalize metadata payloads from DB/API into ItemMetadata."""
+
+    if metadata is None:
+        return None
+
+    if isinstance(metadata, ItemMetadata):
+        return metadata
+
+    if not isinstance(metadata, dict):
+        return None
+
+    return ItemMetadata.model_validate(metadata)
+
+
 # Item models
 
 
@@ -81,7 +109,7 @@ class ItemCreate(BaseModel):
     content: str
     content_type: ContentType
     source_url: str | None = None
-    metadata: dict | None = None
+    metadata: ItemMetadata | None = None
 
 
 class ItemUpdate(BaseModel):
@@ -90,7 +118,7 @@ class ItemUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
     source_url: str | None = None
-    metadata: dict | None = None
+    metadata: ItemMetadata | None = None
 
 
 class Item(BaseModel):
@@ -104,7 +132,7 @@ class Item(BaseModel):
     created_at: datetime
     updated_at: datetime
     processing_status: ProcessingStatus
-    metadata: dict | None
+    metadata: ItemMetadata | None
 
     model_config = {"from_attributes": True}
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import i18n from '@/i18n/config'
 import { ItemMetadataSection } from './ItemMetadataSection'
+import { parseItemMetadata } from './ItemMetadataSection.utils'
 
 describe('ItemMetadataSection', () => {
   beforeEach(async () => {
@@ -11,11 +12,11 @@ describe('ItemMetadataSection', () => {
   it('renders summary, concepts, and entities from metadata', async () => {
     render(
       <ItemMetadataSection
-        metadata={{
+        metadata={parseItemMetadata({
           summary: 'A compact summary',
           concepts: ['Knowledge Graph', 'Embeddings'],
           entities: ['Cortex', 'SQLite'],
-        }}
+        })}
       />
     )
 
@@ -38,10 +39,10 @@ describe('ItemMetadataSection', () => {
   it('renders nothing when extraction metadata is missing', async () => {
     render(
       <ItemMetadataSection
-        metadata={{
+        metadata={parseItemMetadata({
           processing_error: 'Parser failed',
-          error_step: 'extract',
-        }}
+          error_step: 'parsing',
+        })}
       />
     )
 

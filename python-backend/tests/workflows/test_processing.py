@@ -77,8 +77,8 @@ class TestProcessItem:
         assert item is not None
         assert item.processing_status == ProcessingStatus.COMPLETED
         assert item.metadata is not None
-        assert item.metadata["summary"] == "Done"
-        assert item.metadata["concepts"] == ["ai"]
+        assert item.metadata.summary == "Done"
+        assert item.metadata.concepts == ["ai"]
         assert len(chunks) >= 1
 
     async def test_process_item_retries_validation_then_succeeds(
@@ -158,8 +158,9 @@ class TestProcessItem:
         assert item is not None
         assert item.processing_status == ProcessingStatus.FAILED
         assert item.metadata is not None
-        assert "Validation failed after 3 retries" in item.metadata["processing_error"]
-        assert item.metadata["error_step"] == ProcessingStep.VALIDATING
+        assert item.metadata.processing_error is not None
+        assert "Validation failed after 3 retries" in item.metadata.processing_error
+        assert item.metadata.error_step == ProcessingStep.VALIDATING
 
     async def test_process_item_missing_item_routes_to_error_handling(
         self, workflow_db

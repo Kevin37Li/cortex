@@ -395,17 +395,18 @@ class ProcessingState(TypedDict, total=False):
     item_id: str
     # ... other fields
     error: str | None
-    error_step: str | None
+    error_step: ProcessingStep | None
     retry_count: int
 
 @log_node_execution("parse")
 async def parse_node(state: ProcessingState) -> dict:
+    current_step = ProcessingStep.PARSING
     try:
         parser = ContentParser()
         result = parser.parse(state["raw_content"], state["content_type"])
         return {"parsed_text": result.text}
     except Exception as e:
-        return {"error": str(e), "error_step": "parse"}
+        return {"error": str(e), "error_step": current_step}
 ```
 
 Use a `route_or_error()` factory for conditional edges:
@@ -488,20 +489,37 @@ Workflow nodes manage their own database connections:
 
 ```python
 from src.db.database import db_connection
+from src.db.models import ItemUpdate, ProcessingStep, normalize_item_metadata
 from src.db.repositories import item_repo
 
 @log_node_execution("persist")
 async def persist_node(state: ProcessingState) -> dict:
+    current_step = ProcessingStep.STORING
     try:
         async with db_connection() as db:
             # Multiple operations, single atomic commit
             chunks = await chunk_repo.create_many(db, chunk_creates)
             await embedding_service.embed_chunks(db, chunks)
-            await item_repo.update(db, item_id, ItemUpdate(metadata=metadata))
+
+            item = await item_repo.get(db, item_id)
+            existing_metadata = (
+                item.metadata.model_dump(exclude_none=True)
+                if item and item.metadata
+                else {}
+            )
+            existing_metadata["summary"] = metadata.summary
+            existing_metadata["concepts"] = metadata.concepts
+            existing_metadata["entities"] = metadata.entities
+
+            await item_repo.update(
+                db,
+                item_id,
+                ItemUpdate(metadata=normalize_item_metadata(existing_metadata)),
+            )
             await db.commit()
         return {"chunks": chunks, "embeddings_stored": True}
     except Exception as e:
-        return {"error": str(e), "error_step": "persist"}
+        return {"error": str(e), "error_step": current_step}
 ```
 
 ## Related Documentation
