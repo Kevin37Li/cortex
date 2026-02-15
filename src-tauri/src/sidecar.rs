@@ -54,14 +54,33 @@ pub fn should_skip_sidecar() -> bool {
         .unwrap_or(false)
 }
 
+/// Resolves the Python backend working directory as `parent(cwd)/python-backend`.
+fn resolve_python_backend_dir() -> Result<std::path::PathBuf, String> {
+    let current_dir =
+        std::env::current_dir().map_err(|e| format!("Failed to resolve working directory: {e}"))?;
+    let parent = current_dir.parent().ok_or_else(|| {
+        format!(
+            "Failed to resolve parent directory from working directory: {}",
+            current_dir.display()
+        )
+    })?;
+    let working_dir = parent.join("python-backend");
+    if working_dir.is_dir() {
+        return Ok(working_dir);
+    }
+
+    Err(format!(
+        "Failed to locate python-backend directory at: {}",
+        working_dir.display()
+    ))
+}
+
 /// Spawns the Python backend as a child process.
 ///
 /// Runs `uv run python -m src.main` from the `python-backend/` working directory.
 /// Returns the child process handle on success.
 fn spawn_python_process() -> Result<tokio::process::Child, String> {
-    let working_dir = std::env::current_dir()
-        .map(|d| d.join("python-backend"))
-        .map_err(|e| format!("Failed to resolve working directory: {e}"))?;
+    let working_dir = resolve_python_backend_dir()?;
 
     log::info!("Spawning Python sidecar from {}", working_dir.display());
 
