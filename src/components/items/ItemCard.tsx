@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/item'
 import { Badge } from '@/components/ui/badge'
 import type { ContentType, Item } from '@/services/items'
+import { useProcessingStore } from '@/store/processing-store'
 import { ProcessingStatusBadge } from './ProcessingStatusBadge'
 
 const contentTypeConfig: Record<
@@ -80,12 +81,19 @@ interface ItemCardProps {
 
 export function ItemCard({ item, onRetryProcessing }: ItemCardProps) {
   const { t, i18n } = useTranslation()
+  const processingUpdate = useProcessingStore(
+    state => state.processingByItemId[item.id]
+  )
   const { icon: ContentTypeIcon, labelKey } =
     contentTypeConfig[item.content_type] ?? contentTypeConfig.file
   const relativeCreatedAt = formatRelativeCreatedAt(
     item.created_at,
     i18n.language
   )
+  const liveStatus = processingUpdate?.status ?? item.processing_status
+  const stepLabel = processingUpdate
+    ? t(`items.processing.step.${processingUpdate.step}`)
+    : undefined
   const retryHandler = onRetryProcessing
     ? () => onRetryProcessing(item)
     : undefined
@@ -115,7 +123,8 @@ export function ItemCard({ item, onRetryProcessing }: ItemCardProps) {
 
       <ItemActions className="pe-3">
         <ProcessingStatusBadge
-          status={item.processing_status}
+          status={liveStatus}
+          stepLabel={stepLabel}
           onRetry={retryHandler}
         />
       </ItemActions>

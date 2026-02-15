@@ -132,6 +132,24 @@ This preserves type exports (`Item`, `ContentType`, etc.) while mocking the hook
 
 ### Testing Zustand Stores
 
+Stores can be tested directly via `getState()` without rendering -- this is faster and clearer when the store has no rendering dependencies:
+
+```typescript
+import { useProcessingStore } from '@/store/processing-store'
+
+beforeEach(() => useProcessingStore.getState().reset())
+
+test('setUpdate adds entry', () => {
+  useProcessingStore.getState().setUpdate(mockUpdate)
+  const state = useProcessingStore.getState()
+  expect(state.processingByItemId['item-1']).toEqual(mockUpdate)
+})
+```
+
+See `src/store/processing-store.test.ts` for a full example.
+
+Alternatively, use `renderHook` when you need to test reactive behavior or selectors:
+
 ```typescript
 import { renderHook, act } from '@testing-library/react'
 import { useUIStore } from '@/store/ui-store'

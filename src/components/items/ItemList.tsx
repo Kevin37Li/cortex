@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertCircle, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { keepPreviousData } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Empty,
@@ -24,7 +25,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useItems, type Item } from '@/services/items'
+import { useItems, useRetryProcessing, type Item } from '@/services/items'
 import { ItemCard } from './ItemCard'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -65,15 +66,15 @@ function getPageNumbers(
 interface ItemListProps {
   className?: string
   pageSize?: number
-  onRetryProcessing?: (item: Item) => void
 }
 
 export function ItemList({
   className,
   pageSize = DEFAULT_PAGE_SIZE,
-  onRetryProcessing,
 }: ItemListProps) {
   const { t } = useTranslation()
+  const retryProcessingMutation = useRetryProcessing()
+  const retryingItemIdsRef = useRef(new Set<string>())
   const resolvedPageSize = normalizePageSize(pageSize)
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -166,6 +167,32 @@ export function ItemList({
 
   const pageNumbers = getPageNumbers(currentPage, totalPages)
 
+  const handleRetryProcessing = (item: Item) => {
+    if (retryingItemIdsRef.current.has(item.id)) {
+      return
+    }
+
+    retryingItemIdsRef.current.add(item.id)
+
+    void retryProcessingMutation
+      .mutateAsync(item.id)
+      .then(response => {
+        if (response.outcome === 'retried') {
+          toast.success(t('items.detail.retrySucceeded'))
+        } else if (response.outcome === 'already_queued') {
+          toast.info(t('items.detail.retryQueued'))
+        } else {
+          toast.warning(t('items.detail.retryNotInQueue'))
+        }
+      })
+      .catch(() => {
+        toast.error(t('toast.error.generic'))
+      })
+      .finally(() => {
+        retryingItemIdsRef.current.delete(item.id)
+      })
+  }
+
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
       <ScrollArea className="flex-1">
@@ -174,7 +201,7 @@ export function ItemList({
             <ItemCard
               key={item.id}
               item={item}
-              onRetryProcessing={onRetryProcessing}
+              onRetryProcessing={handleRetryProcessing}
             />
           ))}
         </ItemGroup>

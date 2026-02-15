@@ -105,11 +105,14 @@ Frontend code uses `apiFetch()` from `src/lib/api-config.ts` rather than raw `fe
 
 ### Streaming (Chat, Processing Progress)
 
-WebSocket for real-time updates:
+WebSocket for real-time updates. Derive URLs from `API_BASE` (never hardcode):
 
 ```typescript
-// Chat streaming
-const ws = new WebSocket(`ws://localhost:8742/api/ws/chat/${conversationId}`)
+import { API_BASE } from '@/lib/api-config'
+
+const url = new URL(`/api/ws/chat/${conversationId}`, API_BASE)
+url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+const ws = new WebSocket(url.toString())
 
 ws.onmessage = event => {
   const data = JSON.parse(event.data)
@@ -120,6 +123,8 @@ ws.onmessage = event => {
 
 ws.send(JSON.stringify({ message: userQuery }))
 ```
+
+See `src/hooks/use-processing-websocket.ts` for the full pattern with reconnection, runtime payload validation, and Zustand store integration.
 
 ### Rust → Python (Rare)
 

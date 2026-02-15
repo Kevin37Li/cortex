@@ -1,9 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import App from './App'
 import i18n from '@/i18n/config'
+
+vi.mock('./hooks/use-processing-websocket', () => ({
+  useProcessingWebSocket: vi.fn(),
+}))
 
 // Tauri bindings are mocked globally in src/test/setup.ts
 

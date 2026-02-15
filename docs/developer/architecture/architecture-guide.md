@@ -206,12 +206,18 @@ const item = await apiFetch<Item>('/api/items/', {
 
 See `src/services/items.ts` for the canonical TanStack Query service hook pattern.
 
-**WebSocket** for streaming (chat, processing progress):
+**WebSocket** for streaming (chat, processing progress). Derive URLs from `API_BASE`:
 
 ```typescript
-const ws = new WebSocket(`ws://localhost:8742/api/ws/chat/${id}`)
+import { API_BASE } from '@/lib/api-config'
+
+const url = new URL(`/api/ws/chat/${id}`, API_BASE)
+url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+const ws = new WebSocket(url.toString())
 ws.onmessage = ({ data }) => appendChunk(JSON.parse(data).content)
 ```
+
+See `src/hooks/use-processing-websocket.ts` for the full pattern with reconnection and runtime validation.
 
 ### Frontend → Rust (Tauri)
 
@@ -270,7 +276,7 @@ src/                          # React frontend
 │   └── tauri-bindings/      # Generated type-safe commands
 ├── routes/                  # File-based route components
 ├── services/                # TanStack Query + API calls
-├── types/                   # Generated types (api.gen.ts from OpenAPI)
+├── types/                   # TypeScript types (generated api.gen.ts + manual definitions)
 └── store/                   # Zustand stores
 
 src-tauri/src/               # Rust backend

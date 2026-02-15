@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
 import i18n from '@/i18n/config'
 import { ApiRequestError } from '@/lib/api-config'
 import type { Item } from '@/services/items'
+import { useProcessingStore } from '@/store/processing-store'
 import { ItemDetail } from './ItemDetail'
 
 vi.mock('@/services/items', async () => {
@@ -77,6 +78,7 @@ function createRetryMutationResult(
 describe('ItemDetail', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    useProcessingStore.getState().reset()
     await i18n.changeLanguage('en')
   })
 
@@ -346,5 +348,49 @@ describe('ItemDetail', () => {
         'Something went wrong'
       )
     })
+  })
+
+  it('renders live processing step and progress percent from the processing store', async () => {
+    const processingItem: Item = {
+      ...baseItem,
+      processing_status: 'pending',
+      metadata: null,
+    }
+    useItemMock.mockReturnValue(createItemQueryResult({ data: processingItem }))
+    useRetryProcessingMock.mockReturnValue(createRetryMutationResult())
+    useProcessingStore.getState().setUpdate({
+      type: 'processing_update',
+      item_id: processingItem.id,
+      status: 'processing',
+      step: 'extracting',
+      progress: 0.65,
+      message: 'Extracting metadata...',
+    })
+
+    render(<ItemDetail itemId={processingItem.id} />, {
+      initialPath: `/items/${processingItem.id}`,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Extracting metadata...')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Extracting metadata... 65%')).toBeInTheDocument()
+  })
+
+  it('sets and clears websocket subscription intent on mount and unmount', async () => {
+    useItemMock.mockReturnValue(createItemQueryResult({ data: baseItem }))
+    useRetryProcessingMock.mockReturnValue(createRetryMutationResult())
+
+    const { unmount } = render(<ItemDetail itemId={baseItem.id} />, {
+      initialPath: `/items/${baseItem.id}`,
+    })
+
+    await waitFor(() => {
+      expect(useProcessingStore.getState().subscriptionItemId).toBe(baseItem.id)
+    })
+
+    unmount()
+    expect(useProcessingStore.getState().subscriptionItemId).toBeNull()
   })
 })

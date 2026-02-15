@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { AlertCircle, ArrowLeft, ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
@@ -18,6 +19,7 @@ import { ApiRequestError } from '@/lib/api-config'
 import { logger } from '@/lib/logger'
 import { cn } from '@/lib/utils'
 import { useItem, useRetryProcessing, type ContentType } from '@/services/items'
+import { useProcessingStore } from '@/store/processing-store'
 import { parseItemMetadata } from './ItemMetadataSection.utils'
 import { ItemMetadataSection } from './ItemMetadataSection'
 import { ProcessingStatusBadge } from './ProcessingStatusBadge'
@@ -57,6 +59,19 @@ export function ItemDetail({ itemId, className }: ItemDetailProps) {
   const { t, i18n } = useTranslation()
   const itemQuery = useItem(itemId)
   const retryProcessingMutation = useRetryProcessing()
+  const processingUpdate = useProcessingStore(
+    state => state.processingByItemId[itemId]
+  )
+  const setSubscriptionItemId = useProcessingStore(
+    state => state.setSubscriptionItemId
+  )
+
+  useEffect(() => {
+    setSubscriptionItemId(itemId)
+    return () => {
+      setSubscriptionItemId(null)
+    }
+  }, [itemId, setSubscriptionItemId])
 
   const backButton = (
     <Link
@@ -138,6 +153,13 @@ export function ItemDetail({ itemId, className }: ItemDetailProps) {
   const metadata = parseItemMetadata(item.metadata)
   const processingError = metadata?.processingError ?? null
   const errorStep = metadata?.errorStep ?? null
+  const liveStatus = processingUpdate?.status ?? item.processing_status
+  const stepLabel = processingUpdate
+    ? t(`items.processing.step.${processingUpdate.step}`)
+    : undefined
+  const progressPercent = processingUpdate
+    ? Math.round(processingUpdate.progress * 100)
+    : null
 
   const handleRetryProcessing = async () => {
     try {
@@ -220,8 +242,11 @@ export function ItemDetail({ itemId, className }: ItemDetailProps) {
               {t('items.detail.processing')}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              <ProcessingStatusBadge status={item.processing_status} />
-              {item.processing_status === 'failed' ? (
+              <ProcessingStatusBadge
+                status={liveStatus}
+                stepLabel={stepLabel}
+              />
+              {liveStatus === 'failed' ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -234,9 +259,16 @@ export function ItemDetail({ itemId, className }: ItemDetailProps) {
                 </Button>
               ) : null}
             </div>
+            {processingUpdate && progressPercent !== null ? (
+              <p className="text-muted-foreground text-sm">
+                {t('items.processing.progressPercent', {
+                  step: stepLabel ?? '',
+                  percent: progressPercent,
+                })}
+              </p>
+            ) : null}
 
-            {item.processing_status === 'failed' &&
-            (processingError || errorStep) ? (
+            {liveStatus === 'failed' && (processingError || errorStep) ? (
               <div className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
                 <p className="font-medium text-destructive">
                   {t('items.detail.processingFailed')}

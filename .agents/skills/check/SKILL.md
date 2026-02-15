@@ -7,7 +7,7 @@ description: 'Run a thorough senior-level code review for Cortex changes: archit
 
 ## Overview
 
-Run a comprehensive, read-only code review. Always include architecture compliance, and also assess bugs, code smells, test gaps, regressions, and concrete improvements. Delegate architecture-specific validation to `$architecture-checker`, then extend with a senior-engineer review.
+Run a comprehensive, read-only code review. Include architecture compliance by delegating rule-level architecture checks to `$architecture-checker`, then extend with a senior-engineer review focused on bugs, regressions, risk, maintainability, and test gaps.
 
 ## Workflow
 
@@ -20,7 +20,8 @@ Run a comprehensive, read-only code review. Always include architecture complian
 2. Run architecture validation first.
 
 - Invoke `$architecture-checker` with the derived scope.
-- Reuse its findings in the final report (do not duplicate entries).
+- Treat `$architecture-checker` as the source of truth for documented architecture-rule violations.
+- Reuse its findings in the final report and do not restate the same issue as a new finding.
 
 3. Gather review evidence.
 
@@ -32,7 +33,7 @@ Run a comprehensive, read-only code review. Always include architecture complian
 4. Perform a senior-level manual review across these categories:
 
 - Correctness and potential bugs (logic flaws, edge cases, null/undefined handling, async/race conditions).
-- Architecture and design fit (against `AGENTS.md` and `docs/developer`).
+- Cross-cutting design fit and interaction risks not already covered by `$architecture-checker` findings.
 - Security and data safety risks.
 - Error handling and observability gaps.
 - Performance risks (render cascades, unnecessary allocations, N+1 patterns, expensive loops/queries).
@@ -53,10 +54,15 @@ Run a comprehensive, read-only code review. Always include architecture complian
 
 - `path`
 
+### Architecture Findings (from `$architecture-checker`)
+
+- Reused architecture violations/missing requirements/anti-pattern risks
+- Note only net-new architecture concerns here if they were not already reported by `$architecture-checker`
+
 ### Findings (ordered by severity)
 
 1. **[Critical|High|Medium] `path:line`**
-   - **Category:** Bug | Architecture | Security | Performance | Code Smell | Testing
+   - **Category:** Bug | Security | Performance | Code Smell | Testing | Cross-Cutting Design
    - **Issue:** ...
    - **Impact/Risk:** ...
    - **Recommendation:** ...

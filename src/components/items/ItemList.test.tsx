@@ -10,14 +10,27 @@ vi.mock('@/services/items', async () => {
   return {
     ...actual,
     useItems: vi.fn(),
+    useRetryProcessing: vi.fn(),
   }
 })
 
-const { useItems } = await import('@/services/items')
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
+const { useItems, useRetryProcessing } = await import('@/services/items')
+const { toast } = await import('sonner')
 
 type UseItemsResult = ReturnType<typeof useItems>
+type UseRetryProcessingResult = ReturnType<typeof useRetryProcessing>
 
 const useItemsMock = vi.mocked(useItems)
+const useRetryProcessingMock = vi.mocked(useRetryProcessing)
 
 function createItem(index: number): Item {
   return {
@@ -67,9 +80,25 @@ function createQueryResult(overrides: Partial<UseItemsResult>): UseItemsResult {
   } as UseItemsResult
 }
 
+function createRetryMutationResult(
+  overrides: Partial<UseRetryProcessingResult> = {}
+): UseRetryProcessingResult {
+  return {
+    mutateAsync: vi.fn(),
+    isPending: false,
+    ...overrides,
+  } as UseRetryProcessingResult
+}
+
 describe('ItemList', () => {
   beforeEach(async () => {
     useItemsMock.mockReset()
+    useRetryProcessingMock.mockReset()
+    useRetryProcessingMock.mockReturnValue(createRetryMutationResult())
+    vi.mocked(toast.success).mockReset()
+    vi.mocked(toast.info).mockReset()
+    vi.mocked(toast.warning).mockReset()
+    vi.mocked(toast.error).mockReset()
     await i18n.changeLanguage('en')
   })
 
@@ -411,6 +440,80 @@ describe('ItemList', () => {
     expect(
       screen.queryByRole('navigation', { name: 'pagination' })
     ).not.toBeInTheDocument()
+  })
+
+  it('retries a failed item from the list and shows success feedback', async () => {
+    const failedItem = createItem(4)
+    const mutateAsync = vi.fn().mockResolvedValue({
+      retried_count: 1,
+      outcome: 'retried',
+    })
+    useRetryProcessingMock.mockReturnValue(
+      createRetryMutationResult({ mutateAsync })
+    )
+    useItemsMock.mockReturnValue(
+      createQueryResult({
+        data: {
+          items: [failedItem],
+          total: 1,
+          offset: 0,
+          limit: 20,
+        },
+      })
+    )
+
+    render(<ItemList />, { initialPath: '/items' })
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Retry Processing' })
+    )
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith(failedItem.id)
+    })
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Retry queued')
+  })
+
+  it('prevents duplicate retries for the same item while request is pending', async () => {
+    const failedItem = createItem(8)
+    let resolveRetry:
+      | ((value: { retried_count: number; outcome: 'retried' }) => void)
+      | undefined
+    const mutateAsync = vi.fn(
+      () =>
+        new Promise<{ retried_count: number; outcome: 'retried' }>(resolve => {
+          resolveRetry = resolve
+        })
+    )
+    useRetryProcessingMock.mockReturnValue(
+      createRetryMutationResult({ mutateAsync })
+    )
+    useItemsMock.mockReturnValue(
+      createQueryResult({
+        data: {
+          items: [failedItem],
+          total: 1,
+          offset: 0,
+          limit: 20,
+        },
+      })
+    )
+
+    render(<ItemList />, { initialPath: '/items' })
+
+    const retryButton = await screen.findByRole('button', {
+      name: 'Retry Processing',
+    })
+    fireEvent.click(retryButton)
+    fireEvent.click(retryButton)
+
+    expect(mutateAsync).toHaveBeenCalledTimes(1)
+
+    resolveRetry?.({ retried_count: 1, outcome: 'retried' })
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Retry queued')
+    })
   })
 
   it('renders localized pagination accessibility labels in Chinese', async () => {

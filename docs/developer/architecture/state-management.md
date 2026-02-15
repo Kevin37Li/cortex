@@ -188,7 +188,7 @@ This app uses React Compiler which automatically handles memoization. You do **n
 
 **Feature-specific stores** - Use for:
 
-- Domain-specific state (e.g., `useDocumentStore`)
+- Transient cross-component state (e.g., `useProcessingStore` for WebSocket-fed processing updates)
 - Feature flags and configuration
 - Temporary workflow state
 
@@ -202,7 +202,8 @@ This app uses React Compiler which automatically handles memoization. You do **n
 rule:
   any:
     - pattern: const { $$$PROPS } = useUIStore($$$ARGS)
-    - pattern: const { $$$PROPS } = useNewStore($$$ARGS) # Add new store
+    - pattern: const { $$$PROPS } = useProcessingStore($$$ARGS)
+    - pattern: const { $$$PROPS } = useNewStore($$$ARGS) # Add new stores here
 ```
 
 ## Routing State

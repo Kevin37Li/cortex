@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
 import i18n from '@/i18n/config'
 import type { Item } from '@/services/items'
+import { useProcessingStore } from '@/store/processing-store'
 import { ItemCard } from './ItemCard'
 
 const baseItem: Item = {
@@ -18,6 +19,7 @@ const baseItem: Item = {
 
 describe('ItemCard', () => {
   beforeEach(async () => {
+    useProcessingStore.getState().reset()
     await i18n.changeLanguage('en')
     vi.spyOn(Date, 'now').mockReturnValue(
       new Date('2026-02-12T12:00:00Z').getTime()
@@ -78,5 +80,24 @@ describe('ItemCard', () => {
     expect(screen.getByText('笔记')).toBeInTheDocument()
     expect(screen.getByText('待处理')).toBeInTheDocument()
     expect(screen.getByText(/2.*前/)).toBeInTheDocument()
+  })
+
+  it('prefers live processing status and step label from the processing store', async () => {
+    useProcessingStore.getState().setUpdate({
+      type: 'processing_update',
+      item_id: baseItem.id,
+      status: 'processing',
+      step: 'extracting',
+      progress: 0.65,
+      message: 'Extracting metadata...',
+    })
+
+    render(<ItemCard item={baseItem} />, { initialPath: '/items' })
+
+    await waitFor(() => {
+      expect(screen.getByText('Processing')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Extracting metadata...')).toBeInTheDocument()
   })
 })

@@ -7,6 +7,7 @@ import { initializeLanguage } from './i18n/language-init'
 import { logger } from './lib/logger'
 import { cleanupOldFiles } from './lib/recovery'
 import { commands } from './lib/tauri-bindings'
+import { useProcessingWebSocket } from './hooks/use-processing-websocket'
 import './App.css'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -16,6 +17,8 @@ interface AppProps {
 }
 
 function App({ children }: AppProps) {
+  useProcessingWebSocket()
+
   // Initialize command system and cleanup on app startup
   useEffect(() => {
     logger.info('🚀 Frontend application starting up')
