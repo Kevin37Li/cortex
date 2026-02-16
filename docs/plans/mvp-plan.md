@@ -1,9 +1,9 @@
 # Cortex MVP Implementation Plan
 
-**Status:** Phase 1 Complete - In Progress
-**Version:** 1.2
+**Status:** Phase 2 Complete - In Progress
+**Version:** 1.3
 **Date:** January 2026
-**Last Reviewed:** Phase 1 audit completed 2026-01-26; architecture patterns validated against `docs/developer/`
+**Last Reviewed:** Phase 2 audit completed 2026-02-15; all backend and frontend tasks validated against codebase
 
 ---
 
@@ -386,47 +386,47 @@ Before marking any phase complete:
 
 **Remaining items deferred from Phase 1 to Phase 2:**
 
-- [ ] Python sidecar lifecycle management in Rust (spawn, health poll, restart, shutdown) per `docs/developer/architecture/python-sidecar.md`
+- [x] Python sidecar lifecycle management in Rust (spawn, health poll, restart, shutdown) per `docs/developer/architecture/python-sidecar.md` — completed in Phase 2
 
 **Milestone:** ✅ Can launch app, see empty item list, backend responds to health checks
 
-### Phase 2: Content Pipeline (Weeks 2-3)
+### Phase 2: Content Pipeline (Weeks 2-3) ✅ COMPLETE
 
 **Goal:** Save content and process it with AI
 
 **Backend Tasks:**
 
-- [ ] Python sidecar lifecycle management in Rust (spawn, health poll, restart, shutdown) per `python-sidecar.md`
-- [ ] Create `workflows/processing.py` implementing the LangGraph content processing graph
-- [ ] Content parsing (HTML via Readability, plain text)
-- [ ] Semantic chunking with RecursiveCharacterTextSplitter
-- [ ] Embedding generation (Ollama + OpenAI providers)
-- [ ] Embedding dimension consistency enforcement — track model in chunk metadata, prevent mixing (768 vs 1536 dims)
-- [ ] Metadata extraction (summary, entities, concepts)
-- [ ] Implement `ProcessingQueue` in `services/processing.py` for background processing with status updates
-- [ ] Implement embedding management in `services/embeddings.py`
-- [ ] Processing status events (WebSocket)
-- [ ] Add `ProcessingError` to `exceptions.py` and register its FastAPI exception handler in `main.py`
-- [ ] Add processing queue endpoints: `GET /api/processing/queue`, `POST /api/processing/retry`
-- [ ] Write tests for processing workflow steps
+- [x] Python sidecar lifecycle management in Rust (spawn, health poll, restart, shutdown) per `python-sidecar.md`
+- [x] Create `workflows/processing.py` implementing the LangGraph content processing graph
+- [x] Content parsing (HTML via Readability, plain text)
+- [x] Semantic chunking with RecursiveCharacterTextSplitter
+- [x] Embedding generation (Ollama provider complete; OpenAI deferred to Phase 6 cloud provider setup)
+- [x] Embedding dimension consistency enforcement — track model in chunk metadata, prevent mixing (768 vs 1536 dims)
+- [x] Metadata extraction (summary, entities, concepts)
+- [x] Implement `ProcessingQueue` in `services/processing.py` for background processing with status updates
+- [x] Implement embedding management in `services/embeddings.py`
+- [x] Processing status events (WebSocket)
+- [x] Add `ProcessingError` to `exceptions.py` and register its FastAPI exception handler in `main.py`
+- [x] Add processing queue endpoints: `GET /api/processing/queue`, `POST /api/processing/retry`
+- [x] Write tests for processing workflow steps (91% coverage)
 
 **Frontend Tasks:**
 
-- [ ] Create TanStack Query service hooks in `src/services/items.ts` wrapping API calls
-- [ ] Quick note creation UI (state: useState for form, TanStack Query for submission)
-- [ ] File import dialog
-- [ ] Item list with processing status indicators (state: TanStack Query)
-- [ ] Item detail view (content, metadata, status)
-- [ ] Progress indicators for async AI operations
-- [ ] Add translation keys for processing status messages
+- [x] Create TanStack Query service hooks in `src/services/items.ts` wrapping API calls
+- [x] Quick note creation UI (state: TanStack Form for local state, TanStack Query for submission)
+- [x] File import dialog (native Tauri file picker, .txt/.md support, size validation)
+- [x] Item list with processing status indicators (state: TanStack Query + Zustand processing store)
+- [x] Item detail view (content, metadata, status, retry button for failed items)
+- [x] Progress indicators for async AI operations (WebSocket real-time updates, ProcessingStatusBadge component)
+- [x] Add translation keys for processing status messages (217 keys, English + Chinese, zero parity gaps)
 
 **Quality Gate:**
 
-- [ ] `bun run check:all` passes
-- [ ] All UI strings use translation keys
-- [ ] Python tests pass for workflow steps
+- [x] `bun run check:all` passes (all 12 checks)
+- [x] All UI strings use translation keys
+- [x] Python tests pass for workflow steps
 
-**Milestone:** Can create a note → see it process → view extracted metadata
+**Milestone:** ✅ Can create a note → see it process → view extracted metadata
 
 ### Phase 3: Search (Week 3)
 

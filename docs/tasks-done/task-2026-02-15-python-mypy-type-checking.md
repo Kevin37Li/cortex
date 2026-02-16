@@ -94,20 +94,20 @@ _Tracked: 2026-02-16_
 
 ### Files Changed
 
-| File                                                | Change   | Description |
-| --------------------------------------------------- | -------- | ----------- |
-| `package.json`                                      | Modified | Added `python:typecheck` and included it in `check:all`. |
-| `python-backend/pyproject.toml`                    | Modified | Added `[tool.mypy]` settings with module-scoped overrides and added `mypy` to dev dependencies. |
-| `python-backend/uv.lock`                            | Modified | Updated lockfile with `mypy` and transitive dependencies. |
-| `python-backend/src/db/database.py`                 | Modified | Fixed nullable `fetchone()` handling before tuple indexing in verification queries. |
-| `python-backend/src/db/repositories/items.py`       | Modified | Introduced `ItemList` type alias and normalized list-return signatures. |
-| `python-backend/src/api/dependencies.py`            | Modified | Added `isinstance` checks for app-state singleton dependencies to satisfy runtime/type safety. |
-| `python-backend/src/providers/base.py`              | Modified | Corrected abstract `stream_chat` signature to return `AsyncIterator[str]` without `async def`. |
-| `python-backend/src/providers/ollama.py`            | Modified | Tightened response-shape validation and normalized embedding vectors to `list[float]`. |
-| `python-backend/src/workflows/processing.py`        | Modified | Added explicit node/update type aliases and casts around LangGraph compile/invoke boundaries for mypy compatibility. |
-| `docs/developer/quality-tooling/static-analysis.md` | Modified | Documented mypy usage in quick-reference table and Python tooling commands. |
-| `.prettierignore`                                   | Modified | Ignored `python-backend/.mypy_cache/` artifacts. |
-| `docs/tasks-todo/task-19-python-mypy-type-checking.md` | Modified | Marked acceptance criteria complete and recorded implementation/learning notes. |
+| File                                                   | Change   | Description                                                                                                          |
+| ------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                                         | Modified | Added `python:typecheck` and included it in `check:all`.                                                             |
+| `python-backend/pyproject.toml`                        | Modified | Added `[tool.mypy]` settings with module-scoped overrides and added `mypy` to dev dependencies.                      |
+| `python-backend/uv.lock`                               | Modified | Updated lockfile with `mypy` and transitive dependencies.                                                            |
+| `python-backend/src/db/database.py`                    | Modified | Fixed nullable `fetchone()` handling before tuple indexing in verification queries.                                  |
+| `python-backend/src/db/repositories/items.py`          | Modified | Introduced `ItemList` type alias and normalized list-return signatures.                                              |
+| `python-backend/src/api/dependencies.py`               | Modified | Added `isinstance` checks for app-state singleton dependencies to satisfy runtime/type safety.                       |
+| `python-backend/src/providers/base.py`                 | Modified | Corrected abstract `stream_chat` signature to return `AsyncIterator[str]` without `async def`.                       |
+| `python-backend/src/providers/ollama.py`               | Modified | Tightened response-shape validation and normalized embedding vectors to `list[float]`.                               |
+| `python-backend/src/workflows/processing.py`           | Modified | Added explicit node/update type aliases and casts around LangGraph compile/invoke boundaries for mypy compatibility. |
+| `docs/developer/quality-tooling/static-analysis.md`    | Modified | Documented mypy usage in quick-reference table and Python tooling commands.                                          |
+| `.prettierignore`                                      | Modified | Ignored `python-backend/.mypy_cache/` artifacts.                                                                     |
+| `docs/tasks-todo/task-19-python-mypy-type-checking.md` | Modified | Marked acceptance criteria complete and recorded implementation/learning notes.                                      |
 
 ### Dependencies Added
 
