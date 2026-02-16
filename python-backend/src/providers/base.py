@@ -66,7 +66,7 @@ class AIProvider(ABC):
         ...
 
     @abstractmethod
-    async def stream_chat(
+    def stream_chat(
         self, messages: list[dict[str, str]], system: str | None = None
     ) -> AsyncIterator[str]:
         """Generate a streaming chat completion.

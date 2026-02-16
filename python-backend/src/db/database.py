@@ -127,11 +127,17 @@ async def verify_database() -> dict:
 
         # Get SQLite version
         cursor = await db.execute("SELECT sqlite_version()")
-        sqlite_version = (await cursor.fetchone())[0]
+        sqlite_version_row = await cursor.fetchone()
+        if sqlite_version_row is None:
+            raise RuntimeError("Failed to retrieve SQLite version")
+        sqlite_version = sqlite_version_row[0]
 
         # Get sqlite-vec version
         cursor = await db.execute("SELECT vec_version()")
-        vec_version = (await cursor.fetchone())[0]
+        vec_version_row = await cursor.fetchone()
+        if vec_version_row is None:
+            raise RuntimeError("Failed to retrieve sqlite-vec version")
+        vec_version = vec_version_row[0]
 
         # Get table names
         cursor = await db.execute(
@@ -142,13 +148,15 @@ async def verify_database() -> dict:
         # Get counts (may be 0 if tables don't exist yet)
         try:
             cursor = await db.execute("SELECT COUNT(*) FROM items")
-            item_count = (await cursor.fetchone())[0]
+            item_count_row = await cursor.fetchone()
+            item_count = item_count_row[0] if item_count_row is not None else 0
         except aiosqlite.OperationalError:
             item_count = 0
 
         try:
             cursor = await db.execute("SELECT COUNT(*) FROM chunks")
-            chunk_count = (await cursor.fetchone())[0]
+            chunk_count_row = await cursor.fetchone()
+            chunk_count = chunk_count_row[0] if chunk_count_row is not None else 0
         except aiosqlite.OperationalError:
             chunk_count = 0
 

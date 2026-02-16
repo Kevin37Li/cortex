@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import TypeAlias
 from uuid import uuid4
 
 import aiosqlite
@@ -17,6 +18,8 @@ from ..models import (
     normalize_item_metadata,
 )
 from .base import BaseRepository
+
+ItemList: TypeAlias = list[Item]
 
 
 class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
@@ -129,7 +132,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
 
     async def list(
         self, db: aiosqlite.Connection, offset: int = 0, limit: int = 20
-    ) -> list[Item]:
+    ) -> ItemList:
         """List items with pagination, ordered by created_at descending.
 
         Args:
@@ -238,7 +241,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         result = await cursor.fetchone()
         return result[0] if result else 0
 
-    async def get_by_status(self, db: aiosqlite.Connection, status: str) -> list[Item]:
+    async def get_by_status(self, db: aiosqlite.Connection, status: str) -> ItemList:
         """Get items filtered by processing status.
 
         Args:

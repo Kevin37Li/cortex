@@ -25,3 +25,4 @@ src/lib/bindings.ts
 # Python backend
 python-backend/.venv/
 python-backend/__pycache__/
+python-backend/.mypy_cache/

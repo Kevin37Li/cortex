@@ -130,14 +130,16 @@ class OllamaProvider(AIProvider):
 
                 response.raise_for_status()
                 data = response.json()
-                embedding = data.get("embedding")
-                if embedding is None:
+                embedding = data.get("embedding") if isinstance(data, dict) else None
+                if not isinstance(embedding, list) or not all(
+                    isinstance(value, int | float) for value in embedding
+                ):
                     raise OllamaAPIResponseError(
                         operation="embed",
                         model=self.embedding_model,
                         response_data=data,
                     )
-                return embedding
+                return [float(value) for value in embedding]
         except httpx.ConnectError as e:
             raise OllamaNotRunningError(base_url=self.base_url) from e
         except httpx.TimeoutException as e:
@@ -213,12 +215,13 @@ class OllamaProvider(AIProvider):
 
                 response.raise_for_status()
                 data = response.json()
-                message = data.get("message")
-                if message is None or "content" not in message:
+                message = data.get("message") if isinstance(data, dict) else None
+                content = message.get("content") if isinstance(message, dict) else None
+                if not isinstance(content, str):
                     raise OllamaAPIResponseError(
                         operation="chat", model=self.chat_model, response_data=data
                     )
-                return message["content"]
+                return content
         except httpx.ConnectError as e:
             raise OllamaNotRunningError(base_url=self.base_url) from e
         except httpx.TimeoutException as e:
@@ -266,8 +269,17 @@ class OllamaProvider(AIProvider):
                         if line:
                             try:
                                 data = json.loads(line)
-                                content = data.get("message", {}).get("content", "")
-                                if content:
+                                message = (
+                                    data.get("message")
+                                    if isinstance(data, dict)
+                                    else None
+                                )
+                                content = (
+                                    message.get("content")
+                                    if isinstance(message, dict)
+                                    else None
+                                )
+                                if isinstance(content, str) and content:
                                     yield content
                             except json.JSONDecodeError:
                                 continue

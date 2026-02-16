@@ -82,7 +82,7 @@ async def get_embedding_service(
 def get_processing_queue(request: Request) -> ProcessingQueue:
     """Get the processing queue singleton from app state."""
     queue = getattr(request.app.state, "processing_queue", None)
-    if queue is None:
+    if not isinstance(queue, ProcessingQueue):
         raise HTTPException(
             status_code=503,
             detail="Processing queue is not available",
@@ -93,7 +93,7 @@ def get_processing_queue(request: Request) -> ProcessingQueue:
 def get_processing_ws_manager(websocket: WebSocket) -> ProcessingConnectionManager:
     """Get the processing websocket manager singleton from app state."""
     manager = getattr(websocket.app.state, "processing_ws_manager", None)
-    if manager is None:
+    if not isinstance(manager, ProcessingConnectionManager):
         raise WebSocketException(
             code=1011,
             reason="Processing websocket manager is not available",

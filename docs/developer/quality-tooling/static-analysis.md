@@ -15,6 +15,7 @@ All static analysis tools configured in this app and how to use them.
 | clippy         | Rust linting             | `bun run rust:clippy`      | Yes          |
 | ruff format    | Python formatting        | `bun run python:fmt:check` | Yes          |
 | ruff check     | Python linting           | `bun run python:lint`      | Yes          |
+| mypy           | Python type checking     | `bun run python:typecheck` | Yes          |
 | Vitest         | Frontend tests           | `bun run test:run`         | Yes          |
 | cargo test     | Rust tests               | `bun run rust:test`        | Yes          |
 | pytest         | Python tests             | `bun run python:test`      | Yes          |
@@ -98,6 +99,7 @@ bun run python:fmt:check   # Check formatting (ruff)
 bun run python:fmt         # Fix formatting
 bun run python:lint        # Lint with ruff
 bun run python:lint:fix    # Auto-fix ruff warnings
+bun run python:typecheck   # Type check with mypy (full src/ scope)
 bun run python:test        # Run pytest
 ```
 

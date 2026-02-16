@@ -11,10 +11,11 @@ Uses LangGraph StateGraph for:
 
 import functools
 import logging
-from collections.abc import Callable
-from typing import TypedDict
+from collections.abc import Awaitable, Callable
+from typing import Any, TypedDict, cast
 
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from src.db.database import db_connection
 from src.db.models import (
@@ -103,6 +104,10 @@ class ProcessingState(TypedDict, total=False):
     error_step: ProcessingStep | None
     last_progress: float
     emit_update: ProcessingUpdateEmitter | None
+
+
+NodeUpdate = ProcessingState
+NodeFunc = Callable[[ProcessingState], Awaitable[NodeUpdate]]
 
 
 def _status_for_step(step: ProcessingStep) -> ProcessingStatus:
@@ -198,15 +203,17 @@ def _build_conservative_fallback_metadata(
     return ExtractedMetadata(summary=summary, concepts=concepts, entities=entities)
 
 
-def log_node_execution(node_name: str):
+def log_node_execution(
+    node_name: str,
+) -> Callable[[NodeFunc], NodeFunc]:
     """Decorator for logging workflow node execution.
 
     Logs entry, exit, and any exceptions that occur during node execution.
     """
 
-    def decorator(func):
+    def decorator(func: NodeFunc) -> NodeFunc:
         @functools.wraps(func)
-        async def wrapper(state: ProcessingState) -> dict:
+        async def wrapper(state: ProcessingState) -> NodeUpdate:
             item_id = state.get("item_id", "unknown")
             logger.info(f"Starting node: {node_name}", extra={"item_id": item_id})
             try:
@@ -226,7 +233,7 @@ def log_node_execution(node_name: str):
 
 
 @log_node_execution("classify")
-async def classify_node(state: ProcessingState) -> dict:
+async def classify_node(state: ProcessingState) -> NodeUpdate:
     """Fetch item from DB, set processing status, determine content type.
 
     Creates the AI provider and stores it in state for downstream nodes.
@@ -252,7 +259,7 @@ async def classify_node(state: ProcessingState) -> dict:
         # Create AI provider for downstream nodes
         provider = OllamaProvider()
 
-        result = {
+        result: NodeUpdate = {
             "raw_content": item.content,
             "content_type": item.content_type,
             "title": item.title,
@@ -267,7 +274,7 @@ async def classify_node(state: ProcessingState) -> dict:
 
 
 @log_node_execution("parse")
-async def parse_node(state: ProcessingState) -> dict:
+async def parse_node(state: ProcessingState) -> NodeUpdate:
     """Parse raw content using ContentParser based on content type."""
     current_step = ProcessingStep.PARSING
     try:
@@ -278,7 +285,7 @@ async def parse_node(state: ProcessingState) -> dict:
         # Use extracted title if better than existing
         new_title = result.title if result.title else state.get("title", "")
 
-        node_result: dict = {"parsed_text": result.text, "title": new_title}
+        node_result: NodeUpdate = {"parsed_text": result.text, "title": new_title}
         if progress is not None:
             node_result["last_progress"] = progress
         return node_result
@@ -287,7 +294,7 @@ async def parse_node(state: ProcessingState) -> dict:
 
 
 @log_node_execution("chunk")
-async def chunk_node(state: ProcessingState) -> dict:
+async def chunk_node(state: ProcessingState) -> NodeUpdate:
     """Split parsed text into semantic chunks."""
     current_step = ProcessingStep.CHUNKING
     try:
@@ -295,7 +302,7 @@ async def chunk_node(state: ProcessingState) -> dict:
         chunker = ChunkingService()
         chunk_results = chunker.chunk_text(state["parsed_text"])
 
-        result: dict = {"chunk_results": chunk_results}
+        result: NodeUpdate = {"chunk_results": chunk_results}
         if progress is not None:
             result["last_progress"] = progress
         return result
@@ -304,7 +311,7 @@ async def chunk_node(state: ProcessingState) -> dict:
 
 
 @log_node_execution("extract_metadata")
-async def extract_metadata_node(state: ProcessingState) -> dict:
+async def extract_metadata_node(state: ProcessingState) -> NodeUpdate:
     """Extract summary, concepts, and entities using LLM."""
     current_step = ProcessingStep.EXTRACTING
     try:
@@ -317,7 +324,7 @@ async def extract_metadata_node(state: ProcessingState) -> dict:
             title=state.get("title"),
         )
 
-        result: dict = {"metadata": metadata}
+        result: NodeUpdate = {"metadata": metadata}
         if progress is not None:
             result["last_progress"] = progress
         return result
@@ -326,7 +333,7 @@ async def extract_metadata_node(state: ProcessingState) -> dict:
 
 
 @log_node_execution("validate")
-async def validate_node(state: ProcessingState) -> dict:
+async def validate_node(state: ProcessingState) -> NodeUpdate:
     """Validate that chunks and metadata were successfully created."""
     current_step = ProcessingStep.VALIDATING
     try:
@@ -359,7 +366,7 @@ async def validate_node(state: ProcessingState) -> dict:
                 bool(metadata and metadata.summary),
                 len(metadata.concepts) if metadata else 0,
             )
-            result: dict = {"validation_passed": True, "metadata": fallback}
+            result: NodeUpdate = {"validation_passed": True, "metadata": fallback}
             if progress is not None:
                 result["last_progress"] = progress
             return result
@@ -368,16 +375,16 @@ async def validate_node(state: ProcessingState) -> dict:
             f"Validation passed: {len(chunk_results)} chunks, "
             f"{len(metadata.concepts)} concepts"
         )
-        result: dict = {"validation_passed": True}
+        success_result: NodeUpdate = {"validation_passed": True}
         if progress is not None:
-            result["last_progress"] = progress
-        return result
+            success_result["last_progress"] = progress
+        return success_result
     except Exception as e:
         return {"error": str(e), "error_step": current_step}
 
 
 @log_node_execution("persist")
-async def persist_node(state: ProcessingState) -> dict:
+async def persist_node(state: ProcessingState) -> NodeUpdate:
     """Persist chunks, embeddings, and metadata to database.
 
     Only called after validation passes to avoid orphaned data on retries.
@@ -435,7 +442,7 @@ async def persist_node(state: ProcessingState) -> dict:
             # Single atomic commit - all-or-nothing
             await db.commit()
 
-        result: dict = {"chunks": created_chunks, "embeddings_stored": True}
+        result: NodeUpdate = {"chunks": created_chunks, "embeddings_stored": True}
         if progress is not None:
             result["last_progress"] = progress
         return result
@@ -444,7 +451,7 @@ async def persist_node(state: ProcessingState) -> dict:
 
 
 @log_node_execution("complete")
-async def complete_node(state: ProcessingState) -> dict:
+async def complete_node(state: ProcessingState) -> NodeUpdate:
     """Mark item processing as completed."""
     current_step = ProcessingStep.COMPLETED
     try:
@@ -456,7 +463,7 @@ async def complete_node(state: ProcessingState) -> dict:
 
         progress = emit_processing_update(state, step=current_step)
         logger.info(f"Processing completed for item {item_id}")
-        result: dict = {}
+        result: NodeUpdate = {}
         if progress is not None:
             result["last_progress"] = progress
         return result
@@ -465,7 +472,7 @@ async def complete_node(state: ProcessingState) -> dict:
 
 
 @log_node_execution("handle_error")
-async def handle_error_node(state: ProcessingState) -> dict:
+async def handle_error_node(state: ProcessingState) -> NodeUpdate:
     """Handle processing errors by updating item status and metadata."""
     item_id = state.get("item_id")
     error = state.get("error", "Unknown error")
@@ -549,19 +556,21 @@ def route_after_validation(state: ProcessingState) -> str:
     return "handle_error"
 
 
-def build_processing_graph() -> StateGraph:
+def build_processing_graph() -> CompiledStateGraph[
+    ProcessingState, None, ProcessingState, ProcessingState
+]:
     """Build and compile the content processing workflow graph."""
     builder = StateGraph(ProcessingState)
 
     # Add nodes
-    builder.add_node("classify", classify_node)
-    builder.add_node("parse", parse_node)
-    builder.add_node("chunk", chunk_node)
-    builder.add_node("extract_metadata", extract_metadata_node)
-    builder.add_node("validate", validate_node)
-    builder.add_node("persist", persist_node)
-    builder.add_node("complete", complete_node)
-    builder.add_node("handle_error", handle_error_node)
+    builder.add_node("classify", cast(Any, classify_node))
+    builder.add_node("parse", cast(Any, parse_node))
+    builder.add_node("chunk", cast(Any, chunk_node))
+    builder.add_node("extract_metadata", cast(Any, extract_metadata_node))
+    builder.add_node("validate", cast(Any, validate_node))
+    builder.add_node("persist", cast(Any, persist_node))
+    builder.add_node("complete", cast(Any, complete_node))
+    builder.add_node("handle_error", cast(Any, handle_error_node))
 
     # Set entry point
     builder.set_entry_point("classify")
@@ -607,7 +616,10 @@ def build_processing_graph() -> StateGraph:
     )
     builder.add_edge("handle_error", END)
 
-    return builder.compile()
+    return cast(
+        CompiledStateGraph[ProcessingState, None, ProcessingState, ProcessingState],
+        builder.compile(),
+    )
 
 
 # Compile the graph once at module load
@@ -635,4 +647,4 @@ async def process_item(
     if emit_update is not None:
         initial_state["emit_update"] = emit_update
     result = await graph.ainvoke(initial_state)
-    return result
+    return cast(ProcessingState, result)
