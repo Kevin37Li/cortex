@@ -166,13 +166,19 @@ class OllamaProvider(AIProvider):
         return embeddings
 
     async def chat(
-        self, messages: list[dict[str, str]], system: str | None = None
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        json_mode: bool = False,
+        json_schema: dict[str, object] | None = None,
     ) -> str:
         """Generate a chat completion.
 
         Args:
             messages: List of message dicts with 'role' and 'content' keys.
             system: Optional system prompt.
+            json_mode: If True, request JSON-only response from Ollama.
+            json_schema: Optional JSON schema for structured output.
 
         Returns:
             The assistant's response text.
@@ -191,6 +197,10 @@ class OllamaProvider(AIProvider):
 
             if system:
                 payload["system"] = system
+            if json_schema is not None:
+                payload["format"] = json_schema
+            elif json_mode:
+                payload["format"] = "json"
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(

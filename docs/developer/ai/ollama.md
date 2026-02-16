@@ -151,17 +151,26 @@ async def embed_batch(self, texts: list[str]) -> list[list[float]]:
 ```python
 async def chat(
     self,
-    messages: list[dict],
-    system: str | None = None
+    messages: list[dict[str, str]],
+    system: str | None = None,
+    json_mode: bool = False,
+    json_schema: dict[str, object] | None = None,
 ) -> str:
+    payload = {
+        "model": self.chat_model,
+        "messages": messages,
+        "stream": False
+    }
+    if system:
+        payload["system"] = system
+    if json_schema is not None:
+        payload["format"] = json_schema
+    elif json_mode:
+        payload["format"] = "json"
+
     response = await self.client.post(
         "http://localhost:11434/api/chat",
-        json={
-            "model": self.chat_model,
-            "messages": messages,
-            "system": system,
-            "stream": False
-        }
+        json=payload
     )
     return response.json()["message"]["content"]
 
@@ -185,6 +194,8 @@ async def stream_chat(
             if content := data.get("message", {}).get("content"):
                 yield content
 ```
+
+`json_schema` takes precedence over `json_mode`. Use `json_mode=True` for generic JSON-only output, or pass `json_schema` to enforce a specific structure.
 
 ## Model Management
 

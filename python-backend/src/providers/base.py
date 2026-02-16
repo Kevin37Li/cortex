@@ -43,13 +43,19 @@ class AIProvider(ABC):
 
     @abstractmethod
     async def chat(
-        self, messages: list[dict[str, str]], system: str | None = None
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        json_mode: bool = False,
+        json_schema: dict[str, object] | None = None,
     ) -> str:
         """Generate a chat completion.
 
         Args:
             messages: List of message dicts with 'role' and 'content' keys.
             system: Optional system prompt.
+            json_mode: If True, request JSON-only output from the provider.
+            json_schema: Optional JSON schema to enforce structured output.
 
         Returns:
             The assistant's response text.

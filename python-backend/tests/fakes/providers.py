@@ -35,9 +35,13 @@ class MockAIProvider(AIProvider):
         return [[0.1] * self.embedding_dim for _ in texts]
 
     async def chat(
-        self, messages: list[dict[str, str]], system: str | None = None
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        json_mode: bool = False,
+        json_schema: dict[str, object] | None = None,
     ) -> str:
-        del messages, system
+        del messages, system, json_mode, json_schema
         return self.chat_response
 
     async def stream_chat(

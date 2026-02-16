@@ -30,6 +30,20 @@ EXTRACTION_USER_PROMPT = """Extract metadata from the following content:
 Content:
 {text}"""
 
+EXTRACTION_JSON_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string", "minLength": 1},
+        "concepts": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+        },
+        "entities": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["summary", "concepts", "entities"],
+}
+
 
 class MetadataExtractor:
     """Extracts structured metadata from content using LLM chat.
@@ -76,6 +90,7 @@ class MetadataExtractor:
             response = await self._provider.chat(
                 messages=[{"role": "user", "content": user_prompt}],
                 system=EXTRACTION_SYSTEM_PROMPT,
+                json_schema=EXTRACTION_JSON_SCHEMA,
             )
         except AIProviderError as e:
             raise MetadataExtractionError(

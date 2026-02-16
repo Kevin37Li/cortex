@@ -24,9 +24,20 @@ class MockAIProvider(AIProvider):
         return [[0.1] * 768 for _ in texts]
 
     async def chat(
-        self, messages: list[dict[str, str]], system: str | None = None
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        json_mode: bool = False,
+        json_schema: dict[str, object] | None = None,
     ) -> str:
-        self.chat_calls.append({"messages": messages, "system": system})
+        self.chat_calls.append(
+            {
+                "messages": messages,
+                "system": system,
+                "json_mode": json_mode,
+                "json_schema": json_schema,
+            }
+        )
         if self.should_fail:
             raise AIProviderError("Mock provider error")
         return self.response
@@ -325,3 +336,14 @@ class TestSystemPrompt:
         assert system is not None
         assert "knowledge extraction" in system.lower()
         assert "JSON" in system
+
+    @pytest.mark.asyncio
+    async def test_uses_json_schema(self) -> None:
+        """Test that extraction requests JSON schema from provider."""
+        provider = MockAIProvider('{"summary": "", "concepts": [], "entities": []}')
+        extractor = MetadataExtractor(provider)
+
+        await extractor.extract("Test content")
+
+        assert len(provider.chat_calls) == 1
+        assert provider.chat_calls[0]["json_schema"] is not None

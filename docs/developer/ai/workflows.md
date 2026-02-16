@@ -36,7 +36,7 @@ LangGraph provides:
 ```
 New Item → Classify → Parse → Chunk → Embed → Extract Metadata → Validate → Store → Discover Connections
                 ↓
-         (retry if validation fails)
+         (retry for missing chunks; fallback metadata if extraction is incomplete)
 ```
 
 ### Flow
@@ -69,10 +69,11 @@ New Item → Classify → Parse → Chunk → Embed → Extract Metadata → Val
 │  Extract    │ LLM extracts: summary, concepts, entities
 └──────┬──────┘
        │
-┌──────▼──────┐      ┌──────────────┐
-│  Validate   │─────▶│    Retry     │ If quality is poor
-└──────┬──────┘ Poor └──────────────┘
-       │ Good
+┌──────▼──────────────────────────────────────────┐
+│  Validate                                       │
+│  - Retry path: chunks missing                   │
+│  - Fallback path: metadata incomplete           │
+└──────┬──────────────────────────────────────────┘
        │
 ┌──────▼──────┐
 │   Store     │ Persist to database
@@ -110,7 +111,8 @@ class ProcessingState(TypedDict, total=False):
 
 - **Conditional parsing**: Different content types need different parsers
 - **Semantic chunking**: Respects document structure, not fixed character counts
-- **Validation loop**: Catches garbage extractions before storing
+- **Validation routing**: Missing chunks trigger retry; incomplete metadata gets conservative fallback
+- **Conservative fallback metadata**: Uses source text/title only and avoids synthetic concepts/entities
 - **Async connections**: Don't block user confirmation on slow connection discovery
 
 ## Workflow 2: Adaptive Search
@@ -428,9 +430,12 @@ builder.add_conditional_edges(
 )
 ```
 
-### Validation Retry Loop
+### Validation Routing
 
-For validation with retry:
+Validation routing in content processing:
+
+- Retry is used when chunking produced no chunks.
+- Incomplete metadata (missing summary/concepts) is recovered in `validate_node()` with conservative fallback metadata, then the workflow proceeds to persist.
 
 ```python
 def route_after_validation(state: ProcessingState) -> str:

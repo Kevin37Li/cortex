@@ -162,6 +162,34 @@ class TestProcessItem:
         assert "Validation failed after 3 retries" in item.metadata.processing_error
         assert item.metadata.error_step == ProcessingStep.VALIDATING
 
+    async def test_process_item_uses_fallback_metadata_when_llm_metadata_incomplete(
+        self, workflow_db
+    ) -> None:
+        """Incomplete LLM metadata should fallback without synthetic concepts."""
+        del workflow_db
+        item_id = await _create_item(
+            title="Fallback Metadata Item",
+            content="Cortex captures notes and organizes ideas for fast retrieval.",
+        )
+        provider = MockAIProvider(
+            chat_response='{"summary":"","concepts":[],"entities":[]}'
+        )
+
+        with patch("src.workflows.processing.OllamaProvider", return_value=provider):
+            result = await workflow.process_item(item_id)
+
+        assert result.get("error") is None
+        assert result.get("validation_passed") is True
+
+        async with db_connection() as db:
+            item = await item_repo.get(db, item_id)
+
+        assert item is not None
+        assert item.processing_status == ProcessingStatus.COMPLETED
+        assert item.metadata is not None
+        assert item.metadata.summary == "Fallback Metadata Item"
+        assert item.metadata.concepts == []
+
     async def test_process_item_missing_item_routes_to_error_handling(
         self, workflow_db
     ) -> None:

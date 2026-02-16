@@ -154,11 +154,11 @@ When content is captured:
 ```
 Classify → Parse → Chunk → Embed → Extract → Validate → Store → Connect
     │                                   │                           │
-    └── Type-specific parsing           └── Retry if quality low    └── Async discovery
+    └── Type-specific parsing           └── Retry on missing chunks or fallback metadata    └── Async discovery
 ```
 
 - **Semantic chunking**: 200-500 tokens respecting document structure
-- **Validation loop**: LLM checks extraction quality, retries if poor
+- **Validation behavior**: Retries only for missing chunks; metadata gaps use conservative fallback from source text/title
 - **Connection discovery**: Background task finds related items
 
 ### Hybrid Search

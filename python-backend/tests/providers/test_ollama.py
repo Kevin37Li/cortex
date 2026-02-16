@@ -334,6 +334,57 @@ class TestOllamaProviderChat:
             payload = call_args.kwargs["json"]
             assert payload["system"] == "You are a helpful assistant."
 
+    async def test_chat_with_json_mode(self, ollama_provider):
+        """Test chat includes format=json when JSON mode is requested."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "message": {"role": "assistant", "content": '{"ok":true}'}
+        }
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            messages = [{"role": "user", "content": "Return JSON"}]
+            await ollama_provider.chat(messages, json_mode=True)
+
+            call_args = mock_client.post.call_args
+            payload = call_args.kwargs["json"]
+            assert payload["format"] == "json"
+
+    async def test_chat_with_json_schema(self, ollama_provider):
+        """Test chat includes schema object in format when provided."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "message": {"role": "assistant", "content": '{"summary":"ok"}'}
+        }
+        schema = {
+            "type": "object",
+            "properties": {"summary": {"type": "string"}},
+            "required": ["summary"],
+        }
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            messages = [{"role": "user", "content": "Return JSON"}]
+            await ollama_provider.chat(messages, json_schema=schema)
+
+            call_args = mock_client.post.call_args
+            payload = call_args.kwargs["json"]
+            assert payload["format"] == schema
+
     async def test_chat_raises_model_not_found_on_404(self, ollama_provider):
         """Test chat raises OllamaModelNotFoundError on 404 response."""
         mock_response = MagicMock()

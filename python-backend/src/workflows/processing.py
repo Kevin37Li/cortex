@@ -163,6 +163,41 @@ def emit_processing_update(
     return progress
 
 
+def _build_conservative_fallback_metadata(
+    state: ProcessingState, llm_metadata: ExtractedMetadata | None
+) -> ExtractedMetadata:
+    """Build non-synthetic fallback metadata from source text only.
+
+    Summary priority:
+    1) LLM summary (if present)
+    2) Item title (exact text)
+    3) Raw excerpt from parsed content (exact text)
+
+    Concepts/entities are only used when the LLM already provided them.
+    """
+    title = (state.get("title") or "").strip()
+    parsed_text = (state.get("parsed_text") or "").strip()
+
+    llm_summary = (llm_metadata.summary if llm_metadata else "").strip()
+    if llm_summary:
+        summary = llm_summary
+    elif title:
+        summary = title
+    else:
+        summary = parsed_text[:240]
+
+    concepts = (
+        [concept for concept in llm_metadata.concepts if concept]
+        if llm_metadata
+        else []
+    )
+    entities = (
+        [entity for entity in llm_metadata.entities if entity] if llm_metadata else []
+    )
+
+    return ExtractedMetadata(summary=summary, concepts=concepts, entities=entities)
+
+
 def log_node_execution(node_name: str):
     """Decorator for logging workflow node execution.
 
@@ -317,19 +352,17 @@ async def validate_node(state: ProcessingState) -> dict:
 
         # Check that metadata has required fields (summary and concepts)
         if metadata is None or not metadata.summary or not metadata.concepts:
-            retry_count = state.get("retry_count", 0) + 1
+            fallback = _build_conservative_fallback_metadata(state, metadata)
             logger.warning(
-                f"Validation failed: missing or incomplete metadata (retry {retry_count}/{MAX_RETRIES})"
+                "Validation recovered with conservative fallback metadata: "
+                "llm_summary_present=%s llm_concepts_count=%d",
+                bool(metadata and metadata.summary),
+                len(metadata.concepts) if metadata else 0,
             )
-            # Set error if max retries exceeded
-            if retry_count >= MAX_RETRIES:
-                return {
-                    "validation_passed": False,
-                    "retry_count": retry_count,
-                    "error": f"Validation failed after {MAX_RETRIES} retries: missing or incomplete metadata",
-                    "error_step": current_step,
-                }
-            return {"validation_passed": False, "retry_count": retry_count}
+            result: dict = {"validation_passed": True, "metadata": fallback}
+            if progress is not None:
+                result["last_progress"] = progress
+            return result
 
         logger.info(
             f"Validation passed: {len(chunk_results)} chunks, "

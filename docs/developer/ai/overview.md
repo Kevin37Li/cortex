@@ -18,7 +18,11 @@ class AIProvider(ABC):
 
     @abstractmethod
     async def chat(
-        self, messages: list[dict[str, str]], system: str | None = None
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        json_mode: bool = False,
+        json_schema: dict[str, object] | None = None,
     ) -> str: ...
 
     @abstractmethod
@@ -204,7 +208,14 @@ class MockAIProvider(AIProvider):
         # Use 768 dimensions to match nomic-embed-text
         return [hash(text) % 100 / 100.0] * 768
 
-    async def chat(self, messages: list[dict[str, str]], system: str | None = None) -> str:
+    async def chat(
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        json_mode: bool = False,
+        json_schema: dict[str, object] | None = None,
+    ) -> str:
+        del messages, system, json_mode, json_schema
         return "Mock response for testing"
 ```
 
