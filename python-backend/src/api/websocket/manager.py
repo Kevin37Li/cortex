@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from fastapi import WebSocket
 
-from ...db.models import ProcessingUpdate
+from src.db import ProcessingUpdate
 
 logger = logging.getLogger(__name__)
 DEFAULT_MAX_CLIENT_QUEUE = 100

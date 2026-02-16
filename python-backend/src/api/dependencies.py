@@ -7,17 +7,16 @@ from fastapi import Depends, HTTPException, WebSocket
 from starlette.exceptions import WebSocketException
 from starlette.requests import Request
 
-from ..db.database import db_connection
-from ..db.repositories import (
+from src.api.websocket import ProcessingConnectionManager
+from src.db import db_connection
+from src.db.repositories import (
     ChunkRepository,
     ItemRepository,
     chunk_repo,
     item_repo,
 )
-from ..providers import AIProvider, OllamaProvider
-from ..services.embeddings import EmbeddingService
-from ..services.processing import ProcessingQueue
-from .websocket.manager import ProcessingConnectionManager
+from src.providers import AIProvider, OllamaProvider
+from src.services import EmbeddingService, ProcessingQueue
 
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:

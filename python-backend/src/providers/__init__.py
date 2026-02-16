@@ -1,8 +1,8 @@
 """AI provider implementations for Cortex backend."""
 
-from .base import AIProvider
-from .models import ModelInfo, OllamaHealthResponse
-from .ollama import OllamaProvider
+from src.providers.base import AIProvider
+from src.providers.models import ModelInfo, OllamaHealthResponse
+from src.providers.ollama import OllamaProvider
 
 __all__ = [
     "AIProvider",

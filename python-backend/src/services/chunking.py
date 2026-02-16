@@ -5,7 +5,7 @@ import logging
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.config import settings
-from src.db.models import ChunkResult
+from src.db import ChunkResult
 from src.exceptions import ChunkingError
 
 logger = logging.getLogger(__name__)

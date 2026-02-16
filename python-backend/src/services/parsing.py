@@ -5,7 +5,7 @@ import logging
 from bs4 import BeautifulSoup
 from readability import Document
 
-from src.db.models import ContentType, ParsedContent
+from src.db import ContentType, ParsedContent
 from src.exceptions import ContentParsingError
 
 logger = logging.getLogger(__name__)

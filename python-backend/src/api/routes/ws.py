@@ -4,8 +4,8 @@ import logging
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from ..dependencies import get_processing_ws_manager
-from ..websocket.manager import ProcessingConnectionManager
+from src.api.dependencies import get_processing_ws_manager
+from src.api.websocket import ProcessingConnectionManager
 
 logger = logging.getLogger(__name__)
 SUBSCRIBE_KEY = "subscribe"

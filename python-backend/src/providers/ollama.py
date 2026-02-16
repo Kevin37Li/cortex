@@ -6,15 +6,14 @@ from datetime import datetime
 
 import httpx
 
-from ..config import settings
-from ..exceptions import (
+from src.config import settings
+from src.exceptions import (
     OllamaAPIResponseError,
     OllamaModelNotFoundError,
     OllamaNotRunningError,
     OllamaTimeoutError,
 )
-from .base import AIProvider
-from .models import ModelInfo
+from src.providers import AIProvider, ModelInfo
 
 
 class OllamaProvider(AIProvider):

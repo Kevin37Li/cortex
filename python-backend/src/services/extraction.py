@@ -4,7 +4,7 @@ import json
 import logging
 import re
 
-from src.db.models import ExtractedMetadata
+from src.db import ExtractedMetadata
 from src.exceptions import AIProviderError, MetadataExtractionError
 from src.providers import AIProvider
 

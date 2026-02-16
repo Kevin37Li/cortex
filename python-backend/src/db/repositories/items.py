@@ -9,15 +9,9 @@ from uuid import uuid4
 
 import aiosqlite
 
-from ...exceptions import DatabaseError, ItemNotFoundError
-from ..models import (
-    Item,
-    ItemCreate,
-    ItemMetadata,
-    ItemUpdate,
-    normalize_item_metadata,
-)
-from .base import BaseRepository
+from src.db import Item, ItemCreate, ItemMetadata, ItemUpdate, normalize_item_metadata
+from src.db.repositories import BaseRepository
+from src.exceptions import DatabaseError, ItemNotFoundError
 
 ItemList: TypeAlias = list[Item]
 

@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import aiosqlite
 
-from ..models import Chunk, ChunkCreate
+from src.db import Chunk, ChunkCreate
 
 
 class ChunkRepository:

@@ -9,10 +9,14 @@ import logging
 from collections.abc import Callable
 
 from src.config import settings
-from src.db.database import db_connection
-from src.db.models import ProcessingUpdate, QueueStatus, RetryFailedResult
+from src.db import (
+    ProcessingUpdate,
+    QueueStatus,
+    RetryFailedResult,
+    db_connection,
+)
 from src.db.repositories import item_repo
-from src.workflows.processing import process_item
+from src.workflows import process_item
 
 logger = logging.getLogger(__name__)
 

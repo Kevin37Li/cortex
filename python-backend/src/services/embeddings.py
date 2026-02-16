@@ -6,8 +6,7 @@ import aiosqlite
 import sqlite_vec
 
 from src.config import settings
-from src.db.database import EMBEDDING_DIMENSION
-from src.db.models import Chunk
+from src.db import EMBEDDING_DIMENSION, Chunk
 from src.db.repositories import metadata_repo
 from src.exceptions import (
     AIProviderError,

@@ -7,20 +7,22 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api.routes.health import router as health_router
-from .api.routes.items import router as items_router
-from .api.routes.processing import router as processing_router
-from .api.routes.ws import router as ws_router
-from .api.websocket.manager import ProcessingConnectionManager
-from .config import settings
-from .db import init_database, verify_database
-from .exceptions import (
+from src.api.routes import (
+    health_router,
+    items_router,
+    processing_router,
+    ws_router,
+)
+from src.api.websocket import ProcessingConnectionManager
+from src.config import settings
+from src.db import init_database, verify_database
+from src.exceptions import (
     AIProviderError,
     DatabaseError,
     ItemNotFoundError,
     ProcessingError,
 )
-from .services.processing import ProcessingQueue
+from src.services import ProcessingQueue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

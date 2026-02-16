@@ -493,8 +493,7 @@ def log_node_execution(node_name: str):
 Workflow nodes manage their own database connections:
 
 ```python
-from src.db.database import db_connection
-from src.db.models import ItemUpdate, ProcessingStep, normalize_item_metadata
+from src.db import db_connection, ItemUpdate, ProcessingStep, normalize_item_metadata
 from src.db.repositories import item_repo
 
 @log_node_execution("persist")

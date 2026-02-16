@@ -17,8 +17,7 @@ from typing import Any, TypedDict, cast
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.db.database import db_connection
-from src.db.models import (
+from src.db import (
     ChunkCreate,
     ChunkResult,
     ContentType,
@@ -27,6 +26,7 @@ from src.db.models import (
     ProcessingStatus,
     ProcessingStep,
     ProcessingUpdate,
+    db_connection,
     normalize_item_metadata,
 )
 from src.db.repositories import chunk_repo, item_repo

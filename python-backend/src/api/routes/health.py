@@ -7,10 +7,10 @@ import aiosqlite
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
-from ...config import get_app_version
-from ...db.models import ComponentCheck, HealthResponse
-from ...providers import OllamaHealthResponse, OllamaProvider
-from ..dependencies import get_db_connection, get_ollama_provider
+from src.api.dependencies import get_db_connection, get_ollama_provider
+from src.config import get_app_version
+from src.db import ComponentCheck, HealthResponse
+from src.providers import OllamaHealthResponse, OllamaProvider
 
 router = APIRouter(tags=["health"])
 

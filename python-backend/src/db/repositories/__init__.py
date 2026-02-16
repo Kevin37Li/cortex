@@ -1,9 +1,9 @@
 """Repository classes for data access."""
 
-from .app_metadata import AppMetadataRepository
-from .base import BaseRepository
-from .chunks import ChunkRepository
-from .items import ItemRepository
+from src.db.repositories.app_metadata import AppMetadataRepository
+from src.db.repositories.base import BaseRepository
+from src.db.repositories.chunks import ChunkRepository
+from src.db.repositories.items import ItemRepository
 
 # Module-level singleton instances (stateless repos)
 item_repo = ItemRepository()

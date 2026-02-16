@@ -131,6 +131,21 @@ python-backend/
 
 ## API Design
 
+### Import Conventions
+
+Use absolute imports rooted at `src` across the Python backend.
+Prefer package-level exports (`src.db`, `src.services`, `src.workflows`, `src.api.routes`, `src.api.websocket`) when available to keep call sites stable during refactors.
+
+```python
+# ❌ BAD: Relative imports drift during package refactors
+from ..db.database import db_connection
+from ..services.processing import ProcessingQueue
+
+# ✅ GOOD: Absolute imports and package exports
+from src.db import db_connection
+from src.services import ProcessingQueue
+```
+
 ### RESTful Endpoints
 
 ```python
@@ -249,18 +264,12 @@ POST /api/search
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 
-from .api.routes.health import router as health_router
-from .api.routes.items import router as items_router
-from .api.routes.processing import router as processing_router
-from .api.routes.ws import router as ws_router
-from .api.websocket.manager import ProcessingConnectionManager
-from .db import init_database
-from .exceptions import AIProviderError, DatabaseError, ItemNotFoundError, ProcessingError
-from .services.processing import ProcessingQueue
+from src.api.routes import health_router, items_router, processing_router, ws_router
+from src.api.websocket import ProcessingConnectionManager
+from src.db import init_database
+from src.services import ProcessingQueue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -275,6 +284,7 @@ async def lifespan(app: FastAPI):
 
     app.state.processing_queue = queue
     app.state.processing_ws_manager = ws_manager
+    app.state.processing_ws_unsubscribe = unsubscribe
     await queue.start()
     yield
     # Shutdown: drain workers first so terminal events reach subscribers
@@ -285,38 +295,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 
-# Exception handlers (see error-handling.md for patterns)
-@app.exception_handler(ItemNotFoundError)
-async def item_not_found_handler(request: Request, exc: ItemNotFoundError):
-    return JSONResponse(status_code=404, content={"error": exc.error_code, "message": str(exc)})
-
-@app.exception_handler(DatabaseError)
-async def database_error_handler(request: Request, exc: DatabaseError):
-    return JSONResponse(status_code=500, content={"error": exc.error_code, "message": "Internal database error"})
-
-@app.exception_handler(AIProviderError)
-async def ai_provider_error_handler(request: Request, exc: AIProviderError):
-    return JSONResponse(status_code=503, content={"error": exc.error_code, "message": str(exc)})
-
-@app.exception_handler(ProcessingError)
-async def processing_error_handler(request: Request, exc: ProcessingError):
-    return JSONResponse(status_code=500, content={"error": exc.error_code, "message": str(exc)})
-
-# CORS for Tauri webview
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "tauri://localhost",
-        "http://localhost",
-        "http://localhost:1420",
-        "http://127.0.0.1",
-        "http://127.0.0.1:1420",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Register routers
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
@@ -324,19 +302,25 @@ app.include_router(processing_router, prefix="/api")
 app.include_router(ws_router, prefix="/api")
 ```
 
+For full app wiring (exception handlers and CORS), see `python-backend/src/main.py`.
+
 ### Route Example
 
 ```python
 # src/api/routes/items.py
+import logging
+
+import aiosqlite
 from fastapi import APIRouter, Depends, Query, Response
 
-from ...db.models import Item, ItemCreate, ItemListResponse, ItemUpdate
-from ...db.repositories import ItemRepository
-from ...exceptions import ItemNotFoundError
-from ...services.processing import ProcessingQueue
-from ..dependencies import get_db_connection, get_item_repo, get_processing_queue
+from src.api.dependencies import get_db_connection, get_item_repo, get_processing_queue
+from src.db import Item, ItemCreate, ItemListResponse, ItemUpdate
+from src.db.repositories import ItemRepository
+from src.exceptions import ItemNotFoundError
+from src.services import ProcessingQueue
 
 router = APIRouter(prefix="/items", tags=["items"])
+logger = logging.getLogger(__name__)
 
 @router.post("/", response_model=Item, status_code=201,
              responses={422: {"description": "Validation error"}})
@@ -346,10 +330,13 @@ async def create_item(
     repo: ItemRepository = Depends(get_item_repo),
     queue: ProcessingQueue = Depends(get_processing_queue),
 ) -> Item:
-    """Create a new item and enqueue for background processing."""
+    """Create item, commit, then enqueue best-effort processing."""
     item = await repo.create(db, data)
-    await db.commit()
-    await queue.enqueue(item.id)
+    await db.commit()  # Commit before enqueue so worker can read item
+    try:
+        await queue.enqueue(item.id)
+    except Exception:
+        logger.exception(f"Failed to enqueue item {item.id} after create")
     return item
 
 @router.get("/", response_model=ItemListResponse)
@@ -389,8 +376,8 @@ from collections.abc import AsyncIterator
 
 import aiosqlite
 
-from ..db.database import db_connection
-from ..db.repositories import ItemRepository, item_repo
+from src.db import db_connection
+from src.db.repositories import ItemRepository, item_repo
 
 async def get_db_connection() -> AsyncIterator[aiosqlite.Connection]:
     """Async generator for FastAPI Depends().
@@ -739,9 +726,9 @@ Module-level singletons are exported for shared access:
 
 ```python
 # src/db/repositories/__init__.py
-from .items import ItemRepository
-from .chunks import ChunkRepository
-from .app_metadata import AppMetadataRepository
+from src.db.repositories.app_metadata import AppMetadataRepository
+from src.db.repositories.chunks import ChunkRepository
+from src.db.repositories.items import ItemRepository
 
 # Singleton instances (stateless repos)
 item_repo = ItemRepository()
@@ -753,7 +740,7 @@ Usage:
 
 ```python
 # In FastAPI routes (via dependency injection)
-from ..db.repositories import item_repo
+from src.db.repositories import item_repo
 item = await item_repo.create(db, data)
 await db.commit()
 
