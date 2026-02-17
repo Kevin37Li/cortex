@@ -245,13 +245,17 @@ POST /api/search
     "results": [
         {
             "item_id": "item_abc123",
-            "title": "ML Fundamentals",
-            "snippet": "...relevant text...",
-            "score": 0.85
+            "item_title": "ML Fundamentals",
+            "content_type": "note",
+            "chunk_id": "chunk_42",
+            "chunk_content": "...relevant text...",
+            "score": 0.85,
+            "rank": 1
         }
     ],
-    "query_type": "simple",
-    "took_ms": 45
+    "total": 1,
+    "query": "machine learning basics",
+    "search_type": "hybrid"
 }
 ```
 

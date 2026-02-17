@@ -17,6 +17,7 @@ from src.exceptions import (
     OllamaNotRunningError,
     OllamaTimeoutError,
     ProcessingError,
+    SearchError,
 )
 
 
@@ -36,6 +37,7 @@ class TestErrorCodes:
             (OllamaTimeoutError, "ollama_timeout"),
             (OllamaAPIResponseError, "ollama_api_response_error"),
             (ProcessingError, "processing_error"),
+            (SearchError, "search_error"),
             (ContentParsingError, "content_parsing_error"),
             (ChunkingError, "chunking_error"),
             (EmbeddingError, "embedding_error"),
@@ -91,6 +93,31 @@ class TestContentParsingError:
         exc = ContentParsingError("test")
         assert exc.item_id is None
         assert exc.step is None
+
+
+class TestSearchError:
+    """Tests for SearchError."""
+
+    def test_basic_instantiation(self):
+        exc = SearchError("search failed")
+        assert str(exc) == "search failed"
+        assert exc.query is None
+        assert exc.step is None
+
+    def test_with_all_context(self):
+        exc = SearchError(
+            "search failed at rerank",
+            query="hybrid ranking",
+            step="rerank",
+        )
+        assert str(exc) == "search failed at rerank"
+        assert exc.query == "hybrid ranking"
+        assert exc.step == "rerank"
+
+    def test_inherits_from_cortex_error(self):
+        exc = SearchError("test")
+        assert isinstance(exc, CortexError)
+        assert isinstance(exc, Exception)
 
 
 class TestChunkingError:

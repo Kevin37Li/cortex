@@ -106,6 +106,23 @@ class ProcessingError(CortexError):
         super().__init__(message)
 
 
+class SearchError(CortexError):
+    """Raised when search operations fail."""
+
+    error_code: str = "search_error"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        query: str | None = None,
+        step: str | None = None,
+    ) -> None:
+        self.query = query
+        self.step = step
+        super().__init__(message)
+
+
 class ContentParsingError(ProcessingError):
     """Raised when HTML/text content cannot be parsed."""
 

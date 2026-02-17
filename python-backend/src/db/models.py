@@ -2,9 +2,9 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Content processing models
 
@@ -172,6 +172,67 @@ class ItemListResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+# Search models
+SearchType = Literal["hybrid", "vector", "fts"]
+
+
+class SearchRequest(BaseModel):
+    """Request body for POST /api/search."""
+
+    model_config = {"extra": "forbid"}
+
+    query: str = Field(min_length=1, max_length=1000)
+    limit: int = Field(default=20, ge=1, le=100)
+    search_type: SearchType = "hybrid"
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def normalize_query(cls, value: Any) -> Any:
+        """Trim before Field constraints so max_length applies to normalized input."""
+        if not isinstance(value, str):
+            return value
+
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Query must not be blank")
+        return stripped
+
+
+class SearchResultItem(BaseModel):
+    """A single search result with item context."""
+
+    item_id: str
+    item_title: str
+    content_type: ContentType
+    chunk_id: str
+    chunk_content: str
+    score: float = Field(ge=0.0, le=1.0)
+    rank: int = Field(ge=1)
+
+
+class SearchResponse(BaseModel):
+    """Response body for POST /api/search."""
+
+    results: list[SearchResultItem]
+    total: int = Field(ge=0)
+    query: str
+    search_type: SearchType
+
+
+class ChunkSearchResult(BaseModel):
+    """Internal: raw search hit before item enrichment.
+
+    Score is intentionally unbounded — raw search backends (FTS, vector)
+    return arbitrary similarity/relevance scores that are normalized to
+    [0, 1] during enrichment into SearchResultItem.
+    """
+
+    chunk_id: str
+    item_id: str
+    content: str
+    score: float
 
 
 # Health check models

@@ -21,6 +21,7 @@ from src.exceptions import (
     DatabaseError,
     ItemNotFoundError,
     ProcessingError,
+    SearchError,
 )
 from src.services import ProcessingQueue
 
@@ -86,6 +87,15 @@ async def ai_provider_error_handler(request: Request, exc: AIProviderError):
 @app.exception_handler(ProcessingError)
 async def processing_error_handler(request: Request, exc: ProcessingError):
     """Handle ProcessingError with 500 response."""
+    return JSONResponse(
+        status_code=500,
+        content={"error": exc.error_code, "message": str(exc)},
+    )
+
+
+@app.exception_handler(SearchError)
+async def search_error_handler(request: Request, exc: SearchError):
+    """Handle SearchError with 500 response."""
     return JSONResponse(
         status_code=500,
         content={"error": exc.error_code, "message": str(exc)},

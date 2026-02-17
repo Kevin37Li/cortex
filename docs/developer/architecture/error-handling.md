@@ -273,6 +273,15 @@ class ProcessingError(CortexError):
         self.step = step
         super().__init__(message)
 
+class SearchError(CortexError):
+    """Search operation failed (not part of content processing pipeline)."""
+    error_code: str = "search_error"
+
+    def __init__(self, message: str, *, query: str | None = None, step: str | None = None) -> None:
+        self.query = query
+        self.step = step
+        super().__init__(message)
+
 class AIProviderError(CortexError):
     """Base exception for AI provider errors."""
     error_code: str = "ai_provider_error"
@@ -377,6 +386,13 @@ async def processing_error_handler(request: Request, exc: ProcessingError):
 async def ai_provider_error_handler(request: Request, exc: AIProviderError):
     return JSONResponse(
         status_code=503,
+        content={"error": exc.error_code, "message": str(exc)}
+    )
+
+@app.exception_handler(SearchError)
+async def search_error_handler(request: Request, exc: SearchError):
+    return JSONResponse(
+        status_code=500,
         content={"error": exc.error_code, "message": str(exc)}
     )
 
