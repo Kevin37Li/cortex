@@ -268,7 +268,8 @@ python-backend/
     │   └── test_ollama.py
     ├── services/                    # Service-level tests
     │   ├── test_embeddings.py
-    │   └── test_parsing.py
+    │   ├── test_parsing.py
+    │   └── test_search.py
     ├── workflows/                   # Workflow integration tests
     │   └── test_processing.py
     └── conftest.py                  # Shared fixtures
@@ -297,6 +298,7 @@ mock_provider      # MockAIProvider with deterministic embeddings
 
 # Service fixtures
 embedding_service  # EmbeddingService with mock provider
+search_service     # SearchService with mock EmbeddingService
 
 # Test data fixtures
 sample_chunks      # List of sample Chunk objects for tests

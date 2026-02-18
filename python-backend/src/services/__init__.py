@@ -5,6 +5,7 @@ from src.services.embeddings import EmbeddingService
 from src.services.extraction import MetadataExtractor
 from src.services.parsing import ContentParser
 from src.services.processing import ProcessingQueue
+from src.services.search import SearchService
 
 __all__ = [
     "ChunkingService",
@@ -12,4 +13,5 @@ __all__ = [
     "EmbeddingService",
     "MetadataExtractor",
     "ProcessingQueue",
+    "SearchService",
 ]

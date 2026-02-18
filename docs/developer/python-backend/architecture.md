@@ -109,7 +109,8 @@ python-backend/
 │   │   ├── chunking.py        # Semantic text chunking
 │   │   ├── embeddings.py      # Embedding generation and storage
 │   │   ├── extraction.py      # Metadata extraction via LLM
-│   │   └── processing.py      # Background processing queue
+│   │   ├── processing.py      # Background processing queue
+│   │   └── search.py          # Hybrid search (vector, FTS, RRF fusion)
 │   │
 │   ├── config.py              # Application configuration (pydantic-settings)
 │   ├── exceptions.py          # Custom exception hierarchy
@@ -429,6 +430,8 @@ async def create_item(
 
 Services receive the database connection via method parameters, not constructor. This enables transaction batching across multiple operations.
 
+`EmbeddingService` and `SearchService` both follow this pattern — `db` is passed per call, not stored on the instance.
+
 ```python
 # src/api/dependencies.py
 async def get_ai_provider() -> AsyncIterator[AIProvider]:
@@ -455,6 +458,45 @@ service = EmbeddingService(provider)
 await service.embed_chunks(db, chunks)
 await db.commit()  # Route commits after all operations succeed
 ```
+
+**Circular import caveat for services.** When one service depends on another, import the sub-module directly rather than from the package to avoid a circular import through `src/services/__init__.py`. Example: `search.py` imports `EmbeddingService` via `from src.services.embeddings import EmbeddingService`, not `from src.services import EmbeddingService`. Imports from `src.db` are safe because the database package does not import from `src.services`.
+
+**aiosqlite is single-threaded per connection.** `aiosqlite` serializes all queries through a background thread per connection. Calling `asyncio.gather()` on two queries sharing the same `db` handle provides no DB-level parallelism.
+
+**Parallel I/O via a secondary connection.** When two independent queries must run concurrently (e.g., vector search and FTS in `hybrid_search`), open a second `aiosqlite.Connection` to the same database file and pass each query to a separate connection:
+
+```python
+# src/services/search.py — parallel hybrid search pattern
+secondary_db: aiosqlite.Connection | None = None
+try:
+    db_path = await self._resolve_main_db_path(db)
+    if db_path is None:
+        # In-memory or unnamed DB — cannot share across connections; fall back to sequential
+        vector_results = await self.vector_search(query, db=db, limit=limit)
+        fts_results = await self.fts_search(query, db=db, limit=limit)
+    else:
+        secondary_db = await self._open_secondary_read_connection(db_path)
+        vector_out, fts_out = await asyncio.gather(
+            self.vector_search(query, db=db, limit=limit),
+            self.fts_search(query, db=secondary_db, limit=limit),
+            return_exceptions=True,
+        )
+        if isinstance(vector_out, BaseException):
+            raise vector_out
+        if isinstance(fts_out, BaseException):
+            raise fts_out
+        vector_results, fts_results = vector_out, fts_out
+finally:
+    if secondary_db is not None:
+        await secondary_db.close()
+```
+
+Key requirements for this pattern:
+
+- **Apply `configure_connection` to secondary connections.** `_open_secondary_read_connection` calls `configure_connection(secondary_db)` from `src.db` to apply the same PRAGMA settings (foreign keys, sqlite-vec extension, row factory) as the primary connection. Skipping this causes missing extension errors on the secondary connection.
+- **`return_exceptions=True` + `isinstance` check.** Using `return_exceptions=True` prevents one failing branch from silently cancelling the other. Checking `isinstance(result, BaseException)` and re-raising makes exception propagation explicit.
+- **In-memory DB fallback.** In-memory (`:memory:`) and unnamed SQLite databases cannot be opened by a second connection — each connection gets its own isolated in-memory store. `_resolve_main_db_path` queries `PRAGMA database_list` and returns `None` for these cases, triggering sequential single-connection execution. This fallback is exercised by the test suite, which uses in-memory databases.
+- **Close the secondary connection in `finally`.** The secondary connection must be closed even if `gather()` or downstream code raises.
 
 This pattern:
 
@@ -532,8 +574,11 @@ async def _load_sqlite_vec(db: aiosqlite.Connection) -> None:
     await db.execute("SELECT load_extension(?)", [sqlite_vec.loadable_path()])
     await db.enable_load_extension(False)
 
-async def _configure_connection(db: aiosqlite.Connection) -> None:
-    """Shared connection setup (PRAGMA, extensions, row factory)."""
+async def configure_connection(db: aiosqlite.Connection) -> None:
+    """Shared connection setup (PRAGMA, extensions, row factory).
+
+    Exported from src.db so services can apply it to secondary connections.
+    """
     await db.execute("PRAGMA foreign_keys = ON")
     await _load_sqlite_vec(db)
     db.row_factory = aiosqlite.Row
@@ -546,7 +591,7 @@ async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
     For FastAPI routes, use get_db_connection() from api.dependencies.
     """
     async with aiosqlite.connect(settings.db_path) as db:
-        await _configure_connection(db)
+        await configure_connection(db)
         yield db
 ```
 

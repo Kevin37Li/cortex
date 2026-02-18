@@ -26,7 +26,7 @@ async def _load_sqlite_vec(db: aiosqlite.Connection) -> None:
     await db.enable_load_extension(False)
 
 
-async def _configure_connection(db: aiosqlite.Connection) -> None:
+async def configure_connection(db: aiosqlite.Connection) -> None:
     """Shared connection setup (PRAGMA, extensions, row factory)."""
     await db.execute("PRAGMA foreign_keys = ON")
     await _load_sqlite_vec(db)
@@ -41,7 +41,7 @@ async def db_connection() -> AsyncIterator[aiosqlite.Connection]:
     For FastAPI routes, use get_db_connection() from api.dependencies.
     """
     async with aiosqlite.connect(settings.db_path) as db:
-        await _configure_connection(db)
+        await configure_connection(db)
         yield db
 
 

@@ -2,6 +2,7 @@
 
 from src.db.database import (
     EMBEDDING_DIMENSION,
+    configure_connection,
     db_connection,
     init_database,
     verify_database,
@@ -63,6 +64,7 @@ __all__ = [
     "SearchResponse",
     "SearchResultItem",
     "SearchType",
+    "configure_connection",
     "db_connection",
     "init_database",
     "normalize_item_metadata",

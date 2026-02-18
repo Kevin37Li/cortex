@@ -15,6 +15,7 @@ from src.main import app
 from src.providers import OllamaProvider
 from src.services.embeddings import EmbeddingService
 from src.services.processing import ProcessingQueue
+from src.services.search import SearchService
 
 from tests.fakes.providers import MockAIProvider
 
@@ -117,6 +118,12 @@ def mock_provider() -> MockAIProvider:
 def embedding_service(mock_provider: MockAIProvider) -> EmbeddingService:
     """Create an EmbeddingService with mock provider."""
     return EmbeddingService(provider=mock_provider, model_name="test-model")
+
+
+@pytest.fixture(scope="function")
+def search_service(embedding_service: EmbeddingService) -> SearchService:
+    """Create a SearchService with mock embedding service."""
+    return SearchService(embedding_service=embedding_service)
 
 
 # Test data fixtures
