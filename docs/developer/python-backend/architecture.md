@@ -71,7 +71,7 @@ python-backend/
 │   │   │   ├── items.py       # CRUD for items
 │   │   │   ├── processing.py  # Processing queue endpoints
 │   │   │   ├── ws.py          # WebSocket endpoints
-│   │   │   ├── search.py      # Search endpoints (planned)
+│   │   │   ├── search.py      # Search endpoints (planned — workflow implemented, API route pending)
 │   │   │   ├── chat.py        # Chat endpoints (planned)
 │   │   │   └── settings.py    # Configuration endpoints (planned)
 │   │   └── websocket/         # WebSocket infrastructure
@@ -80,11 +80,12 @@ python-backend/
 │   │
 │   ├── workflows/             # LangGraph workflows
 │   │   ├── __init__.py
+│   │   ├── utils.py           # Shared workflow utilities (log_node_execution, route_or_error)
 │   │   ├── processing.py      # Content processing graph
-│   │   ├── search.py          # Adaptive search graph
-│   │   ├── chat.py            # RAG chat graph
-│   │   ├── connections.py     # Connection discovery graph
-│   │   └── digest.py          # Daily digest graph
+│   │   ├── search.py          # Search graph (vector, FTS, hybrid)
+│   │   ├── chat.py            # RAG chat graph (planned)
+│   │   ├── connections.py     # Connection discovery graph (planned)
+│   │   └── digest.py          # Daily digest graph (planned)
 │   │
 │   ├── providers/             # AI provider implementations
 │   │   ├── __init__.py

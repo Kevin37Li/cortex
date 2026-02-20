@@ -21,13 +21,13 @@ LangGraph provides:
 
 ## Workflow Overview
 
-| Workflow                 | Trigger             | Purpose                                         |
-| ------------------------ | ------------------- | ----------------------------------------------- |
-| **Content Processing**   | Item saved          | Transform raw content into searchable knowledge |
-| **Adaptive Search**      | Search query        | Find relevant content with smart retrieval      |
-| **RAG Chat**             | Chat message        | Answer questions using knowledge base           |
-| **Connection Discovery** | Processing complete | Find relationships between items                |
-| **Daily Digest**         | Scheduled           | Surface insights and forgotten content          |
+| Workflow                 | Trigger             | Purpose                                           |
+| ------------------------ | ------------------- | ------------------------------------------------- |
+| **Content Processing**   | Item saved          | Transform raw content into searchable knowledge   |
+| **Search**               | Search query        | Hybrid retrieval with vector, FTS, and RRF fusion |
+| **RAG Chat**             | Chat message        | Answer questions using knowledge base             |
+| **Connection Discovery** | Processing complete | Find relationships between items                  |
+| **Daily Digest**         | Scheduled           | Surface insights and forgotten content            |
 
 ## Workflow 1: Content Processing
 
@@ -115,13 +115,19 @@ class ProcessingState(TypedDict, total=False):
 - **Conservative fallback metadata**: Uses source text/title only and avoids synthetic concepts/entities
 - **Async connections**: Don't block user confirmation on slow connection discovery
 
-## Workflow 2: Adaptive Search
+## Workflow 2: Search
 
-**Purpose**: Find relevant content even with vague or complex queries.
+**Purpose**: Find relevant content using vector search, full-text search, or both (hybrid) with reciprocal rank fusion.
 
 ```
-Query → Analyze → [Decompose if complex] → Vector Search → FTS Search → Fuse → [Expand if poor] → Return
+Query → [Embed Query] → [Vector Search] → [FTS Search] → Fuse Results → Enrich Results → END
 ```
+
+The workflow conditionally skips nodes based on search type:
+
+- **hybrid**: embed_query → vector_search → fts_search → fuse_results → enrich_results → END
+- **vector**: embed_query → vector_search → fuse_results → enrich_results → END
+- **fts**: fts_search → fuse_results → enrich_results → END
 
 ### Flow
 
@@ -129,61 +135,75 @@ Query → Analyze → [Decompose if complex] → Vector Search → FTS Search �
 ┌─────────────┐
 │   Query     │
 └──────┬──────┘
-       │
-┌──────▼──────┐
-│  Analyze    │ Classify: simple, multi-faceted, temporal
-└──────┬──────┘
-       │
-   ┌───┴────────────┐
-   │ Multi-faceted  │
-   ▼                │
-┌──────────┐        │
-│Decompose │        │ Break into sub-queries
-└────┬─────┘        │
+       │ route_after_entry
+   ┌───┴──────────┐
+   │              │
+   ▼ (vector/     ▼ (fts)
+     hybrid)
+┌──────────┐  ┌──────────┐
+│  Embed   │  │   FTS    │
+│  Query   │  │  Search  │
+└────┬─────┘  └────┬─────┘
      │              │
-┌────▼────────◀─────┘
-│Vector Search│ Embed query, find similar chunks
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│  FTS Search │ Full-text for exact matches
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│    Fuse     │ Reciprocal Rank Fusion
-└──────┬──────┘
-       │
-┌──────▼──────┐      ┌──────────────┐
-│  Evaluate   │─────▶│   Expand     │ Add synonyms if poor results
-└──────┬──────┘ Poor └──────────────┘
-       │ Good
-       │
-┌──────▼──────┐
-│   Return    │ Ranked results with snippets
+┌────▼─────┐        │
+│ Vector   │        │
+│ Search   │        │
+└────┬─────┘        │
+     │ route_after_vector
+   ┌─┴──────┐       │
+   │(hybrid)│       │
+   ▼        │       │
+┌──────┐    │       │
+│ FTS  │    │       │
+│Search│    │       │
+└──┬───┘    │       │
+   └────┬───┘───────┘
+        │
+┌───────▼─────┐
+│    Fuse     │ RRF for hybrid; passthrough for single-mode
+└───────┬─────┘
+        │
+┌───────▼─────┐
+│   Enrich    │ Attach item metadata to chunk hits
+└───────┬─────┘
+        │
+┌───────▼─────┐
+│     END     │
 └─────────────┘
+
+(Any node error → handle_error → END)
 ```
 
 ### State Schema
 
 ```python
-class SearchState(TypedDict):
-    original_query: str
-    query_type: str  # simple, multi_faceted, temporal
-    sub_queries: list[str]
-    vector_results: list[SearchResult]
-    fts_results: list[SearchResult]
-    fused_results: list[SearchResult]
-    result_quality: str  # good, poor
-    expansion_terms: list[str]
-    final_results: list[SearchResult]
+class SearchState(TypedDict, total=False):
+    # Input
+    query: str
+    search_type: SearchType  # "hybrid", "vector", or "fts"
+    limit: int
+
+    # Intermediate
+    query_embedding: list[float]
+    vector_results: list[ChunkSearchResult]
+    fts_results: list[ChunkSearchResult]
+    fused_results: list[ChunkSearchResult]
+
+    # Output
+    final_results: list[SearchResultItem]
+
+    # Error handling
+    error: str | None
+    error_step: str | None
 ```
 
 ### Key Design Decisions
 
-- **Hybrid search**: Vector finds concepts, FTS finds exact phrases
-- **Query decomposition**: "Compare X and Y" becomes searches for both
-- **Automatic expansion**: Try related terms before returning empty results
-- **RRF fusion**: Simple but effective combination of ranked lists
+- **Hybrid search**: Vector finds concepts, FTS finds exact phrases — combined via RRF
+- **Conditional routing**: `route_after_entry` and `route_after_vector` skip unnecessary nodes per search type
+- **Per-node error routing**: Every node routes to `handle_error` on failure, providing LangGraph state visibility into which step failed
+- **Pre-computed embeddings**: `embed_query` stores the embedding in state; `vector_search` reuses it via `query_embedding` parameter to avoid re-embedding
+- **Why not `SearchService.hybrid_search()`**: The multi-node workflow trades some performance for per-step error routing and observability, acceptable for the MVP
 
 ## Workflow 3: RAG Chat
 
@@ -388,18 +408,40 @@ class DigestState(TypedDict):
 
 ## Implementation Notes
 
+### Shared Workflow Utilities
+
+`workflows/utils.py` provides generic helpers used by all workflows:
+
+```python
+# src/workflows/utils.py
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Any, TypeVar
+
+NodeFuncT = TypeVar("NodeFuncT", bound=Callable[[Any], Awaitable[Any]])
+
+def log_node_execution(node_name: str) -> Callable[[NodeFuncT], NodeFuncT]:
+    """Decorator for logging node entry/exit with consistent metadata.
+
+    Extracts common context fields (item_id, query) from any workflow state.
+    """
+    ...
+
+def route_or_error(next_node: str) -> Callable[[Mapping[str, Any]], str]:
+    """Route to next_node or handle_error if error is set in state."""
+    def router(state: Mapping[str, Any]) -> str:
+        if state.get("error"):
+            return "handle_error"
+        return next_node
+    return router
+```
+
+Both functions use `Mapping[str, Any]` (not a specific TypedDict) so they work with any workflow state type (`ProcessingState`, `SearchState`, etc.).
+
 ### Error Handling in Workflows
 
 Each node should catch exceptions and return error state for routing:
 
 ```python
-class ProcessingState(TypedDict, total=False):
-    item_id: str
-    # ... other fields
-    error: str | None
-    error_step: ProcessingStep | None
-    retry_count: int
-
 @log_node_execution("parse")
 async def parse_node(state: ProcessingState) -> dict:
     current_step = ProcessingStep.PARSING
@@ -411,16 +453,10 @@ async def parse_node(state: ProcessingState) -> dict:
         return {"error": str(e), "error_step": current_step}
 ```
 
-Use a `route_or_error()` factory for conditional edges:
+Use `route_or_error()` from `workflows/utils.py` for conditional edges:
 
 ```python
-def route_or_error(next_node: str):
-    """Route to next_node or handle_error if error is set."""
-    def router(state: ProcessingState) -> str:
-        if state.get("error"):
-            return "handle_error"
-        return next_node
-    return router
+from src.workflows.utils import route_or_error
 
 # Usage in graph definition
 builder.add_conditional_edges(
@@ -465,28 +501,17 @@ result = await graph.ainvoke(state, config)
 
 ### Observability
 
-Log workflow execution for debugging with a decorator:
+Use the `log_node_execution` decorator from `workflows/utils.py` for consistent node logging:
 
 ```python
-import functools
+from src.workflows.utils import log_node_execution
 
-def log_node_execution(node_name: str):
-    """Decorator for logging workflow node execution."""
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(state: ProcessingState) -> dict:
-            item_id = state.get("item_id", "unknown")
-            logger.info(f"Starting node: {node_name}", extra={"item_id": item_id})
-            try:
-                result = await func(state)
-                logger.info(f"Completed node: {node_name}", extra={"item_id": item_id})
-                return result
-            except Exception as e:
-                logger.error(f"Failed node: {node_name}", extra={"item_id": item_id, "error": str(e)})
-                raise
-        return wrapper
-    return decorator
+@log_node_execution("parse")
+async def parse_node(state: ProcessingState) -> dict:
+    ...
 ```
+
+The decorator automatically extracts context fields (`item_id` for processing, `query` for search) from any workflow state and logs node entry, exit, and failures. See `src/workflows/utils.py` for the implementation.
 
 ### Database Access in Nodes
 

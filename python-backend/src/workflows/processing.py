@@ -9,9 +9,8 @@ Uses LangGraph StateGraph for:
 - Error handling with graceful degradation
 """
 
-import functools
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import Any, TypedDict, cast
 
 from langgraph.graph import END, StateGraph
@@ -37,6 +36,7 @@ from src.services import (
     EmbeddingService,
     MetadataExtractor,
 )
+from src.workflows.utils import log_node_execution, route_or_error
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,6 @@ class ProcessingState(TypedDict, total=False):
 
 
 NodeUpdate = ProcessingState
-NodeFunc = Callable[[ProcessingState], Awaitable[NodeUpdate]]
 
 
 def _status_for_step(step: ProcessingStep) -> ProcessingStatus:
@@ -201,35 +200,6 @@ def _build_conservative_fallback_metadata(
     )
 
     return ExtractedMetadata(summary=summary, concepts=concepts, entities=entities)
-
-
-def log_node_execution(
-    node_name: str,
-) -> Callable[[NodeFunc], NodeFunc]:
-    """Decorator for logging workflow node execution.
-
-    Logs entry, exit, and any exceptions that occur during node execution.
-    """
-
-    def decorator(func: NodeFunc) -> NodeFunc:
-        @functools.wraps(func)
-        async def wrapper(state: ProcessingState) -> NodeUpdate:
-            item_id = state.get("item_id", "unknown")
-            logger.info(f"Starting node: {node_name}", extra={"item_id": item_id})
-            try:
-                result = await func(state)
-                logger.info(f"Completed node: {node_name}", extra={"item_id": item_id})
-                return result
-            except Exception as e:
-                logger.error(
-                    f"Failed node: {node_name}",
-                    extra={"item_id": item_id, "error": str(e)},
-                )
-                raise
-
-        return wrapper
-
-    return decorator
 
 
 @log_node_execution("classify")
@@ -525,17 +495,6 @@ async def handle_error_node(state: ProcessingState) -> NodeUpdate:
         )
 
     return {}
-
-
-def route_or_error(next_node: str):
-    """Create a router that routes to next_node or handle_error if error is set."""
-
-    def router(state: ProcessingState) -> str:
-        if state.get("error"):
-            return "handle_error"
-        return next_node
-
-    return router
 
 
 def route_after_validation(state: ProcessingState) -> str:
