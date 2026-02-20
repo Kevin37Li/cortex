@@ -15,8 +15,8 @@ Write comprehensive tests for the search service, LangGraph workflow, and API en
 - [ ] RRF unit tests: correct score calculation, correct ordering, handles single-source input
 - [ ] Result enrichment tests: adds item title and content_type, skips orphaned chunks (item deleted but chunk remains)
 - [ ] Error handling tests: SearchError raised for empty query, graceful handling of embedding failures
-- [ ] API endpoint tests: 200 with results, 200 with empty results, 422 for search errors, validates request body
-- [ ] All tests pass: `uv run pytest tests/ -x`
+- [ ] API endpoint tests: 200 with results, 200 with empty results, 500 for runtime search errors, validates request body (422 for validation)
+- [ ] All tests pass: `bun run python:test -- -x`
 - [ ] Test coverage for search code >= 85%
 
 ## Dependencies
@@ -50,7 +50,7 @@ import aiosqlite
 import sqlite_vec
 from pathlib import Path
 
-from src.db.database import init_database, _configure_connection
+from src.db.database import configure_connection, init_database
 from src.config import settings
 
 
@@ -64,7 +64,7 @@ async def search_db(tmp_path: Path):
     try:
         await init_database()
         async with aiosqlite.connect(db_path) as db:
-            await _configure_connection(db)
+            await configure_connection(db)
             # Seed test data
             await _seed_test_data(db)
             await db.commit()
@@ -165,6 +165,9 @@ Use `httpx.AsyncClient` with FastAPI's `TestClient` pattern:
 
 ```python
 from httpx import ASGITransport, AsyncClient
+from unittest.mock import AsyncMock, patch
+
+from src.exceptions import SearchError
 from src.main import app
 
 @pytest.fixture
@@ -193,6 +196,16 @@ async def test_search_empty_results(client, search_db):
     })
     assert response.status_code == 200
     assert response.json()["results"] == []
+
+async def test_search_runtime_error_returns_500(client):
+    with patch(
+        "src.api.routes.search.search",
+        new=AsyncMock(return_value={"error": "boom", "error_step": "vector_search"}),
+    ):
+        response = await client.post("/api/search/", json={"query": "python"})
+
+    assert response.status_code == 500
+    assert response.json()["error"] == SearchError.error_code
 
 async def test_search_validates_request(client):
     response = await client.post("/api/search/", json={
@@ -224,7 +237,6 @@ Create the `tests/workflows/` and `tests/api/` directories if they don't exist.
 ## Verification
 
 ```bash
-cd python-backend
-uv run pytest tests/ -x -v
-uv run pytest tests/ --cov=src --cov-report=term-missing
+bun run python:test -- -x -v
+bun run python:test -- --cov=src --cov-report=term-missing --cov-fail-under=85
 ```
