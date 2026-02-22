@@ -11,6 +11,7 @@ from src.api.routes import (
     health_router,
     items_router,
     processing_router,
+    search_router,
     ws_router,
 )
 from src.api.websocket import ProcessingConnectionManager
@@ -121,6 +122,7 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
 app.include_router(processing_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
 app.include_router(ws_router, prefix="/api")
 
 

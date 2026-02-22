@@ -405,6 +405,17 @@ async def database_error_handler(request: Request, exc: DatabaseError):
     )
 ```
 
+### HTTP Status Code Reference
+
+| Exception Class     | HTTP Status | Use Case                                   |
+| ------------------- | ----------- | ------------------------------------------ |
+| Pydantic validation | 422         | Malformed request body (FastAPI automatic) |
+| `ItemNotFoundError` | 404         | Resource not found                         |
+| `ProcessingError`   | 500         | Processing pipeline failure                |
+| `SearchError`       | 500         | Search execution failure                   |
+| `DatabaseError`     | 500         | Internal DB error (message hidden)         |
+| `AIProviderError`   | 503         | AI service unavailable                     |
+
 ### External Service Error Pattern
 
 For external services (Ollama, cloud APIs), use a two-tier approach:

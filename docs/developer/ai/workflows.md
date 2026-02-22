@@ -513,9 +513,30 @@ async def parse_node(state: ProcessingState) -> dict:
 
 The decorator automatically extracts context fields (`item_id` for processing, `query` for search) from any workflow state and logs node entry, exit, and failures. See `src/workflows/utils.py` for the implementation.
 
+### Calling Workflows from API Routes
+
+API routes call workflow functions via package-level exports. Because workflow nodes manage their own DB connections (see below), routes that invoke workflows do **not** use `Depends(get_db_connection)` or any DB dependency injection.
+
+```python
+# ✅ GOOD: Import from package export
+from src.workflows import search
+
+# ❌ BAD: Direct submodule import
+from src.workflows.search import search
+```
+
+The route must defensively validate the workflow's return value:
+
+1. **Type check**: Ensure `isinstance(result, dict)` — workflows return their full state dict, not a clean response model
+2. **Error check**: `result.get("error") is not None` — check for error key in state (use `is not None`, not truthiness, to catch empty-string errors)
+3. **Extract results**: Pull the relevant output key (e.g., `result.get("final_results", [])`)
+4. **Exception wrapping**: Re-raise `SearchError`/`ProcessingError` directly; wrap unexpected exceptions with `from exc`
+
+See `src/api/routes/search.py` for the canonical example and `docs/developer/python-backend/architecture.md` for the full route pattern comparison.
+
 ### Database Access in Nodes
 
-Workflow nodes manage their own database connections:
+Workflow nodes manage their own database connections. This means API routes calling workflows do **not** need `Depends(get_db_connection)` — the workflow handles connections internally:
 
 ```python
 from src.db import db_connection, ItemUpdate, ProcessingStep, normalize_item_metadata

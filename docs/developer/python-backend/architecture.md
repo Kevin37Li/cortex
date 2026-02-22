@@ -71,7 +71,7 @@ python-backend/
 │   │   │   ├── items.py       # CRUD for items
 │   │   │   ├── processing.py  # Processing queue endpoints
 │   │   │   ├── ws.py          # WebSocket endpoints
-│   │   │   ├── search.py      # Search endpoints (planned — workflow implemented, API route pending)
+│   │   │   ├── search.py      # Search endpoints
 │   │   │   ├── chat.py        # Chat endpoints (planned)
 │   │   │   └── settings.py    # Configuration endpoints (planned)
 │   │   └── websocket/         # WebSocket infrastructure
@@ -159,8 +159,7 @@ PUT    /api/items/{id}         # Update item
 DELETE /api/items/{id}         # Delete item
 
 # Search
-POST   /api/search             # Execute search
-GET    /api/search/suggestions # Get search suggestions
+POST   /api/search/            # Execute search (hybrid, vector, or FTS)
 
 # Chat
 POST   /api/conversations                    # Create conversation
@@ -272,7 +271,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from src.api.routes import health_router, items_router, processing_router, ws_router
+from src.api.routes import health_router, items_router, processing_router, search_router, ws_router
 from src.api.websocket import ProcessingConnectionManager
 from src.db import init_database
 from src.services import ProcessingQueue
@@ -305,12 +304,13 @@ app = FastAPI(title="Cortex Backend", lifespan=lifespan)
 app.include_router(health_router, prefix="/api")
 app.include_router(items_router, prefix="/api")
 app.include_router(processing_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
 app.include_router(ws_router, prefix="/api")
 ```
 
 For full app wiring (exception handlers and CORS), see `python-backend/src/main.py`.
 
-### Route Example
+### Route Example (CRUD with DI)
 
 ```python
 # src/api/routes/items.py
@@ -371,6 +371,48 @@ async def delete_item(
     await db.commit()
     return Response(status_code=204)
 ```
+
+### Route Example (Workflow, no DI)
+
+Routes that call LangGraph workflows do **not** inject DB dependencies — the workflow manages its own connections per node. Instead, the route imports the workflow function from the package-level export and defensively validates the returned state dict.
+
+```python
+# src/api/routes/search.py
+from src.db import SearchRequest, SearchResponse
+from src.exceptions import SearchError
+from src.workflows import search  # Package-level export, not direct submodule
+
+router = APIRouter(prefix="/search", tags=["search"])
+
+@router.post("/", response_model=SearchResponse, status_code=200,
+             responses={500: {"description": "Search execution failed"}})
+async def search_items(request: SearchRequest) -> SearchResponse:
+    try:
+        result = await search(query=request.query, ...)
+    except SearchError:
+        raise  # Let global exception handler return 500
+    except Exception as exc:
+        raise SearchError(str(exc), query=request.query, step="workflow") from exc
+
+    if not isinstance(result, dict):
+        raise SearchError("Search workflow returned invalid state", ...)
+
+    if result.get("error") is not None:
+        raise SearchError(str(result["error"]), ...)
+
+    return SearchResponse(results=result.get("final_results", []), ...)
+```
+
+**Key differences from CRUD routes:**
+
+| Aspect          | CRUD Route (items)            | Workflow Route (search)                       |
+| --------------- | ----------------------------- | --------------------------------------------- |
+| DB connection   | `Depends(get_db_connection)`  | None — workflow opens its own                 |
+| Import          | Repositories via DI           | Workflow function from `src.workflows`        |
+| Result handling | Direct Pydantic model         | Validate dict → check error → extract results |
+| Error wrapping  | Specific exceptions from repo | Wrap unexpected exceptions in `SearchError`   |
+
+See `src/api/routes/search.py` for the full implementation.
 
 ### Dependency Injection
 
