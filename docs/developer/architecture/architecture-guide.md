@@ -247,10 +247,10 @@ SQLite handles crashes gracefully—user data is safe.
 ## Component Architecture
 
 ```
-MainWindow (Top-level orchestrator)
+MainWindowShell (Top-level orchestrator)
 ├── TitleBar (Window controls + toolbar)
 ├── LeftSidebar (Navigation, collections)
-├── MainContent (Primary content area)
+├── Main Content Area (Primary content via Outlet)
 ├── RightSidebar (Context, related items)
 └── Global Overlays
     ├── PreferencesDialog (Cmd+,)
@@ -276,6 +276,7 @@ src/                          # React frontend
 │   └── tauri-bindings/      # Generated type-safe commands
 ├── routes/                  # File-based route components
 ├── services/                # TanStack Query + API calls
+├── test-utils/              # Shared test helpers (e.g., query-test-helpers)
 ├── types/                   # TypeScript types (generated api.gen.ts + manual definitions)
 └── store/                   # Zustand stores
 

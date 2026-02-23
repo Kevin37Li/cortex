@@ -109,7 +109,59 @@ const link = screen.getByRole('link', { name: /Item Title/i })
 expect(link).toHaveAttribute('href', '/items/item-1')
 ```
 
-### Mocking Service Hooks
+### Testing Service Hooks Directly
+
+Service hooks (e.g., `useSearch`, `useItems`) that call the Python backend via `apiFetch()` can be tested directly with `renderHook` and shared test helpers from `src/test-utils/`:
+
+```typescript
+import { renderHook, waitFor } from '@testing-library/react'
+import {
+  createMockResponse,
+  createTestQueryClient,
+  createWrapper,
+} from '@/test-utils/query-test-helpers'
+
+// Stub global fetch (bypasses apiFetch's real HTTP calls)
+const fetchMock = vi.fn()
+vi.stubGlobal('fetch', fetchMock)
+
+test('useSearch sends POST with normalized params', async () => {
+  fetchMock.mockResolvedValue(
+    createMockResponse({
+      body: { results: [], total: 0, query: 'graph', search_type: 'hybrid' },
+    })
+  )
+
+  const queryClient = createTestQueryClient()
+  const { result } = renderHook(() => useSearch({ query: '  graph  ' }), {
+    wrapper: createWrapper(queryClient),
+  })
+
+  await waitFor(() => {
+    expect(result.current.isSuccess).toBe(true)
+  })
+
+  const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+  expect(url).toContain('/api/search/')
+  expect(JSON.parse(init.body as string)).toEqual({
+    query: 'graph',
+    search_type: 'hybrid',
+    limit: 20,
+  })
+})
+```
+
+**Shared helpers** (`src/test-utils/query-test-helpers.ts`):
+
+| Helper                    | Purpose                                                     |
+| ------------------------- | ----------------------------------------------------------- |
+| `createTestQueryClient()` | QueryClient with `retry: false` for deterministic tests     |
+| `createWrapper(client)`   | React wrapper component providing QueryClientProvider       |
+| `createMockResponse()`    | Builds a minimal `Response` object with configurable status |
+
+See `src/services/items.test.ts` and `src/services/search.test.ts` for full examples of this pattern.
+
+### Mocking Service Hooks in Component Tests
 
 To mock TanStack Query service hooks while preserving type exports, use `vi.importActual`:
 

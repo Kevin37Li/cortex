@@ -1,7 +1,10 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  createMockResponse,
+  createTestQueryClient,
+  createWrapper,
+} from '@/test-utils/query-test-helpers'
 import type { Item, ItemCreate, ItemUpdate, RetryResponse } from './items'
 
 vi.mock('@/lib/logger', () => ({
@@ -41,44 +44,6 @@ const sampleItem: Item = {
   metadata: null,
 }
 const specialItemId = 'item/with spaces?#'
-
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-}
-
-function createWrapper(queryClient: QueryClient) {
-  function TestQueryClientProvider({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children)
-  }
-
-  TestQueryClientProvider.displayName = 'TestQueryClientProvider'
-
-  return TestQueryClientProvider
-}
-
-function createMockResponse({
-  ok,
-  status = 200,
-  body,
-  json,
-}: {
-  ok?: boolean
-  status?: number
-  body?: unknown
-  json?: () => Promise<unknown>
-}): Response {
-  return {
-    ok: ok ?? (status >= 200 && status < 300),
-    status,
-    json: json ?? vi.fn().mockResolvedValue(body),
-    headers: new Headers(),
-  } as Response
-}
 
 describe('itemQueryKeys', () => {
   it('creates expected query keys', () => {

@@ -170,7 +170,7 @@ Use Tauri's `app_data_dir()` for safe storage locations - never write to arbitra
 
 ## SQLite Database (When Needed)
 
-> **Note:** SQLite is not installed in this app. Add it when your app needs relational data with queries.
+> **Note:** The Rust/Tauri side does not use SQLite directly. The Python sidecar backend manages all SQLite operations (items, embeddings, full-text search) -- see [python-backend/architecture.md](../python-backend/architecture.md). The guidance below is for adding Rust-side SQLite if needed.
 
 ### When to Use SQLite
 

@@ -220,10 +220,9 @@ Apply `data-tauri-drag-region` to elements that should drag the window (like tit
 ```
 src/components/
 ├── layout/           # App structure
-│   ├── MainWindow.tsx
+│   ├── MainWindowShell.tsx
 │   ├── LeftSideBar.tsx
-│   ├── RightSideBar.tsx
-│   └── MainWindowContent.tsx
+│   └── RightSideBar.tsx
 ├── titlebar/         # Window chrome
 │   ├── TitleBar.tsx
 │   ├── MacOSWindowControls.tsx

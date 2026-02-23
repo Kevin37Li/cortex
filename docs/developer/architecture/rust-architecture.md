@@ -15,7 +15,8 @@ src-tauri/src/
 │   ├── preferences.rs
 │   ├── notifications.rs
 │   ├── quick_pane.rs
-│   └── recovery.rs
+│   ├── recovery.rs
+│   └── sidecar.rs   # Python sidecar lifecycle management
 └── utils/           # Utility modules
     ├── mod.rs
     └── platform.rs  # Platform-specific helpers

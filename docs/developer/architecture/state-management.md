@@ -43,7 +43,7 @@ const { data, isLoading, error } = useQuery({
 })
 ```
 
-For HTTP-backed data from the Python sidecar, see `src/services/items.ts` which uses `apiFetch()` from `src/lib/api-config.ts` instead of Tauri commands.
+For HTTP-backed data from the Python sidecar, see `src/services/items.ts` (CRUD) and `src/services/search.ts` (query with parameter normalization) which use `apiFetch()` from `src/lib/api-config.ts` instead of Tauri commands.
 
 #### Paginated Queries with `keepPreviousData`
 
