@@ -231,7 +231,7 @@ async def delete_item_embeddings(db, item_id: str):
 
 ## Hybrid Search
 
-Combine vector similarity with full-text search for best results.
+Combine vector similarity with full-text search for best results. See `python-backend/src/services/search.py` for the production implementation with Pydantic models, score normalization to [0, 1], error handling, and parallel query execution.
 
 ### Implementation
 

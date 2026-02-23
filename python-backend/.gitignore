@@ -9,6 +9,8 @@ __pycache__/
 *$py.class
 *.so
 .ruff_cache/
+.coverage
+.coverage.*
 
 # Distribution
 dist/

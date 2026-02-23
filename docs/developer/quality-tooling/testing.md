@@ -245,33 +245,50 @@ python-backend/
 │   │   │   ├── health.py           # Health check endpoint
 │   │   │   ├── items.py            # CRUD for items
 │   │   │   ├── processing.py       # Processing queue endpoints
+│   │   │   ├── search.py           # Search endpoint
 │   │   │   └── ws.py               # WebSocket endpoints
 │   │   └── websocket/
 │   │       └── manager.py          # ProcessingConnectionManager
 │   ├── services/
-│   │   └── processing.py
+│   │   ├── chunking.py
+│   │   ├── embeddings.py
+│   │   ├── extraction.py
+│   │   ├── parsing.py
+│   │   ├── processing.py
+│   │   └── search.py
 │   └── workflows/
-│       └── processing.py
+│       ├── processing.py
+│       ├── search.py
+│       └── utils.py
 └── tests/
     ├── api/                         # API endpoint tests
+    │   ├── test_exception_handlers.py
     │   ├── test_health.py
     │   ├── test_health_ollama.py
     │   ├── test_items.py
     │   ├── test_processing.py
+    │   ├── test_search.py
     │   └── test_ws_processing.py
     ├── core/                        # Exception hierarchy tests
     │   └── test_exceptions.py
     ├── db/                          # Database and repository tests
     │   ├── test_database.py
-    │   └── test_repositories.py
+    │   ├── test_repositories.py
+    │   └── test_search_models.py
+    ├── fakes/                       # Shared test doubles
+    │   └── providers.py
     ├── providers/                   # AI provider tests
     │   └── test_ollama.py
     ├── services/                    # Service-level tests
+    │   ├── test_chunking.py
     │   ├── test_embeddings.py
+    │   ├── test_extraction.py
     │   ├── test_parsing.py
+    │   ├── test_processing.py
     │   └── test_search.py
     ├── workflows/                   # Workflow integration tests
-    │   └── test_processing.py
+    │   ├── test_processing.py
+    │   └── test_search.py
     └── conftest.py                  # Shared fixtures
 ```
 
@@ -385,6 +402,55 @@ pytest tests/api/test_items.py
 # Run with verbose output
 pytest -v
 ```
+
+### Error Propagation Testing
+
+Python services use a three-tier error handling pattern: propagate domain errors, wrap related errors, and wrap unexpected errors. Test all three tiers:
+
+```python
+# 1. Domain errors pass through unchanged (identity check)
+async def test_propagates_existing_search_error(self, service):
+    original = SearchError("boom", query="q", step="validate_query")
+    with patch.object(service._dep, "method", new=AsyncMock(side_effect=original)):
+        with pytest.raises(SearchError) as exc_info:
+            await service.method("q", db=db)
+    assert exc_info.value is original  # Same object, not re-wrapped
+
+# 2. Related errors are wrapped with step metadata
+async def test_wraps_embedding_error(self, service):
+    with patch.object(service._dep, "method", new=AsyncMock(
+        side_effect=EmbeddingError("unavailable", item_id="x", step="embed")
+    )):
+        with pytest.raises(SearchError) as exc_info:
+            await service.method("q", db=db)
+    assert exc_info.value.step == "vector_search"
+
+# 3. Unexpected errors are wrapped in the domain error
+async def test_wraps_unexpected_errors(self, service):
+    with patch.object(service._dep, "method", new=AsyncMock(
+        side_effect=RuntimeError("db down")
+    )):
+        with pytest.raises(SearchError) as exc_info:
+            await service.method("q", db=db)
+    assert exc_info.value.step == "expected_step"
+```
+
+### Workflow Node Error Returns
+
+Workflow nodes catch all exceptions and return error state dicts instead of raising. Test these return values, not exceptions:
+
+```python
+async def test_node_returns_error_state_on_exception(self, workflow_db):
+    with patch.object(workflow.SearchService, "fts_search",
+        new=AsyncMock(side_effect=RuntimeError("fts failed"))
+    ):
+        result = await workflow.fts_search_node({"query": "alpha", "limit": 5})
+
+    assert result["error"] == "fts failed"
+    assert result["error_step"] == "fts_search"
+```
+
+See `tests/services/test_search.py` and `tests/workflows/test_search.py` for full examples.
 
 ## Best Practices
 

@@ -165,6 +165,8 @@ CREATE VIRTUAL TABLE vec_chunks USING vec0(
 
 ## Search Implementation
 
+The conceptual flow for search is shown below. See `python-backend/src/services/search.py` for the full production implementation with error handling, score normalization to [0, 1], missing-chunk filtering, and parallel query execution via secondary DB connections.
+
 ### Basic Vector Search
 
 ```python
@@ -219,22 +221,25 @@ async def hybrid_search(
 
 ### Reciprocal Rank Fusion (RRF)
 
-Combines ranked lists from different search methods:
+Combines ranked lists from different search methods. The actual implementation uses two explicit parameters (`vector_results`, `fts_results`) and normalizes fused scores to [0, 1] so the top result always has `score=1.0`:
 
 ```python
 def reciprocal_rank_fusion(
-    *result_lists: list[SearchResult],
+    vector_results: list[ChunkSearchResult],
+    fts_results: list[ChunkSearchResult],
     k: int = 60,
-    limit: int = 10
-) -> list[SearchResult]:
+) -> list[ChunkSearchResult]:
     scores = defaultdict(float)
 
-    for results in result_lists:
-        for rank, result in enumerate(results):
-            scores[result.id] += 1 / (k + rank + 1)
+    for rank, result in enumerate(vector_results, start=1):
+        scores[result.chunk_id] += 1 / (k + rank)
 
-    sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
-    return [get_result(id) for id in sorted_ids[:limit]]
+    for rank, result in enumerate(fts_results, start=1):
+        scores[result.chunk_id] += 1 / (k + rank)
+
+    # Sort by fused score descending, chunk_id ascending for deterministic tie-breaking
+    # Normalize top score to 1.0
+    ...
 ```
 
 ## Embedding Consistency

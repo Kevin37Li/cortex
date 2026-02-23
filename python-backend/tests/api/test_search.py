@@ -6,6 +6,20 @@ from httpx import AsyncClient
 from src.exceptions import SearchError
 
 
+def _assert_validation_error_payload(response_json: dict) -> list[dict]:
+    """Assert FastAPI/Pydantic validation payload shape."""
+    assert "detail" in response_json
+    errors = response_json["detail"]
+    assert isinstance(errors, list)
+    assert errors
+    first_error = errors[0]
+    assert isinstance(first_error, dict)
+    assert "type" in first_error
+    assert "loc" in first_error
+    assert "msg" in first_error
+    return errors
+
+
 class TestSearchItems:
     """Test POST /api/search/ endpoint."""
 
@@ -211,3 +225,54 @@ class TestSearchItems:
             "error": "search_error",
             "message": "connection lost",
         }
+
+
+class TestSearchValidation:
+    """Test request validation returns 422 for invalid payloads."""
+
+    async def test_empty_query_returns_422(self, client: AsyncClient):
+        response = await client.post("/api/search/", json={"query": ""})
+        assert response.status_code == 422
+        errors = _assert_validation_error_payload(response.json())
+        assert errors[0]["loc"][-1] == "query"
+
+    async def test_whitespace_only_query_returns_422(self, client: AsyncClient):
+        response = await client.post("/api/search/", json={"query": "   "})
+        assert response.status_code == 422
+        _assert_validation_error_payload(response.json())
+
+    async def test_missing_query_returns_422(self, client: AsyncClient):
+        response = await client.post("/api/search/", json={})
+        assert response.status_code == 422
+        errors = _assert_validation_error_payload(response.json())
+        assert errors[0]["loc"][-1] == "query"
+
+    async def test_invalid_search_type_returns_422(self, client: AsyncClient):
+        response = await client.post(
+            "/api/search/", json={"query": "test", "search_type": "keyword"}
+        )
+        assert response.status_code == 422
+        errors = _assert_validation_error_payload(response.json())
+        assert errors[0]["loc"][-1] == "search_type"
+
+    async def test_limit_below_minimum_returns_422(self, client: AsyncClient):
+        response = await client.post("/api/search/", json={"query": "test", "limit": 0})
+        assert response.status_code == 422
+        errors = _assert_validation_error_payload(response.json())
+        assert errors[0]["loc"][-1] == "limit"
+
+    async def test_limit_above_maximum_returns_422(self, client: AsyncClient):
+        response = await client.post(
+            "/api/search/", json={"query": "test", "limit": 101}
+        )
+        assert response.status_code == 422
+        errors = _assert_validation_error_payload(response.json())
+        assert errors[0]["loc"][-1] == "limit"
+
+    async def test_extra_fields_returns_422(self, client: AsyncClient):
+        response = await client.post(
+            "/api/search/", json={"query": "test", "unknown_field": "value"}
+        )
+        assert response.status_code == 422
+        errors = _assert_validation_error_payload(response.json())
+        assert any(error["loc"][-1] == "unknown_field" for error in errors)

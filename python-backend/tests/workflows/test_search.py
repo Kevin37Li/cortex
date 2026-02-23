@@ -128,6 +128,58 @@ class TestFuseResultsNode:
 
         assert result["fused_results"] == [fts_results[0]]
 
+    async def test_returns_error_state_when_rrf_raises(self) -> None:
+        with patch.object(
+            workflow,
+            "reciprocal_rank_fusion",
+            side_effect=RuntimeError("rrf failed"),
+        ):
+            result = await workflow.fuse_results_node(
+                {
+                    "search_type": "hybrid",
+                    "limit": 5,
+                    "vector_results": [_chunk("chunk-1")],
+                    "fts_results": [_chunk("chunk-2")],
+                }
+            )
+
+        assert result["error"] == "rrf failed"
+        assert result["error_step"] == "fuse_results"
+
+
+class TestWorkflowNodes:
+    """Unit tests for individual workflow nodes."""
+
+    async def test_fts_search_node_returns_error_state_on_exception(
+        self, search_workflow_db
+    ) -> None:
+        del search_workflow_db
+        with patch.object(
+            workflow.SearchService,
+            "fts_search",
+            new=AsyncMock(side_effect=RuntimeError("fts node failed")),
+        ):
+            result = await workflow.fts_search_node({"query": "alpha", "limit": 5})
+
+        assert result["error"] == "fts node failed"
+        assert result["error_step"] == "fts_search"
+
+    async def test_enrich_results_node_returns_error_state_on_exception(
+        self, search_workflow_db
+    ) -> None:
+        del search_workflow_db
+        with patch.object(
+            workflow.SearchService,
+            "enrich_results",
+            new=AsyncMock(side_effect=RuntimeError("enrich node failed")),
+        ):
+            result = await workflow.enrich_results_node(
+                {"fused_results": [_chunk("chunk-1")]}
+            )
+
+        assert result["error"] == "enrich node failed"
+        assert result["error_step"] == "enrich_results"
+
 
 @pytest.mark.integration
 class TestSearchWorkflow:

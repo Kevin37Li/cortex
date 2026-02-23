@@ -7,7 +7,7 @@ import pytest
 import sqlite_vec
 from src.db import ChunkSearchResult
 from src.db.database import EMBEDDING_DIMENSION
-from src.exceptions import SearchError
+from src.exceptions import EmbeddingError, SearchError
 from src.services.search import SearchService, reciprocal_rank_fusion
 
 
@@ -168,6 +168,67 @@ class TestVectorSearch:
         assert exc_info.value.step == "vector_search"
         assert "Vector search failed" in str(exc_info.value)
 
+    async def test_skips_vector_hits_without_chunk_rows(
+        self,
+        search_service: SearchService,
+        db_with_vec: aiosqlite.Connection,
+    ) -> None:
+        await _seed_search_data(db_with_vec)
+        await db_with_vec.execute("DELETE FROM chunks WHERE id = ?", ["chunk-2"])
+        await db_with_vec.commit()
+
+        results = await search_service.vector_search(
+            "alpha",
+            db=db_with_vec,
+            limit=3,
+            query_embedding=_one_hot_embedding(0),
+        )
+
+        assert [result.chunk_id for result in results] == ["chunk-1", "chunk-3"]
+
+    async def test_propagates_existing_search_error(
+        self,
+        search_service: SearchService,
+        db_with_vec: aiosqlite.Connection,
+    ) -> None:
+        original = SearchError("query invalid", query="alpha", step="validate_query")
+
+        with (
+            patch.object(
+                search_service._embedding_service,
+                "embed_query",
+                new=AsyncMock(side_effect=original),
+            ),
+            pytest.raises(SearchError) as exc_info,
+        ):
+            await search_service.vector_search("alpha", db=db_with_vec)
+
+        assert exc_info.value is original
+
+    async def test_wraps_embedding_error_in_search_error(
+        self,
+        search_service: SearchService,
+        db_with_vec: aiosqlite.Connection,
+    ) -> None:
+        with (
+            patch.object(
+                search_service._embedding_service,
+                "embed_query",
+                new=AsyncMock(
+                    side_effect=EmbeddingError(
+                        "embedding unavailable",
+                        item_id="item-1",
+                        step="embed_query",
+                    )
+                ),
+            ),
+            pytest.raises(SearchError) as exc_info,
+        ):
+            await search_service.vector_search("alpha", db=db_with_vec)
+
+        assert exc_info.value.step == "vector_search"
+        assert "Vector search failed" in str(exc_info.value)
+
 
 class TestFtsSearch:
     """Tests for fts_search behavior."""
@@ -184,6 +245,19 @@ class TestFtsSearch:
         assert len(results) == 2
         assert all(0.0 <= result.score <= 1.0 for result in results)
         assert results[0].score >= results[1].score
+
+    async def test_returns_empty_list_for_no_matches(
+        self,
+        search_service: SearchService,
+        db_with_vec: aiosqlite.Connection,
+    ) -> None:
+        await _seed_search_data(db_with_vec)
+
+        results = await search_service.fts_search(
+            "nonexistent_xyzzy", db=db_with_vec, limit=20
+        )
+
+        assert results == []
 
     async def test_sanitizes_malformed_match_input(
         self,
@@ -221,6 +295,32 @@ class TestFtsSearch:
 
         first_call_args = db.execute.await_args_list[0].args
         assert first_call_args[1][1] == 100
+
+    async def test_propagates_existing_search_error(
+        self,
+        search_service: SearchService,
+    ) -> None:
+        original = SearchError("fts failed", query="alpha", step="fts_search")
+        db = AsyncMock()
+        db.execute = AsyncMock(side_effect=original)
+
+        with pytest.raises(SearchError) as exc_info:
+            await search_service.fts_search("alpha", db=db)
+
+        assert exc_info.value is original
+
+    async def test_wraps_unexpected_errors_in_search_error(
+        self,
+        search_service: SearchService,
+    ) -> None:
+        db = AsyncMock()
+        db.execute = AsyncMock(side_effect=RuntimeError("fts backend down"))
+
+        with pytest.raises(SearchError) as exc_info:
+            await search_service.fts_search("alpha", db=db)
+
+        assert exc_info.value.step == "fts_search"
+        assert "FTS search failed" in str(exc_info.value)
 
 
 class TestHybridSearch:
@@ -399,6 +499,42 @@ class TestHybridSearch:
         )
         assert all(0.0 <= r.score <= 1.0 for r in results)
 
+    async def test_wraps_non_search_exceptions_from_fts_branch(
+        self,
+        search_service: SearchService,
+        db_with_vec: aiosqlite.Connection,
+    ) -> None:
+        secondary_db = AsyncMock()
+
+        with (
+            patch.object(
+                search_service,
+                "_resolve_main_db_path",
+                new=AsyncMock(return_value="/tmp/test_search.db"),
+            ),
+            patch.object(
+                search_service,
+                "_open_secondary_read_connection",
+                new=AsyncMock(return_value=secondary_db),
+            ),
+            patch.object(
+                search_service,
+                "vector_search",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch.object(
+                search_service,
+                "fts_search",
+                new=AsyncMock(side_effect=RuntimeError("fts crashed")),
+            ),
+            pytest.raises(SearchError) as exc_info,
+        ):
+            await search_service.hybrid_search("query", db=db_with_vec, limit=3)
+
+        assert exc_info.value.step == "hybrid_search"
+        assert "Hybrid search failed" in str(exc_info.value)
+        secondary_db.close.assert_awaited_once()
+
 
 class TestEnrichResults:
     """Tests for enrich_results behavior."""
@@ -438,6 +574,112 @@ class TestEnrichResults:
         assert enriched[1].item_title == "Second Item"
         assert enriched[0].score == 1.0
         assert enriched[1].score == 0.0
+
+    async def test_returns_empty_list_for_empty_input(
+        self,
+        search_service: SearchService,
+    ) -> None:
+        db = AsyncMock()
+        result = await search_service.enrich_results([], db=db)
+        assert result == []
+        db.execute.assert_not_awaited()
+
+    async def test_propagates_existing_search_error(
+        self,
+        search_service: SearchService,
+    ) -> None:
+        db = AsyncMock()
+        original = SearchError("enrich failed", step="enrich_results")
+        db.execute = AsyncMock(side_effect=original)
+
+        with pytest.raises(SearchError) as exc_info:
+            await search_service.enrich_results([_chunk("chunk-1")], db=db)
+
+        assert exc_info.value is original
+
+    async def test_wraps_unexpected_errors_in_search_error(
+        self,
+        search_service: SearchService,
+    ) -> None:
+        db = AsyncMock()
+        db.execute = AsyncMock(side_effect=RuntimeError("db unavailable"))
+
+        with pytest.raises(SearchError) as exc_info:
+            await search_service.enrich_results([_chunk("chunk-1")], db=db)
+
+        assert exc_info.value.step == "enrich_results"
+        assert "Result enrichment failed" in str(exc_info.value)
+
+
+def _chunk(
+    chunk_id: str,
+    *,
+    item_id: str = "item-1",
+    content: str = "chunk content",
+    score: float = 0.9,
+) -> ChunkSearchResult:
+    return ChunkSearchResult(
+        chunk_id=chunk_id,
+        item_id=item_id,
+        content=content,
+        score=score,
+    )
+
+
+class TestSearchServiceHelpers:
+    """Tests for private helper behavior in SearchService."""
+
+    async def test_resolve_main_db_path_supports_tuple_rows(self) -> None:
+        db = AsyncMock()
+        cursor = AsyncMock()
+        cursor.fetchall = AsyncMock(return_value=[(0, "main", "/tmp/search.db")])
+        db.execute = AsyncMock(return_value=cursor)
+
+        db_path = await SearchService._resolve_main_db_path(db)
+
+        assert db_path == "/tmp/search.db"
+
+    async def test_resolve_main_db_path_returns_none_for_memory_db(self) -> None:
+        db = AsyncMock()
+        cursor = AsyncMock()
+        cursor.fetchall = AsyncMock(return_value=[(0, "main", ":memory:")])
+        db.execute = AsyncMock(return_value=cursor)
+
+        db_path = await SearchService._resolve_main_db_path(db)
+
+        assert db_path is None
+
+    async def test_resolve_main_db_path_returns_none_when_main_not_present(
+        self,
+    ) -> None:
+        db = AsyncMock()
+        cursor = AsyncMock()
+        cursor.fetchall = AsyncMock(return_value=[(0, "temp", "/tmp/temp.db")])
+        db.execute = AsyncMock(return_value=cursor)
+
+        db_path = await SearchService._resolve_main_db_path(db)
+
+        assert db_path is None
+
+    async def test_open_secondary_connection_closes_on_configuration_failure(
+        self,
+    ) -> None:
+        secondary_db = AsyncMock()
+
+        with (
+            patch(
+                "src.services.search.aiosqlite.connect",
+                new=AsyncMock(return_value=secondary_db),
+            ),
+            patch(
+                "src.services.search.configure_connection",
+                new=AsyncMock(side_effect=RuntimeError("configure failed")),
+            ),
+            pytest.raises(RuntimeError, match="configure failed"),
+        ):
+            await SearchService._open_secondary_read_connection("/tmp/search.db")
+
+        secondary_db.close.assert_awaited_once()
 
 
 class TestSearchGuardrails:

@@ -439,9 +439,10 @@ Both functions use `Mapping[str, Any]` (not a specific TypedDict) so they work w
 
 ### Error Handling in Workflows
 
-Each node should catch exceptions and return error state for routing:
+Each node should catch exceptions and return error state for routing. The processing workflow uses the `ProcessingStep` enum for `error_step`, while the search workflow uses plain string identifiers (e.g., `"embed_query"`, `"vector_search"`, `"fts_search"`):
 
 ```python
+# Processing workflow: uses ProcessingStep enum
 @log_node_execution("parse")
 async def parse_node(state: ProcessingState) -> dict:
     current_step = ProcessingStep.PARSING
@@ -451,6 +452,16 @@ async def parse_node(state: ProcessingState) -> dict:
         return {"parsed_text": result.text}
     except Exception as e:
         return {"error": str(e), "error_step": current_step}
+
+# Search workflow: uses plain string step identifiers
+@log_node_execution("fts_search")
+async def fts_search_node(state: SearchState) -> NodeUpdate:
+    try:
+        async with db_connection() as db:
+            results = await search_service.fts_search(state["query"], db=db)
+        return {"fts_results": results}
+    except Exception as e:
+        return {"error": str(e), "error_step": "fts_search"}
 ```
 
 Use `route_or_error()` from `workflows/utils.py` for conditional edges:
