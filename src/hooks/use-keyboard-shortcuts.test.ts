@@ -19,6 +19,7 @@ describe('useKeyboardShortcuts', () => {
       commandPaletteOpen: false,
       preferencesOpen: false,
       quickNoteDialogOpen: false,
+      searchFocused: false,
       lastQuickPaneEntry: null,
     })
   })
@@ -106,5 +107,93 @@ describe('useKeyboardShortcuts', () => {
 
     expect(event.defaultPrevented).toBe(true)
     expect(useUIStore.getState().quickNoteDialogOpen).toBe(true)
+  })
+
+  it('focuses search with Cmd+F', () => {
+    renderHook(() => useKeyboardShortcuts(createCommandContext()))
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      metaKey: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(useUIStore.getState().searchFocused).toBe(true)
+  })
+
+  it('focuses search with Ctrl+F', () => {
+    renderHook(() => useKeyboardShortcuts(createCommandContext()))
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      ctrlKey: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(useUIStore.getState().searchFocused).toBe(true)
+  })
+
+  it('prevents default and does not focus search when command palette is open', () => {
+    useUIStore.setState({
+      commandPaletteOpen: true,
+      preferencesOpen: false,
+      quickNoteDialogOpen: false,
+      searchFocused: false,
+    })
+    renderHook(() => useKeyboardShortcuts(createCommandContext()))
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      metaKey: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(useUIStore.getState().searchFocused).toBe(false)
+  })
+
+  it('prevents default and does not focus search when preferences are open', () => {
+    useUIStore.setState({
+      commandPaletteOpen: false,
+      preferencesOpen: true,
+      quickNoteDialogOpen: false,
+      searchFocused: false,
+    })
+    renderHook(() => useKeyboardShortcuts(createCommandContext()))
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      metaKey: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(useUIStore.getState().searchFocused).toBe(false)
+  })
+
+  it('prevents default and does not focus search when quick note dialog is open', () => {
+    useUIStore.setState({
+      commandPaletteOpen: false,
+      preferencesOpen: false,
+      quickNoteDialogOpen: true,
+      searchFocused: false,
+    })
+    renderHook(() => useKeyboardShortcuts(createCommandContext()))
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      metaKey: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(useUIStore.getState().searchFocused).toBe(false)
   })
 })

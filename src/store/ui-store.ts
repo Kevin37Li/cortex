@@ -7,6 +7,7 @@ interface UIState {
   commandPaletteOpen: boolean
   preferencesOpen: boolean
   quickNoteDialogOpen: boolean
+  searchFocused: boolean
   lastQuickPaneEntry: string | null
 
   toggleLeftSidebar: () => void
@@ -19,6 +20,7 @@ interface UIState {
   setPreferencesOpen: (open: boolean) => void
   toggleQuickNoteDialog: () => void
   setQuickNoteDialogOpen: (open: boolean) => void
+  setSearchFocused: (focused: boolean) => void
   setLastQuickPaneEntry: (text: string) => void
 }
 
@@ -30,6 +32,7 @@ export const useUIStore = create<UIState>()(
       commandPaletteOpen: false,
       preferencesOpen: false,
       quickNoteDialogOpen: false,
+      searchFocused: false,
       lastQuickPaneEntry: null,
 
       toggleLeftSidebar: () =>
@@ -89,6 +92,9 @@ export const useUIStore = create<UIState>()(
 
       setQuickNoteDialogOpen: open =>
         set({ quickNoteDialogOpen: open }, undefined, 'setQuickNoteDialogOpen'),
+
+      setSearchFocused: focused =>
+        set({ searchFocused: focused }, undefined, 'setSearchFocused'),
 
       setLastQuickPaneEntry: text =>
         set({ lastQuickPaneEntry: text }, undefined, 'setLastQuickPaneEntry'),

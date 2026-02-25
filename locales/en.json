@@ -17,6 +17,8 @@
   "items.list.goToPreviousPage": "Go to previous page",
   "items.list.goToNextPage": "Go to next page",
   "items.list.morePages": "More pages",
+  "items.search.placeholder": "Search items",
+  "items.search.ariaLabel": "Search items",
   "items.status.pending": "Pending",
   "items.status.processing": "Processing",
   "items.status.completed": "Completed",
@@ -164,6 +166,8 @@
   "commands.createNote.description": "Open the quick note creation dialog",
   "commands.importFile.label": "Import File",
   "commands.importFile.description": "Import a text or Markdown file as an item",
+  "commands.focusSearch.label": "Search",
+  "commands.focusSearch.description": "Search your knowledge base",
 
   "commands.windowClose.label": "Close Window",
   "commands.windowClose.description": "Close the current window",

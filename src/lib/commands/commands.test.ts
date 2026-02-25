@@ -5,8 +5,11 @@ import type { CommandContext, AppCommand } from './types'
 const mockUIStore = {
   getState: vi.fn(() => ({
     leftSidebarVisible: true,
+    rightSidebarVisible: true,
     commandPaletteOpen: false,
     setLeftSidebarVisible: vi.fn(),
+    setRightSidebarVisible: vi.fn(),
+    setSearchFocused: vi.fn(),
   })),
 }
 
@@ -17,6 +20,7 @@ vi.mock('@/store/ui-store', () => ({
 const { registerCommands, getAllCommands, executeCommand } =
   await import('./registry')
 const { navigationCommands } = await import('./navigation-commands')
+const { initializeCommandSystem } = await import('./index')
 
 const createMockContext = (): CommandContext => ({
   openPreferences: vi.fn(),
@@ -67,8 +71,11 @@ describe('Simplified Command System', () => {
     it('filters commands by availability', () => {
       mockUIStore.getState.mockReturnValue({
         leftSidebarVisible: false,
+        rightSidebarVisible: true,
         commandPaletteOpen: false,
         setLeftSidebarVisible: vi.fn(),
+        setRightSidebarVisible: vi.fn(),
+        setSearchFocused: vi.fn(),
       })
 
       const availableCommands = getAllCommands(mockContext)
@@ -98,14 +105,32 @@ describe('Simplified Command System', () => {
         expect(matchesSearch).toBe(true)
       })
     })
+
+    it('filters commands by keyword when label/description do not match', () => {
+      const searchResults = getAllCommands(mockContext, 'config', mockT)
+
+      expect(
+        searchResults.some(command => command.id === 'open-preferences')
+      ).toBe(true)
+    })
+
+    it('initializeCommandSystem registers focus-search command', () => {
+      initializeCommandSystem()
+
+      const commands = getAllCommands(mockContext)
+      expect(commands.some(command => command.id === 'focus-search')).toBe(true)
+    })
   })
 
   describe('Command Execution', () => {
     it('executes show-left-sidebar command correctly', async () => {
       mockUIStore.getState.mockReturnValue({
         leftSidebarVisible: false,
+        rightSidebarVisible: true,
         commandPaletteOpen: false,
         setLeftSidebarVisible: vi.fn(),
+        setRightSidebarVisible: vi.fn(),
+        setSearchFocused: vi.fn(),
       })
 
       const result = await executeCommand('show-left-sidebar', mockContext)
@@ -116,8 +141,11 @@ describe('Simplified Command System', () => {
     it('fails to execute unavailable command', async () => {
       mockUIStore.getState.mockReturnValue({
         leftSidebarVisible: true,
+        rightSidebarVisible: true,
         commandPaletteOpen: false,
         setLeftSidebarVisible: vi.fn(),
+        setRightSidebarVisible: vi.fn(),
+        setSearchFocused: vi.fn(),
       })
 
       const result = await executeCommand('show-left-sidebar', mockContext)

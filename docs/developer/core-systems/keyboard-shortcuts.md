@@ -4,13 +4,14 @@ Centralized keyboard shortcut management using native DOM event listeners.
 
 ## Current Shortcuts
 
-| Shortcut             | Mac   | Windows/Linux | Action                  |
-| -------------------- | ----- | ------------- | ----------------------- |
-| Open Preferences     | Cmd+, | Ctrl+,        | Opens settings dialog   |
-| New Note             | Cmd+N | Ctrl+N        | Opens quick note dialog |
-| Command Palette      | Cmd+K | Ctrl+K        | Opens command search    |
-| Toggle Left Sidebar  | Cmd+1 | Ctrl+1        | Show/hide left panel    |
-| Toggle Right Sidebar | Cmd+2 | Ctrl+2        | Show/hide right panel   |
+| Shortcut             | Mac   | Windows/Linux | Action                                          |
+| -------------------- | ----- | ------------- | ----------------------------------------------- |
+| Open Preferences     | Cmd+, | Ctrl+,        | Opens settings dialog                           |
+| New Note             | Cmd+N | Ctrl+N        | Opens quick note dialog when no dialog is open  |
+| Focus Search         | Cmd+F | Ctrl+F        | Focuses the search input when no dialog is open |
+| Command Palette      | Cmd+K | Ctrl+K        | Opens command search                            |
+| Toggle Left Sidebar  | Cmd+1 | Ctrl+1        | Show/hide left panel                            |
+| Toggle Right Sidebar | Cmd+2 | Ctrl+2        | Show/hide right panel                           |
 
 ## Architecture
 
@@ -21,6 +22,9 @@ export function useKeyboardShortcuts(commandContext: CommandContext) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
+        const { commandPaletteOpen, preferencesOpen, quickNoteDialogOpen } =
+          useUIStore.getState()
+
         switch (e.key.toLowerCase()) {
           case ',': {
             e.preventDefault()
@@ -29,7 +33,18 @@ export function useKeyboardShortcuts(commandContext: CommandContext) {
           }
           case 'n': {
             e.preventDefault()
+            if (commandPaletteOpen || preferencesOpen || quickNoteDialogOpen) {
+              break
+            }
             openQuickNoteDialog()
+            break
+          }
+          case 'f': {
+            e.preventDefault()
+            if (commandPaletteOpen || preferencesOpen || quickNoteDialogOpen) {
+              break
+            }
+            useUIStore.getState().setSearchFocused(true)
             break
           }
           case '1': {
@@ -105,6 +120,7 @@ Native DOM event listeners are used instead of libraries like `react-hotkeys-hoo
 | Pattern         | Keys                |
 | --------------- | ------------------- |
 | Preferences     | Cmd/Ctrl + ,        |
+| Search field    | Cmd/Ctrl + F        |
 | Search/Command  | Cmd/Ctrl + K        |
 | Panel toggles   | Cmd/Ctrl + 1,2,3... |
 | File operations | Cmd/Ctrl + N,O,S    |

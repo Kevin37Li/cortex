@@ -155,12 +155,8 @@ listen('menu-preferences', () => {
 ```json
 // locales/en.json
 {
-  "commands": {
-    "myAction": {
-      "label": "My Action",
-      "description": "Does something useful"
-    }
-  }
+  "commands.myAction.label": "My Action",
+  "commands.myAction.description": "Does something useful"
 }
 ```
 

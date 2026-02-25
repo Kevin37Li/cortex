@@ -16,14 +16,24 @@ export function getAllCommands(
     command => !command.isAvailable || command.isAvailable(context)
   )
 
-  if (searchValue.trim() && t) {
+  if (searchValue.trim()) {
     const search = searchValue.toLowerCase()
     return allCommands.filter(cmd => {
-      const label = t(cmd.labelKey).toLowerCase()
+      const label = t
+        ? t(cmd.labelKey).toLowerCase()
+        : cmd.labelKey.toLowerCase()
       const description = cmd.descriptionKey
-        ? t(cmd.descriptionKey).toLowerCase()
+        ? t
+          ? t(cmd.descriptionKey).toLowerCase()
+          : cmd.descriptionKey.toLowerCase()
         : ''
-      return label.includes(search) || description.includes(search)
+      const keywordMatches =
+        cmd.keywords?.some(keyword => keyword.toLowerCase().includes(search)) ??
+        false
+
+      return (
+        label.includes(search) || description.includes(search) || keywordMatches
+      )
     })
   }
 

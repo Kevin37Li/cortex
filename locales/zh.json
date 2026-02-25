@@ -17,6 +17,8 @@
   "items.list.goToPreviousPage": "转到上一页",
   "items.list.goToNextPage": "转到下一页",
   "items.list.morePages": "更多页面",
+  "items.search.placeholder": "搜索项目",
+  "items.search.ariaLabel": "搜索项目",
   "items.status.pending": "待处理",
   "items.status.processing": "处理中",
   "items.status.completed": "已完成",
@@ -164,6 +166,8 @@
   "commands.createNote.description": "打开快速笔记创建对话框",
   "commands.importFile.label": "导入文件",
   "commands.importFile.description": "将文本或 Markdown 文件导入为项目",
+  "commands.focusSearch.label": "搜索",
+  "commands.focusSearch.description": "搜索你的知识库",
 
   "commands.windowClose.label": "关闭窗口",
   "commands.windowClose.description": "关闭当前窗口",

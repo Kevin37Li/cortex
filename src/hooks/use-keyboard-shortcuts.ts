@@ -9,6 +9,7 @@ import type { CommandContext } from '@/lib/commands/types'
  * Currently handles:
  * - Cmd/Ctrl+, : Open preferences
  * - Cmd/Ctrl+N : Open quick note dialog
+ * - Cmd/Ctrl+F : Focus search
  * - Cmd/Ctrl+1 : Toggle left sidebar
  * - Cmd/Ctrl+2 : Toggle right sidebar
  */
@@ -31,6 +32,14 @@ export function useKeyboardShortcuts(commandContext: CommandContext) {
               break
             }
             openQuickNoteDialog()
+            break
+          }
+          case 'f': {
+            e.preventDefault()
+            if (commandPaletteOpen || preferencesOpen || quickNoteDialogOpen) {
+              break
+            }
+            useUIStore.getState().setSearchFocused(true)
             break
           }
           case '1': {

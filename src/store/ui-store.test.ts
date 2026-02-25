@@ -10,6 +10,7 @@ describe('UIStore', () => {
       commandPaletteOpen: false,
       preferencesOpen: false,
       quickNoteDialogOpen: false,
+      searchFocused: false,
       lastQuickPaneEntry: null,
     })
   })
@@ -21,6 +22,7 @@ describe('UIStore', () => {
     expect(state.commandPaletteOpen).toBe(false)
     expect(state.preferencesOpen).toBe(false)
     expect(state.quickNoteDialogOpen).toBe(false)
+    expect(state.searchFocused).toBe(false)
     expect(state.lastQuickPaneEntry).toBeNull()
   })
 
@@ -82,5 +84,20 @@ describe('UIStore', () => {
 
     setQuickNoteDialogOpen(false)
     expect(useUIStore.getState().quickNoteDialogOpen).toBe(false)
+  })
+
+  it('sets search focused state to true', () => {
+    const { setSearchFocused } = useUIStore.getState()
+
+    setSearchFocused(true)
+    expect(useUIStore.getState().searchFocused).toBe(true)
+  })
+
+  it('sets search focused state to false', () => {
+    useUIStore.getState().setSearchFocused(true)
+    const { setSearchFocused } = useUIStore.getState()
+
+    setSearchFocused(false)
+    expect(useUIStore.getState().searchFocused).toBe(false)
   })
 })
