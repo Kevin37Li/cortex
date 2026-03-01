@@ -266,11 +266,13 @@ src/                          # React frontend
 ├── components/
 │   ├── layout/              # MainWindowShell, sidebars
 │   ├── items/               # Item list and card components
+│   ├── search/              # Search bar, results, and result cards
 │   ├── command-palette/     # Command palette system
 │   └── ui/                  # shadcn/ui components
 ├── hooks/                   # Custom React hooks
 ├── lib/
 │   ├── api-config.ts        # Shared apiFetch() for Python backend HTTP
+│   ├── content-type.ts      # Shared content type config (icon + label mapping)
 │   ├── commands/            # Command system
 │   ├── router.ts            # TanStack Router configuration
 │   └── tauri-bindings/      # Generated type-safe commands

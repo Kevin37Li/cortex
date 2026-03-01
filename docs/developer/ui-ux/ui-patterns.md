@@ -232,6 +232,7 @@ src/components/
 │   ├── dialog.tsx
 │   └── ...
 ├── items/            # Item list and card components
+├── search/           # Search bar, results, result cards
 ├── command-palette/  # Command palette feature
 ├── preferences/      # Preferences dialog
 ├── ThemeProvider.tsx

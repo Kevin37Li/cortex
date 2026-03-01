@@ -214,10 +214,12 @@ export function useCommandContext(): CommandContext {
 
 Organize commands into logical groups (used in command palette headings):
 
-- **navigation**: Route navigation, sidebar toggles, view switching
+- **navigation**: Route navigation, sidebar toggles, view switching, search focus
 - **settings**: Preferences, configuration
 - **notes**: Note creation and management
+- **window**: Window management commands
 - **debug**: Test/diagnostic commands (e.g., notification tests)
+- **other**: Uncategorized commands
 
 Group labels are translated via `commands.group.{groupName}` keys.
 

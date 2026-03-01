@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { File, FileText, Globe, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   Item as ListItem,
@@ -9,27 +8,10 @@ import {
   ItemTitle,
 } from '@/components/ui/item'
 import { Badge } from '@/components/ui/badge'
-import type { ContentType, Item } from '@/services/items'
+import { contentTypeConfig } from '@/lib/content-type'
+import type { Item } from '@/services/items'
 import { useProcessingStore } from '@/store/processing-store'
 import { ProcessingStatusBadge } from './ProcessingStatusBadge'
-
-const contentTypeConfig: Record<
-  ContentType,
-  { icon: LucideIcon; labelKey: string }
-> = {
-  webpage: {
-    icon: Globe,
-    labelKey: 'items.contentType.webpage',
-  },
-  note: {
-    icon: FileText,
-    labelKey: 'items.contentType.note',
-  },
-  file: {
-    icon: File,
-    labelKey: 'items.contentType.file',
-  },
-}
 
 const relativeTimeUnits: {
   unit: Intl.RelativeTimeFormatUnit
