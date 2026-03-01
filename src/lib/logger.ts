@@ -69,13 +69,7 @@ class Logger {
       this.logToConsole(entry)
     }
 
-    // In production, you could optionally send logs to Tauri backend
-    // This is commented out to keep it simple, but here's how you might do it:
-    /*
-    if (!this.isDevelopment && (level === 'warn' || level === 'error')) {
-      this.logToBackend(entry)
-    }
-    */
+    // In production, backend logging can be added through typed Tauri bindings.
   }
 
   private logToConsole(entry: LogEntry): void {
@@ -102,22 +96,6 @@ class Logger {
         break
     }
   }
-
-  /*
-  // Optional: Send logs to Tauri backend for system logging
-  private async logToBackend(entry: LogEntry): Promise<void> {
-    try {
-      await invoke('log_from_frontend', {
-        level: entry.level,
-        message: entry.message,
-        timestamp: entry.timestamp.toISOString(),
-        context: entry.context,
-      })
-    } catch (error) {
-      console.warn('Failed to send log to backend:', error)
-    }
-  }
-  */
 }
 
 // Export a singleton logger instance
